@@ -1,0 +1,379 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Acesso.dc.html": {
+      "expand": "fill",
+      "h": 1100,
+      "is_interactive": true,
+      "title": "02 Criar conta · claro",
+      "w": 1440,
+      "x": 0,
+      "y": 7400
+    },
+    "AcessoLoginEscuro.dc.html": {
+      "expand": "fill",
+      "h": 1100,
+      "is_interactive": true,
+      "title": "02 Entrar · noite",
+      "w": 1440,
+      "x": 1520,
+      "y": 7400
+    },
+    "AcessoMobile.dc.html": {
+      "h": 1800,
+      "is_interactive": true,
+      "title": "02 Criar conta · celular",
+      "w": 390,
+      "x": 3040,
+      "y": 7400
+    },
+    "Arremates.dc.html": {
+      "expand": "fill",
+      "h": 1400,
+      "is_interactive": true,
+      "title": "05 Meus arremates · claro",
+      "w": 1440,
+      "x": 0,
+      "y": 17620
+    },
+    "ArrematesMobile.dc.html": {
+      "h": 2600,
+      "is_interactive": true,
+      "title": "05 Meus arremates · celular noite",
+      "w": 390,
+      "x": 1520,
+      "y": 17620
+    },
+    "Auditoria.dc.html": {
+      "expand": "fill",
+      "h": 2000,
+      "is_interactive": true,
+      "title": "09 Auditoria · íntegro · claro",
+      "w": 1440,
+      "x": 0,
+      "y": 27220
+    },
+    "AuditoriaAdulterado.dc.html": {
+      "expand": "fill",
+      "h": 2000,
+      "is_interactive": true,
+      "title": "09 Auditoria · adulterado · claro",
+      "w": 1440,
+      "x": 1520,
+      "y": 27220
+    },
+    "AuditoriaMobile.dc.html": {
+      "h": 3300,
+      "is_interactive": true,
+      "title": "09 Auditoria · adulterado · celular noite",
+      "w": 390,
+      "x": 3040,
+      "y": 27220
+    },
+    "Carteira.dc.html": {
+      "expand": "fill",
+      "h": 1400,
+      "is_interactive": true,
+      "title": "04 Carteira · claro",
+      "w": 1440,
+      "x": 0,
+      "y": 14820
+    },
+    "CarteiraMobile.dc.html": {
+      "h": 2400,
+      "is_interactive": true,
+      "title": "04 Carteira · celular noite",
+      "w": 390,
+      "x": 1520,
+      "y": 14820
+    },
+    "Comprovante.dc.html": {
+      "expand": "fill",
+      "h": 1400,
+      "is_interactive": true,
+      "title": "06 Comprovante público · claro",
+      "w": 1440,
+      "x": 0,
+      "y": 20620
+    },
+    "ComprovanteEscuro.dc.html": {
+      "expand": "fill",
+      "h": 1400,
+      "is_interactive": true,
+      "title": "06 Comprovante público · noite",
+      "w": 1440,
+      "x": 1520,
+      "y": 20620
+    },
+    "ComprovanteMobile.dc.html": {
+      "h": 1900,
+      "is_interactive": true,
+      "title": "06 Comprovante · celular",
+      "w": 390,
+      "x": 3040,
+      "y": 20620
+    },
+    "CriarLote.dc.html": {
+      "expand": "fill",
+      "h": 1800,
+      "is_interactive": true,
+      "title": "08 Criar lote · claro",
+      "w": 1440,
+      "x": 0,
+      "y": 25020
+    },
+    "CriarLoteErro.dc.html": {
+      "expand": "fill",
+      "h": 1800,
+      "is_interactive": true,
+      "title": "08 Criar lote · FIPE fora do ar · noite",
+      "w": 1440,
+      "x": 1520,
+      "y": 25020
+    },
+    "Main.dc.html": {
+      "h": 1900,
+      "title": "Manual de pátio · tokens claro e noite",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Painel.dc.html": {
+      "expand": "fill",
+      "h": 1700,
+      "title": "07 Painel do leiloeiro · claro",
+      "w": 1440,
+      "x": 0,
+      "y": 22920
+    },
+    "PainelEscuro.dc.html": {
+      "expand": "fill",
+      "h": 1700,
+      "title": "07 Painel do leiloeiro · noite",
+      "w": 1440,
+      "x": 1520,
+      "y": 22920
+    },
+    "Sala.dc.html": {
+      "expand": "fill",
+      "h": 1600,
+      "is_interactive": true,
+      "title": "03 Sala · superado · experimente dar lances",
+      "w": 1440,
+      "x": 0,
+      "y": 9600
+    },
+    "SalaEncerrado.dc.html": {
+      "expand": "fill",
+      "h": 1600,
+      "is_interactive": true,
+      "title": "03 Sala · encerrado, você arrematou · noite",
+      "w": 1440,
+      "x": 0,
+      "y": 11320
+    },
+    "SalaGanhando.dc.html": {
+      "expand": "fill",
+      "h": 1600,
+      "is_interactive": true,
+      "title": "03 Sala · ganhando",
+      "w": 1440,
+      "x": 1520,
+      "y": 9600
+    },
+    "SalaMobile.dc.html": {
+      "h": 3100,
+      "is_interactive": true,
+      "title": "03 Sala · ganhando · celular noite",
+      "w": 390,
+      "x": 4560,
+      "y": 11320
+    },
+    "SalaProrrogado.dc.html": {
+      "expand": "fill",
+      "h": 1600,
+      "is_interactive": true,
+      "title": "03 Sala · prorrogado +2 min · noite",
+      "w": 1440,
+      "x": 4560,
+      "y": 9600
+    },
+    "SalaRecusa.dc.html": {
+      "expand": "fill",
+      "h": 1600,
+      "is_interactive": true,
+      "title": "03 Sala · recusa por saldo",
+      "w": 1440,
+      "x": 1520,
+      "y": 11320
+    },
+    "SalaUltimos.dc.html": {
+      "expand": "fill",
+      "h": 1600,
+      "is_interactive": true,
+      "title": "03 Sala · últimos 2 minutos",
+      "w": 1440,
+      "x": 3040,
+      "y": 9600
+    },
+    "SalaVisitante.dc.html": {
+      "expand": "fill",
+      "h": 1600,
+      "is_interactive": true,
+      "title": "03 Sala · visitante sem login",
+      "w": 1440,
+      "x": 3040,
+      "y": 11320
+    },
+    "Vitrine.dc.html": {
+      "expand": "fill",
+      "h": 2300,
+      "is_interactive": true,
+      "title": "01 Vitrine · claro · busca e filtros funcionam",
+      "w": 1440,
+      "x": 0,
+      "y": 2300
+    },
+    "VitrineEscuro.dc.html": {
+      "expand": "fill",
+      "h": 2300,
+      "is_interactive": true,
+      "title": "01 Vitrine · noite",
+      "w": 1440,
+      "x": 1520,
+      "y": 2300
+    },
+    "VitrineMobile.dc.html": {
+      "h": 4700,
+      "is_interactive": true,
+      "title": "01 Vitrine · celular",
+      "w": 390,
+      "x": 3040,
+      "y": 2300
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-22T21:50:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "t-acesso": {
+      "kind": "title1",
+      "maxW": 3430,
+      "text": "02 · Cadastro e login",
+      "w": 240,
+      "x": 0,
+      "y": 7100
+    },
+    "t-arremates": {
+      "kind": "title1",
+      "maxW": 1910,
+      "text": "05 · Meus arremates",
+      "w": 240,
+      "x": 0,
+      "y": 17320
+    },
+    "t-auditoria": {
+      "kind": "title1",
+      "maxW": 3430,
+      "text": "09 · Auditoria pública",
+      "w": 240,
+      "x": 0,
+      "y": 26920
+    },
+    "t-carteira": {
+      "kind": "title1",
+      "maxW": 1910,
+      "text": "04 · Carteira do licitante",
+      "w": 240,
+      "x": 0,
+      "y": 14520
+    },
+    "t-comprovante": {
+      "kind": "title1",
+      "maxW": 3430,
+      "text": "06 · Comprovante de arremate",
+      "w": 240,
+      "x": 0,
+      "y": 20320
+    },
+    "t-criar": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "08 · Criar lote",
+      "w": 240,
+      "x": 0,
+      "y": 24720
+    },
+    "t-painel": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "07 · Painel do leiloeiro",
+      "w": 240,
+      "x": 0,
+      "y": 22620
+    },
+    "t-sala": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "03 · Sala do lote ao vivo",
+      "w": 240,
+      "x": 0,
+      "y": 9300
+    },
+    "t-sistema": {
+      "kind": "title1",
+      "maxW": 1440,
+      "text": "LanceAuto · manual de pátio",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "t-vitrine": {
+      "kind": "title1",
+      "maxW": 3430,
+      "text": "01 · Vitrine de lotes",
+      "w": 240,
+      "x": 0,
+      "y": 2000
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Vitrine.dc.html",
+    "VitrineEscuro.dc.html",
+    "VitrineMobile.dc.html",
+    "Acesso.dc.html",
+    "AcessoLoginEscuro.dc.html",
+    "AcessoMobile.dc.html",
+    "Sala.dc.html",
+    "SalaGanhando.dc.html",
+    "SalaUltimos.dc.html",
+    "SalaProrrogado.dc.html",
+    "SalaEncerrado.dc.html",
+    "SalaRecusa.dc.html",
+    "SalaVisitante.dc.html",
+    "SalaMobile.dc.html",
+    "Carteira.dc.html",
+    "CarteiraMobile.dc.html",
+    "Arremates.dc.html",
+    "ArrematesMobile.dc.html",
+    "Comprovante.dc.html",
+    "ComprovanteEscuro.dc.html",
+    "ComprovanteMobile.dc.html",
+    "Painel.dc.html",
+    "PainelEscuro.dc.html",
+    "CriarLote.dc.html",
+    "CriarLoteErro.dc.html",
+    "Auditoria.dc.html",
+    "AuditoriaAdulterado.dc.html",
+    "AuditoriaMobile.dc.html"
+  ],
+  "pages": [],
+  "title": "LanceAuto"
+}

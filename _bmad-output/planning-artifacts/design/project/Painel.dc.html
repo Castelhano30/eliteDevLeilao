@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Painel do leiloeiro</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+@keyframes la-pulsa{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+</helmet>
+<div style="background:{{c.fundo}}; color:{{c.tinta}}; font-family:'Newsreader', Georgia, serif; min-height:100vh;">
+  <div style="max-width:1320px; margin:0 auto; padding:20px clamp(16px, 4vw, 56px) 64px; display:flex; flex-direction:column; gap:36px;">
+
+    <header style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:14px 24px;">
+      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px 28px;">
+        <a href="Vitrine.dc.html" aria-label="LanceAuto, vitrine" style="display:inline-flex; flex-direction:column; text-decoration:none; background:transparent; color:{{c.tinta}}; border:3px solid {{c.tinta}}; border-radius:7px; box-shadow:4px 4px 0 {{c.sombra}}; overflow:hidden;">
+          <span aria-hidden="true" style="display:flex; justify-content:center; background:#E2A514; color:#FFFFFF; padding:3px 7px 2px 10px; font-family:'IBM Plex Mono', monospace; font-size:8px; font-weight:600; letter-spacing:.42em; line-height:1;">BRASIL</span>
+          <span style="display:flex; align-items:center; gap:8px; margin:0 3px 3px; padding:5px 9px 3px; border:1.5px solid {{c.tinta}}; border-top:none; border-radius:0 0 4px 4px;"><span aria-hidden="true" style="width:5px; height:5px; border-radius:50%; background:{{c.tinta}};"></span><span style="font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:28px; line-height:1; letter-spacing:.1em;">LANCE·AUTO</span><span aria-hidden="true" style="width:5px; height:5px; border-radius:50%; background:{{c.tinta}};"></span></span>
+        </a>
+        <nav aria-label="Leiloeiro" style="display:flex; flex-wrap:wrap; gap:4px 20px; font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:19px; text-transform:uppercase; letter-spacing:.04em;">
+          <a href="Painel.dc.html" aria-current="page" style="color:{{c.tinta}}; padding:10px 0; text-decoration:none; border-bottom:3px solid {{c.tinta}};">Meus lotes</a>
+          <a href="CriarLote.dc.html" style="color:{{c.tinta}}; padding:10px 0; text-decoration:none;">Criar lote</a>
+          <a href="Vitrine.dc.html" style="color:{{c.tinta}}; padding:10px 0; text-decoration:none;">Vitrine</a>
+        </nav>
+      </div>
+      <span style="display:flex; align-items:center; gap:8px; padding:8px 12px; border:3px solid {{c.linha}}; background:{{c.papel}}; font-family:'IBM Plex Mono', monospace; font-size:13px;">LEILOEIRO A01B <span style="background:{{c.ocre}}; color:{{c.sobreOcre}}; padding:1px 6px; font-weight:600;">VOCÊ</span></span>
+    </header>
+
+    <div style="display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px 24px; border-bottom:4px solid {{c.linha}}; padding-bottom:20px;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <h1 style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:clamp(60px, 9vw, 132px); line-height:.82; margin:0; text-transform:uppercase;">Painel do pátio</h1>
+        <span style="font-size:19px;">Seus lotes, quem está brigando por eles e quanto já entrou.</span>
+      </div>
+      <a href="CriarLote.dc.html" style="display:inline-flex; align-items:center; gap:10px; min-height:60px; box-sizing:border-box; padding:8px 24px 6px; border:3px solid {{c.linha}}; background:{{c.ocre}}; color:{{c.sobreOcre}}; box-shadow:6px 6px 0 {{c.sombra}}; text-decoration:none; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:26px; text-transform:uppercase;"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2 V18 M2 10 H18" stroke="{{c.sobreOcre}}" stroke-width="3.5"></path></svg>Criar lote</a>
+    </div>
+
+    <section aria-label="Resumo" style="display:flex; flex-wrap:wrap; gap:16px;">
+      <div style="flex:2 1 340px; min-width:0; background:{{c.painel}}; border:3px solid {{c.linha}}; box-shadow:6px 6px 0 {{c.sombra}}; padding:16px 20px; display:flex; flex-direction:column; gap:6px;">
+        <span style="font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.16em; color:#8A8273;">TOTAL RECEBIDO · 3 ARREMATES</span>
+        <span style="position:relative; font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:clamp(34px, 4.4vw, 56px); line-height:1; white-space:nowrap;"><span aria-hidden="true" style="color:{{c.led}}; opacity:.1;">R$ 888.888,88</span><span style="position:absolute; left:0; top:0; color:{{c.led}};">R$ 136.500,00</span></span>
+        <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; color:#B3AA99;">Saldo simulado. O pátio agradece mesmo assim.</span>
+      </div>
+      <sc-for list="{{placar}}" as="p" hint-placeholder-count="3">
+        <div style="flex:1 1 150px; background:{{c.painel}}; border:3px solid {{c.linha}}; box-shadow:6px 6px 0 {{c.sombra}}; padding:16px 20px; display:flex; flex-direction:column; gap:6px;">
+          <span style="font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.16em; color:#8A8273;">{{p.rotulo}}</span>
+          <span style="position:relative; font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:56px; line-height:1;"><span aria-hidden="true" style="color:{{p.cor}}; opacity:.1;">88</span><span style="position:absolute; left:0; top:0; color:{{p.cor}};">{{p.n}}</span></span>
+        </div>
+      </sc-for>
+    </section>
+
+    <section aria-labelledby="s-vivo" style="display:flex; flex-direction:column; gap:16px;">
+      <div style="display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;">
+        <h2 id="s-vivo" style="display:inline-flex; align-items:center; gap:12px; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:48px; line-height:1; margin:0; text-transform:uppercase;"><span style="width:13px; height:13px; border-radius:50%; background:{{c.ferrugem}}; animation:la-pulsa 1.2s infinite;"></span>Ao vivo</h2>
+        <span style="flex:1 1 40px; border-top:2px dashed {{c.tracejado}};"></span>
+        <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; color:{{c.tinta2}};">Lote com lance não se cancela. Regra da casa.</span>
+      </div>
+      <div style="overflow-x:auto; background:{{c.papel}}; border:3px solid {{c.linha}};">
+        <table style="width:100%; min-width:760px; border-collapse:collapse; font-family:'IBM Plex Mono', monospace; font-size:15px;">
+          <thead>
+            <tr style="text-align:left; font-size:11px; letter-spacing:.12em; color:{{c.tinta2}};">
+              <th scope="col" style="padding:12px 20px; font-weight:500; border-bottom:3px solid {{c.linha}};">LOTE</th>
+              <th scope="col" style="padding:12px 8px; font-weight:500; border-bottom:3px solid {{c.linha}};">CARRO</th>
+              <th scope="col" style="padding:12px 8px; font-weight:500; border-bottom:3px solid {{c.linha}}; text-align:right;">LANCE ATUAL</th>
+              <th scope="col" style="padding:12px 8px; font-weight:500; border-bottom:3px solid {{c.linha}}; text-align:right;">LANCES</th>
+              <th scope="col" style="padding:12px 8px; font-weight:500; border-bottom:3px solid {{c.linha}};">RESTAM</th>
+              <th scope="col" style="padding:12px 20px 12px 8px; font-weight:500; border-bottom:3px solid {{c.linha}}; text-align:right;">AÇÃO</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{vivos}}" as="l" hint-placeholder-count="3">
+              <tr>
+                <td style="padding:14px 20px; border-bottom:2px dashed {{c.tracejado}}; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:30px; line-height:1;">{{l.num}}</td>
+                <td style="padding:14px 8px; border-bottom:2px dashed {{c.tracejado}};"><span style="display:block; font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:21px; text-transform:uppercase; line-height:1;">{{l.titulo}}</span><span style="font-size:12px; color:{{c.tinta2}};">{{l.meta}}</span></td>
+                <td style="padding:14px 8px; border-bottom:2px dashed {{c.tracejado}}; text-align:right; font-weight:600; white-space:nowrap;">{{l.valor}}</td>
+                <td style="padding:14px 8px; border-bottom:2px dashed {{c.tracejado}}; text-align:right;">{{l.lances}}</td>
+                <td style="padding:14px 8px; border-bottom:2px dashed {{c.tracejado}};"><span style="display:inline-block; position:relative; background:{{c.painel}}; padding:4px 8px; font-weight:600; font-size:20px;"><span aria-hidden="true" style="color:{{c.led}}; opacity:.1;">88:88</span><span style="position:absolute; left:8px; top:4px; color:{{c.led}};">{{l.tempo}}</span></span></td>
+                <td style="padding:14px 20px 14px 8px; border-bottom:2px dashed {{c.tracejado}}; text-align:right;">
+                  <sc-if value="{{l.cancela}}" hint-placeholder-val="{{false}}">
+                    <button type="button" style="min-height:44px; padding:6px 14px 4px; border:3px solid {{c.ferrugem}}; background:transparent; color:{{c.ferrugem}}; font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:18px; text-transform:uppercase; cursor:pointer; border-radius:0;">Cancelar</button>
+                  </sc-if>
+                  <sc-if value="{{l.travado}}" hint-placeholder-val="{{true}}">
+                    <span style="font-size:12px; color:{{c.tinta2}};">Com lances · fica</span>
+                  </sc-if>
+                </td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="s-agenda" style="display:flex; flex-direction:column; gap:16px;">
+      <div style="display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;">
+        <h2 id="s-agenda" style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:48px; line-height:1; margin:0; text-transform:uppercase;">Agendados</h2>
+        <span style="flex:1 1 40px; border-top:2px dashed {{c.tracejado}};"></span>
+      </div>
+      <div style="overflow-x:auto; background:{{c.papel}}; border:3px solid {{c.linha}};">
+        <table style="width:100%; min-width:760px; border-collapse:collapse; font-family:'IBM Plex Mono', monospace; font-size:15px;">
+          <thead>
+            <tr style="text-align:left; font-size:11px; letter-spacing:.12em; color:{{c.tinta2}};">
+              <th scope="col" style="padding:12px 20px; font-weight:500; border-bottom:3px solid {{c.linha}};">LOTE</th>
+              <th scope="col" style="padding:12px 8px; font-weight:500; border-bottom:3px solid {{c.linha}};">CARRO</th>
+              <th scope="col" style="padding:12px 8px; font-weight:500; border-bottom:3px solid {{c.linha}}; text-align:right;">LANCE INICIAL</th>
+              <th scope="col" style="padding:12px 8px; font-weight:500; border-bottom:3px solid {{c.linha}}; text-align:right;">LANCES</th>
+              <th scope="col" style="padding:12px 8px; font-weight:500; border-bottom:3px solid {{c.linha}};">ABRE · FECHA</th>
+              <th scope="col" style="padding:12px 20px 12px 8px; font-weight:500; border-bottom:3px solid {{c.linha}}; text-align:right;">AÇÃO</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{agendados}}" as="l" hint-placeholder-count="2">
+              <tr>
+                <td style="padding:14px 20px; border-bottom:2px dashed {{c.tracejado}}; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:30px; line-height:1;">{{l.num}}</td>
+                <td style="padding:14px 8px; border-bottom:2px dashed {{c.tracejado}};"><span style="display:block; font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:21px; text-transform:uppercase; line-height:1;">{{l.titulo}}</span><span style="font-size:12px; color:{{c.tinta2}};">{{l.meta}}</span></td>
+                <td style="padding:14px 8px; border-bottom:2px dashed {{c.tracejado}}; text-align:right; font-weight:600; white-space:nowrap;">{{l.valor}}</td>
+                <td style="padding:14px 8px; border-bottom:2px dashed {{c.tracejado}}; text-align:right;">00</td>
+                <td style="padding:14px 8px; border-bottom:2px dashed {{c.tracejado}}; white-space:nowrap;">{{l.janela}}</td>
+                <td style="padding:14px 20px 14px 8px; border-bottom:2px dashed {{c.tracejado}}; text-align:right;">
+                  <button type="button" style="min-height:44px; padding:6px 14px 4px; border:3px solid {{c.ferrugem}}; background:transparent; color:{{c.ferrugem}}; font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:18px; text-transform:uppercase; cursor:pointer; border-radius:0;">Cancelar</button>
+                </td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="s-fim" style="display:flex; flex-direction:column; gap:16px;">
+      <div style="display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;">
+        <h2 id="s-fim" style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:48px; line-height:1; margin:0; text-transform:uppercase;">Encerrados</h2>
+        <span style="flex:1 1 40px; border-top:2px dashed {{c.tracejado}};"></span>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap:20px;">
+        <sc-for list="{{encerrados}}" as="l" hint-placeholder-count="4">
+          <div style="position:relative; background:{{c.papel}}; border:3px solid {{c.linha}}; box-shadow:6px 6px 0 {{c.sombra}}; padding:16px 18px 18px; display:flex; flex-direction:column; gap:8px; overflow:hidden;">
+            <div style="display:flex; align-items:baseline; gap:10px;">
+              <span style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:38px; line-height:.9;">{{l.num}}</span>
+              <span style="font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:21px; line-height:1; text-transform:uppercase;">{{l.titulo}}</span>
+            </div>
+            <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; color:{{c.tinta2}};">{{l.meta}}</span>
+            <div style="border-top:2px dashed {{c.tracejado}}; margin:4px 0;"></div>
+            <span style="font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:22px;">{{l.valor}}</span>
+            <span style="font-size:15px; color:{{c.tinta2}};">{{l.obs}}</span>
+            <a href="Auditoria.dc.html" style="align-self:flex-start; font-family:'IBM Plex Mono', monospace; font-size:13px; color:{{c.tinta}}; padding:6px 0 0;">Auditoria do lote</a>
+            <span style="position:absolute; right:12px; top:16px; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:17px; letter-spacing:.08em; text-transform:uppercase; color:{{l.cor}}; border:3px {{l.borda}} {{l.cor}}; padding:3px 8px 1px; transform:rotate({{l.giro}}); line-height:1; background:{{c.papel}};">{{l.selo}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tema":{"editor":"enum","options":["claro","escuro"],"default":"claro"},"$preview":{"width":1440,"height":1700}}'>
+const PAL = {
+  claro: { fundo:'#E8DFCB', papel:'#F5EEDF', suave:'#DDD3BC', tinta:'#1E1C19', tinta2:'#5B5449', linha:'#1E1C19', sombra:'#1E1C19', tracejado:'#8A8273', ocre:'#E2A514', sobreOcre:'#1E1C19', ferrugem:'#A43C1E', verde:'#2E6A3E', painel:'#141311', led:'#F2B92B', ledAlerta:'#FF6A3D' },
+  escuro: { fundo:'#161513', papel:'#262420', suave:'#2F2C27', tinta:'#ECE4D2', tinta2:'#B3AA99', linha:'#CFC5B0', sombra:'#3A362F', tracejado:'#6E675C', ocre:'#E8AE22', sobreOcre:'#161513', ferrugem:'#E36A43', verde:'#74B585', painel:'#0B0B0A', led:'#F2B92B', ledAlerta:'#FF6A3D' }
+};
+class Component extends DCLogic {
+  renderVals() {
+    const c = PAL[this.props.tema === 'escuro' ? 'escuro' : 'claro'];
+    const vivos = [
+      { num: '019', titulo: 'Hilux SRV 2.8 4x4', meta: '2018 · Diesel · FIPE R$ 189.400', valor: 'R$ 165.000,00', lances: '12', tempo: '16:12' },
+      { num: '024', titulo: 'Opala Comodoro 4.1', meta: '1979 · Gasolina · FIPE R$ 41.300', valor: 'R$ 39.500,00', lances: '15', tempo: '28:04' },
+      { num: '023', titulo: 'Uno Mille Way 1.0', meta: '2010 · Flex · FIPE R$ 19.800', valor: 'R$ 12.000,00', lances: '00', tempo: '47:30', vazio: true }
+    ].map((l) => Object.assign(l, { cancela: !!l.vazio, travado: !l.vazio }));
+    return {
+      c, vivos,
+      placar: [
+        { rotulo: 'AO VIVO', n: '03', cor: c.ledAlerta },
+        { rotulo: 'AGENDADOS', n: '02', cor: c.led },
+        { rotulo: 'ENCERRADOS', n: '04', cor: c.led }
+      ],
+      agendados: [
+        { num: '020', titulo: 'Fusca 1300', meta: '1974 · Gasolina · FIPE R$ 24.800', valor: 'R$ 15.000,00', janela: 'Sáb 24/out 14:00 → 15:00' },
+        { num: '021', titulo: 'Corolla XEi 2.0', meta: '2015 · Flex · FIPE R$ 76.300', valor: 'R$ 58.000,00', janela: 'Dom 25/out 10:00 → 11:30' }
+      ],
+      encerrados: [
+        { num: '018', titulo: 'Gol GTI 2.0', meta: '1996 · 17 lances · 1 prorrogação', valor: 'R$ 33.500,00', obs: 'Licitante C3E8 levou. 7% acima da FIPE, e ainda dizem que ninguém liga para Gol quadrado.', selo: 'Arrematado', cor: c.tinta, borda: 'solid', giro: '-6deg' },
+        { num: '017', titulo: 'Opala Diplomata', meta: '1988 · 26 lances', valor: 'R$ 54.000,00', obs: 'Licitante 7F3A levou. 10% acima da FIPE.', selo: 'Arrematado', cor: c.tinta, borda: 'solid', giro: '4deg' },
+        { num: '014', titulo: 'Civic LXS 1.8', meta: '2012 · 19 lances', valor: 'R$ 49.000,00', obs: 'Licitante 7F3A levou. 10% abaixo da FIPE.', selo: 'Arrematado', cor: c.tinta, borda: 'solid', giro: '-3deg' },
+        { num: '016', titulo: 'Santana CL 1.8', meta: '1991 · 0 lances', valor: 'Fechado sem lances', obs: 'Lance inicial de R$ 12.000,00. Talvez na próxima, talvez nunca.', selo: 'Sem lances', cor: c.tinta2, borda: 'dashed', giro: '3deg' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Criar lote</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+@keyframes la-pulsa{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+</helmet>
+<div style="background:{{c.fundo}}; color:{{c.tinta}}; font-family:'Newsreader', Georgia, serif; min-height:100vh;">
+  <div style="max-width:1320px; margin:0 auto; padding:20px clamp(16px, 4vw, 56px) 64px; display:flex; flex-direction:column; gap:32px;">
+
+    <header style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:14px 24px;">
+      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px 28px;">
+        <a href="Vitrine.dc.html" aria-label="LanceAuto, vitrine" style="display:inline-flex; flex-direction:column; text-decoration:none; background:transparent; color:{{c.tinta}}; border:3px solid {{c.tinta}}; border-radius:7px; box-shadow:4px 4px 0 {{c.sombra}}; overflow:hidden;">
+          <span aria-hidden="true" style="display:flex; justify-content:center; background:#E2A514; color:#FFFFFF; padding:3px 7px 2px 10px; font-family:'IBM Plex Mono', monospace; font-size:8px; font-weight:600; letter-spacing:.42em; line-height:1;">BRASIL</span>
+          <span style="display:flex; align-items:center; gap:8px; margin:0 3px 3px; padding:5px 9px 3px; border:1.5px solid {{c.tinta}}; border-top:none; border-radius:0 0 4px 4px;"><span aria-hidden="true" style="width:5px; height:5px; border-radius:50%; background:{{c.tinta}};"></span><span style="font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:28px; line-height:1; letter-spacing:.1em;">LANCE·AUTO</span><span aria-hidden="true" style="width:5px; height:5px; border-radius:50%; background:{{c.tinta}};"></span></span>
+        </a>
+        <nav aria-label="Leiloeiro" style="display:flex; flex-wrap:wrap; gap:4px 20px; font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:19px; text-transform:uppercase; letter-spacing:.04em;">
+          <a href="Painel.dc.html" style="color:{{c.tinta}}; padding:10px 0; text-decoration:none;">Meus lotes</a>
+          <a href="CriarLote.dc.html" aria-current="page" style="color:{{c.tinta}}; padding:10px 0; text-decoration:none; border-bottom:3px solid {{c.tinta}};">Criar lote</a>
+          <a href="Vitrine.dc.html" style="color:{{c.tinta}}; padding:10px 0; text-decoration:none;">Vitrine</a>
+        </nav>
+      </div>
+      <span style="display:flex; align-items:center; gap:8px; padding:8px 12px; border:3px solid {{c.linha}}; background:{{c.papel}}; font-family:'IBM Plex Mono', monospace; font-size:13px;">LEILOEIRO A01B <span style="background:{{c.ocre}}; color:{{c.sobreOcre}}; padding:1px 6px; font-weight:600;">VOCÊ</span></span>
+    </header>
+
+    <div style="display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px 24px; border-bottom:4px solid {{c.linha}}; padding-bottom:20px;">
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.12em; color:{{c.tinta2}};">PAINEL / CRIAR LOTE</span>
+        <h1 style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:clamp(60px, 9vw, 132px); line-height:.82; margin:0; text-transform:uppercase;">Novo lote <span style="color:{{c.tinta2}};">025</span></h1>
+      </div>
+      <span style="font-size:18px; max-width:420px;">Escolha o carro na Tabela FIPE, ajuste as regras e solte no pátio.</span>
+    </div>
+
+    <div style="display:flex; flex-wrap:wrap; gap:36px; align-items:flex-start;">
+      <div style="flex:1 1 560px; min-width:0; display:flex; flex-direction:column; gap:28px;">
+
+        <section aria-labelledby="f-carro" style="background:{{c.papel}}; border:3px solid {{c.linha}}; box-shadow:6px 6px 0 {{c.sombra}};">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; padding:12px 20px; border-bottom:3px solid {{c.linha}};">
+            <h2 id="f-carro" style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:28px; margin:0; text-transform:uppercase;"><span style="font-family:'IBM Plex Mono', monospace; font-size:14px; font-weight:500; margin-right:10px;">01</span>O carro</h2>
+            <span style="display:inline-flex; align-items:center; gap:7px; font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.12em; color:{{fipe.cor}};"><span style="width:8px; height:8px; border-radius:50%; background:{{fipe.cor}}; animation:{{fipe.anim}};"></span>{{fipe.txt}}</span>
+          </div>
+          <div style="padding:20px; display:flex; flex-direction:column; gap:16px;">
+            <sc-if value="{{erro}}" hint-placeholder-val="{{false}}">
+              <div role="alert" style="border:3px dashed {{c.ferrugem}}; padding:18px; display:flex; flex-wrap:wrap; gap:14px 20px; align-items:center;">
+                <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true" style="flex-shrink:0;"><rect x="4" y="8" width="36" height="28" fill="none" stroke="{{c.ferrugem}}" stroke-width="3"></rect><path d="M4 16 H40" stroke="{{c.ferrugem}}" stroke-width="3"></path><path d="M14 22 L30 32 M30 22 L14 32" stroke="{{c.ferrugem}}" stroke-width="3"></path></svg>
+                <div style="flex:1 1 260px; display:flex; flex-direction:column; gap:4px;">
+                  <strong style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:26px; line-height:1; text-transform:uppercase; color:{{c.ferrugem}};">A tabela FIPE não respondeu.</strong>
+                  <span style="font-size:17px; line-height:1.4;">Tente de novo em instantes. O resto do formulário continua aqui, do jeito que você deixou.</span>
+                </div>
+                <button type="button" onClick="{{tentar}}" style="min-height:50px; padding:8px 18px 6px; border:3px solid {{c.linha}}; background:{{c.papel}}; color:{{c.tinta}}; box-shadow:4px 4px 0 {{c.sombra}}; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:20px; text-transform:uppercase; cursor:pointer; border-radius:0;">{{tentarTxt}}</button>
+              </div>
+            </sc-if>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap:14px;">
+              <label style="display:flex; flex-direction:column; gap:6px; font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.1em;">1 · MARCA
+                <select value="{{marca}}" onChange="{{onMarca}}" disabled="{{erro}}" style="min-height:50px; border:3px solid {{selBorda}}; background:{{c.fundo}}; color:{{c.tinta}}; font-family:'Newsreader', Georgia, serif; font-size:18px; padding:6px 10px; border-radius:0; opacity:{{selOpac}};">
+                  <sc-for list="{{marcas}}" as="o" hint-placeholder-count="5"><option value="{{o}}">{{o}}</option></sc-for>
+                </select>
+              </label>
+              <label style="display:flex; flex-direction:column; gap:6px; font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.1em;">2 · MODELO
+                <select value="{{modelo}}" onChange="{{onModelo}}" disabled="{{erro}}" style="min-height:50px; border:3px solid {{selBorda}}; background:{{c.fundo}}; color:{{c.tinta}}; font-family:'Newsreader', Georgia, serif; font-size:18px; padding:6px 10px; border-radius:0; opacity:{{selOpac}};">
+                  <sc-for list="{{modelos}}" as="o" hint-placeholder-count="3"><option value="{{o}}">{{o}}</option></sc-for>
+                </select>
+              </label>
+              <label style="display:flex; flex-direction:column; gap:6px; font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.1em;">3 · ANO / COMBUSTÍVEL
+                <select value="{{anoId}}" onChange="{{onAno}}" disabled="{{erro}}" style="min-height:50px; border:3px solid {{selBorda}}; background:{{c.fundo}}; color:{{c.tinta}}; font-family:'Newsreader', Georgia, serif; font-size:18px; padding:6px 10px; border-radius:0; opacity:{{selOpac}};">
+                  <sc-for list="{{anos}}" as="o" hint-placeholder-count="3"><option value="{{o.id}}">{{o.label}}</option></sc-for>
+                </select>
+              </label>
+            </div>
+            <sc-if value="{{ok}}" hint-placeholder-val="{{true}}">
+              <div style="display:flex; flex-wrap:wrap; gap:8px 28px; align-items:baseline; background:{{c.fundo}}; border:2px dashed {{c.tracejado}}; padding:12px 14px; font-family:'IBM Plex Mono', monospace;">
+                <span style="font-size:11px; letter-spacing:.14em; color:{{c.tinta2}};">REFERÊNCIA FIPE · OUT/2026</span>
+                <span style="font-size:24px; font-weight:600;">{{fipeTxt}}</span>
+                <span style="font-size:13px; color:{{c.tinta2}};">{{carroTxt}}</span>
+              </div>
+            </sc-if>
+          </div>
+        </section>
+
+        <section aria-labelledby="f-img" style="background:{{c.papel}}; border:3px solid {{c.linha}}; box-shadow:6px 6px 0 {{c.sombra}};">
+          <div style="padding:12px 20px; border-bottom:3px solid {{c.linha}};">
+            <h2 id="f-img" style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:28px; margin:0; text-transform:uppercase;"><span style="font-family:'IBM Plex Mono', monospace; font-size:14px; font-weight:500; margin-right:10px;">02</span>A imagem</h2>
+          </div>
+          <div style="padding:20px; display:flex; flex-direction:column; gap:14px;">
+            <label style="display:flex; flex-direction:column; gap:6px; font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.1em;">URL DA IMAGEM · SUGERIDA AUTOMATICAMENTE
+              <input type="url" name="url" value="{{campos.url}}" onChange="{{onCampo}}" disabled="{{semFoto}}" style="min-height:50px; box-sizing:border-box; border:3px solid {{c.linha}}; background:{{c.fundo}}; color:{{c.tinta}}; font-family:'IBM Plex Mono', monospace; font-size:15px; padding:8px 12px; border-radius:0; letter-spacing:0; opacity:{{urlOpac}};">
+            </label>
+            <label style="display:flex; flex-direction:column; gap:6px; font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.1em;">CRÉDITO DA IMAGEM
+              <input type="text" name="credito" value="{{campos.credito}}" onChange="{{onCampo}}" style="min-height:50px; box-sizing:border-box; border:3px solid {{c.linha}}; background:{{c.fundo}}; color:{{c.tinta}}; font-family:'Newsreader', Georgia, serif; font-size:17px; padding:8px 12px; border-radius:0; letter-spacing:0;">
+            </label>
+            <label style="display:flex; align-items:center; gap:12px; min-height:44px; cursor:pointer; font-size:17px;">
+              <input type="checkbox" checked="{{semFoto}}" onChange="{{onSemFoto}}" style="width:24px; height:24px; accent-color:{{c.ocre}}; margin:0;">
+              Sem foto. Usar a ilustração padrão do pátio.
+            </label>
+          </div>
+        </section>
+
+        <section aria-labelledby="f-regras" style="background:{{c.papel}}; border:3px solid {{c.linha}}; box-shadow:6px 6px 0 {{c.sombra}};">
+          <div style="padding:12px 20px; border-bottom:3px solid {{c.linha}};">
+            <h2 id="f-regras" style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:28px; margin:0; text-transform:uppercase;"><span style="font-family:'IBM Plex Mono', monospace; font-size:14px; font-weight:500; margin-right:10px;">03</span>As regras</h2>
+          </div>
+          <div style="padding:20px; display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap:16px;">
+            <label style="grid-column:1 / -1; display:flex; flex-direction:column; gap:6px; font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.1em;">TÍTULO DO LOTE
+              <input type="text" name="titulo" value="{{campos.titulo}}" onChange="{{onCampo}}" style="min-height:50px; box-sizing:border-box; border:3px solid {{c.linha}}; background:{{c.fundo}}; color:{{c.tinta}}; font-family:'Newsreader', Georgia, serif; font-size:19px; padding:8px 12px; border-radius:0; letter-spacing:0;">
+            </label>
+            <label style="display:flex; flex-direction:column; gap:6px; font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.1em;">LANCE INICIAL · R$
+              <input type="text" inputmode="numeric" name="inicial" value="{{campos.inicial}}" onChange="{{onCampo}}" style="min-height:50px; box-sizing:border-box; border:3px solid {{c.linha}}; background:{{c.fundo}}; color:{{c.tinta}}; font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:20px; padding:8px 12px; border-radius:0; letter-spacing:0;">
+            </label>
+            <label style="display:flex; flex-direction:column; gap:6px; font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.1em;">INCREMENTO MÍNIMO · R$
+              <input type="text" inputmode="numeric" name="incremento" value="{{campos.incremento}}" onChange="{{onCampo}}" style="min-height:50px; box-sizing:border-box; border:3px solid {{c.linha}}; background:{{c.fundo}}; color:{{c.tinta}}; font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:20px; padding:8px 12px; border-radius:0; letter-spacing:0;">
+            </label>
+            <label style="display:flex; flex-direction:column; gap:6px; font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.1em;">INÍCIO
+              <input type="datetime-local" name="inicio" value="{{campos.inicio}}" onChange="{{onCampo}}" style="min-height:50px; box-sizing:border-box; border:3px solid {{c.linha}}; background:{{c.fundo}}; color:{{c.tinta}}; font-family:'IBM Plex Mono', monospace; font-size:16px; padding:8px 12px; border-radius:0; letter-spacing:0; color-scheme:{{esquema}};">
+            </label>
+            <label style="display:flex; flex-direction:column; gap:6px; font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.1em;">FIM
+              <input type="datetime-local" name="fim" value="{{campos.fim}}" onChange="{{onCampo}}" style="min-height:50px; box-sizing:border-box; border:3px solid {{c.linha}}; background:{{c.fundo}}; color:{{c.tinta}}; font-family:'IBM Plex Mono', monospace; font-size:16px; padding:8px 12px; border-radius:0; letter-spacing:0; color-scheme:{{esquema}};">
+            </label>
+            <p style="grid-column:1 / -1; margin:0; font-size:15px; color:{{c.tinta2}};">Lance nos 2 minutos finais estica o fim em +2 min. Depois do primeiro lance, o lote não pode mais ser cancelado.</p>
+          </div>
+        </section>
+      </div>
+
+      <aside style="flex:1 1 380px; min-width:0; max-width:480px; display:flex; flex-direction:column; gap:20px;">
+        <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.12em;">ASSIM ELE APARECE NA VITRINE</span>
+        <div style="position:relative; padding-top:22px; display:flex;">
+          <div style="position:absolute; left:20px; top:0; z-index:3; transform:rotate(-4deg);">
+            <div style="position:relative; display:inline-flex;">
+              <svg width="60" height="60" viewBox="0 0 60 60" aria-hidden="true" style="position:absolute; left:-24px; top:-22px; z-index:2; overflow:visible;"><path d="M43 52 C32 40 24 16 4 2" fill="none" stroke="{{c.tinta}}" stroke-width="2.5"></path><path d="M43 52 C34 36 16 24 -6 20" fill="none" stroke="{{c.tinta}}" stroke-width="2.5"></path></svg>
+              <div style="background:{{c.linha}}; padding:3px; clip-path:polygon(14px 0,100% 0,100% 100%,14px 100%,0 calc(100% - 14px),0 14px);">
+                <div style="position:relative; background:{{c.ocre}}; color:{{c.sobreOcre}}; clip-path:polygon(13px 0,100% 0,100% 100%,13px 100%,0 calc(100% - 13px),0 13px); padding:6px 14px 4px 30px; display:flex; flex-direction:column;">
+                  <span style="position:absolute; left:9px; top:50%; width:8px; height:8px; margin-top:-7px; border-radius:50%; background:{{c.fundo}}; border:3px solid {{c.linha}};"></span>
+                  <span style="font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.14em;">LOTE</span>
+                  <span style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:34px; line-height:.9;">025</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="flex:1 1 auto; display:flex; flex-direction:column; background:{{c.papel}}; border:3px solid {{c.linha}}; box-shadow:6px 6px 0 {{c.sombra}};">
+            <div style="position:relative; height:220px; display:flex; align-items:flex-end; justify-content:center; padding-bottom:12px; box-sizing:border-box; border-bottom:3px solid {{c.linha}}; background-color:{{img.fundo}}; background-image:{{img.padrao}}; background-size:{{img.tam}};">
+              <sc-if value="{{ok}}" hint-placeholder-val="{{true}}">
+                <svg viewBox="0 0 240 96" role="img" aria-label="Prévia do carro" style="width:80%;"><path d="{{carro.corpo}}" fill="{{img.corpo}}" stroke="{{c.tinta}}" stroke-width="{{img.traco}}"></path><path d="{{carro.vidro}}" fill="{{img.vidro}}" stroke="{{c.tinta}}" stroke-width="{{img.traco}}"></path><circle cx="{{carro.r1}}" cy="74" r="16" fill="{{c.tinta}}" stroke="{{img.fundo}}" stroke-width="4"></circle><circle cx="{{carro.r1}}" cy="74" r="5" fill="{{img.fundo}}"></circle><circle cx="{{carro.r2}}" cy="74" r="16" fill="{{c.tinta}}" stroke="{{img.fundo}}" stroke-width="4"></circle><circle cx="{{carro.r2}}" cy="74" r="5" fill="{{img.fundo}}"></circle><path d="M0 92 L240 92" stroke="{{c.tinta}}" stroke-width="2" stroke-dasharray="6 5"></path></svg>
+              </sc-if>
+              <sc-if value="{{erro}}" hint-placeholder-val="{{false}}">
+                <span style="align-self:center; font-family:'IBM Plex Mono', monospace; font-size:13px; color:{{c.tinta2}}; text-align:center; padding:0 24px;">Sem carro escolhido.<br>A FIPE está de folga.</span>
+              </sc-if>
+              <span style="position:absolute; right:12px; top:12px; background:{{c.papel}}; border:2px solid {{c.linha}}; font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.08em; padding:3px 7px;">{{img.selo}}</span>
+            </div>
+            <div style="padding:16px 18px 0; display:flex; flex-direction:column; gap:6px;">
+              <h3 style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:30px; line-height:.95; margin:0; text-transform:uppercase;">{{tituloPrev}}</h3>
+              <span style="font-family:'IBM Plex Mono', monospace; font-size:13px; color:{{c.tinta2}};">{{metaPrev}}</span>
+            </div>
+            <div style="margin-top:14px; border-top:2px dashed {{c.tracejado}};"></div>
+            <div style="padding:12px 18px 16px; display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap;">
+              <div style="display:flex; flex-direction:column; gap:3px; font-family:'IBM Plex Mono', monospace;">
+                <span style="font-size:11px; letter-spacing:.12em; color:{{c.tinta2}};">LANCE INICIAL</span>
+                <span style="font-weight:600; font-size:21px;">R$ {{campos.inicial}},00</span>
+              </div>
+              <div style="border:3px solid {{c.linha}}; padding:5px 9px; display:flex; flex-direction:column; align-items:flex-end; gap:1px;">
+                <span style="font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.14em; color:{{c.tinta2}};">ABERTURA</span>
+                <span style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:22px; line-height:1; text-transform:uppercase;">Dom 25/out</span>
+                <span style="font-family:'IBM Plex Mono', monospace; font-size:13px;">10:00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; color:{{c.tinta2}};">Imagem: {{campos.credito}}</span>
+
+        <div style="border-top:3px solid {{c.linha}}; padding-top:18px; display:flex; flex-direction:column; gap:12px;">
+          <button type="button" disabled="{{erro}}" style="min-height:62px; background:{{botao.bg}}; color:{{botao.fg}}; border:3px {{botao.borda}} {{c.linha}}; box-shadow:{{botao.sombra}}; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:28px; letter-spacing:.04em; text-transform:uppercase; padding:10px 20px 8px; cursor:pointer; border-radius:0;">Agendar lote 025</button>
+          <span style="font-size:15px; color:{{c.tinta2}};">{{botaoNota}}</span>
+          <a href="Painel.dc.html" style="align-self:flex-start; font-family:'IBM Plex Mono', monospace; font-size:13px; color:{{c.tinta}}; padding:6px 0;">Voltar ao painel sem salvar</a>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tema":{"editor":"enum","options":["claro","escuro"],"default":"claro"},"erroApi":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":1800}}'>
+const PAL = {
+  claro: { fundo:'#E8DFCB', papel:'#F5EEDF', suave:'#DDD3BC', pontos:'#C9BEA5', tinta:'#1E1C19', tinta2:'#5B5449', linha:'#1E1C19', sombra:'#1E1C19', tracejado:'#8A8273', ocre:'#E2A514', sobreOcre:'#1E1C19', ferrugem:'#A43C1E', verde:'#2E6A3E' },
+  escuro: { fundo:'#161513', papel:'#262420', suave:'#2F2C27', pontos:'#3F3B34', tinta:'#ECE4D2', tinta2:'#B3AA99', linha:'#CFC5B0', sombra:'#3A362F', tracejado:'#6E675C', ocre:'#E8AE22', sobreOcre:'#161513', ferrugem:'#E36A43', verde:'#74B585' }
+};
+const CARRO = {
+  sedan: { corpo:'M12 74 L12 60 Q14 52 30 50 L66 46 L92 28 Q96 26 104 26 L160 26 Q168 26 174 32 L190 46 L222 50 Q230 52 230 62 L230 74 Z', vidro:'M98 32 L128 32 L128 46 L80 46 Z M134 32 L166 32 L182 46 L134 46 Z', r1:58, r2:190 },
+  hatch: { corpo:'M14 74 L14 58 Q16 50 32 48 L70 44 L98 24 Q102 22 110 22 L178 22 Q190 22 196 34 L212 50 Q222 54 222 62 L222 74 Z', vidro:'M104 28 L138 28 L138 44 L80 44 Z M144 28 L178 28 Q186 28 190 36 L194 44 L144 44 Z', r1:58, r2:182 },
+  fusca: { corpo:'M16 74 Q14 56 34 52 Q50 48 60 46 Q72 22 112 18 Q156 16 178 40 Q200 44 214 56 Q224 64 222 74 Z', vidro:'M80 44 Q88 28 110 26 L110 44 Z M118 26 Q146 26 162 44 L118 44 Z', r1:62, r2:184 },
+  picape: { corpo:'M8 74 L8 52 Q10 46 22 44 L64 42 L84 20 Q86 18 92 18 L136 18 Q142 18 144 24 L148 42 L232 42 L232 74 Z', vidro:'M90 24 L116 24 L116 40 L72 40 Z M122 24 L138 24 L142 40 L122 40 Z', r1:56, r2:192 }
+};
+const FIPE = {
+  Chevrolet: { 'Opala Diplomata 4.1': ['sedan', [['1988','Gasolina',48900], ['1990','Gasolina',53200], ['1992','Gasolina',61800]]], 'Opala Comodoro 4.1': ['sedan', [['1979','Gasolina',41300], ['1985','Gasolina',44700]]], 'Chevette SL 1.6': ['sedan', [['1987','Gasolina',16900], ['1990','Álcool',15400]]] },
+  Fiat: { 'Uno Mille Way 1.0': ['hatch', [['2010','Flex',19800], ['2012','Flex',22300]]], 'Uno Mille Fire 1.0': ['hatch', [['2004','Gasolina',14200], ['2006','Flex',15900]]] },
+  Honda: { 'Civic LXS 1.8': ['sedan', [['2012','Flex',54700], ['2013','Flex',58100]]], 'Civic EXR 2.0': ['sedan', [['2014','Flex',67800], ['2016','Flex',79400]]] },
+  Toyota: { 'Corolla XEi 2.0': ['sedan', [['2014','Flex',71900], ['2015','Flex',76300], ['2016','Flex',82100]]], 'Hilux SRV 2.8 4x4': ['picape', [['2017','Diesel',176500], ['2018','Diesel',189400]]] },
+  Volkswagen: { 'Gol GTI 2.0': ['hatch', [['1995','Gasolina',29400], ['1996','Gasolina',31200]]], 'Fusca 1300': ['fusca', [['1972','Gasolina',23600], ['1974','Gasolina',24800]]], 'Santana CL 1.8': ['sedan', [['1991','Gasolina',17900]]] }
+};
+function milhar(n) { return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      erro: !!props.erroApi, carregando: false,
+      marca: 'Toyota', modelo: 'Corolla XEi 2.0', ano: '2015',
+      semFoto: false,
+      campos: { url: 'https://imagens.exemplo.com.br/fipe/corolla-xei-2015.jpg', credito: 'Foto sugerida pela busca · [AUTOR E LICENÇA]', titulo: 'Corolla XEi 2.0 · único dono, revisões em dia', inicial: '58.000', incremento: '1.000', inicio: '2026-10-25T10:00', fim: '2026-10-25T11:30' }
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.t); }
+  renderVals() {
+    const tema = this.props.tema === 'escuro' ? 'escuro' : 'claro';
+    const c = PAL[tema];
+    const s = this.state;
+    const erro = s.erro;
+    const marcas = Object.keys(FIPE);
+    const modelos = Object.keys(FIPE[s.marca]);
+    const mod = FIPE[s.marca][s.modelo] || FIPE[s.marca][modelos[0]];
+    const anos = mod[1].map((a) => ({ id: a[0], label: a[0] + ' · ' + a[1] }));
+    const linha = mod[1].find((a) => a[0] === s.ano) || mod[1][0];
+    const carro = CARRO[mod[0]];
+    const img = s.semFoto
+      ? { fundo: c.papel, padrao: 'linear-gradient(' + c.suave + ' 1px, transparent 1px), linear-gradient(90deg, ' + c.suave + ' 1px, transparent 1px)', tam: '16px 16px', corpo: c.papel, vidro: c.suave, traco: '2.5', selo: 'ILUSTRAÇÃO PADRÃO' }
+      : { fundo: c.suave, padrao: 'radial-gradient(' + c.pontos + ' 1.3px, transparent 1.7px)', tam: '8px 8px', corpo: c.tinta, vidro: c.suave, traco: '0', selo: 'FOTO SUGERIDA' };
+    if (erro) img.selo = 'AGUARDANDO FIPE';
+    const set = (k) => (e) => this.setState({ [k]: e.target.value });
+    return {
+      c, erro, ok: !erro, esquema: tema === 'escuro' ? 'dark' : 'light',
+      fipe: erro
+        ? (s.carregando ? { txt: 'CONSULTANDO A FIPE…', cor: c.tinta2, anim: 'la-pulsa .8s infinite' } : { txt: 'FIPE FORA DO AR', cor: c.ferrugem, anim: 'la-pulsa 1.2s infinite' })
+        : { txt: 'TABELA FIPE CONECTADA', cor: c.verde, anim: 'none' },
+      tentarTxt: s.carregando ? 'Consultando…' : 'Tentar de novo',
+      tentar: () => {
+        if (this.state.carregando) return;
+        this.setState({ carregando: true });
+        this.t = setTimeout(() => this.setState({ carregando: false, erro: false }), 1500);
+      },
+      marcas, modelos, anos,
+      marca: erro ? '' : s.marca, modelo: erro ? '' : s.modelo, anoId: erro ? '' : linha[0],
+      onMarca: (e) => { const m = e.target.value; const mo = Object.keys(FIPE[m])[0]; this.setState({ marca: m, modelo: mo, ano: FIPE[m][mo][1][0][0] }); },
+      onModelo: (e) => { const mo = e.target.value; this.setState({ modelo: mo, ano: FIPE[s.marca][mo][1][0][0] }); },
+      onAno: set('ano'),
+      selBorda: erro ? c.tracejado : c.linha,
+      selOpac: erro ? '0.5' : '1',
+      fipeTxt: 'R$ ' + milhar(linha[2]) + ',00',
+      carroTxt: s.marca + ' · ' + s.modelo + ' · ' + linha[0] + ' · ' + linha[1],
+      carro, img,
+      semFoto: s.semFoto,
+      urlOpac: s.semFoto ? '0.5' : '1',
+      onSemFoto: (e) => this.setState({ semFoto: e.target.checked }),
+      campos: s.campos,
+      onCampo: (e) => { const n = e.target.name, v = e.target.value; this.setState({ campos: Object.assign({}, this.state.campos, { [n]: v }) }); },
+      tituloPrev: erro ? 'Carro a definir' : s.modelo,
+      metaPrev: erro ? '— · — · FIPE —' : linha[0] + ' · ' + linha[1] + ' · FIPE R$ ' + milhar(linha[2]),
+      botao: erro
+        ? { bg: c.suave, fg: c.tinta2, borda: 'dashed', sombra: 'none' }
+        : { bg: c.ocre, fg: c.sobreOcre, borda: 'solid', sombra: '6px 6px 0 ' + c.sombra },
+      botaoNota: erro ? 'Sem marca, modelo e ano não tem lote. O resto já está guardado.' : 'Ele aparece em “Agendados” na hora e abre sozinho no horário marcado.'
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Auditoria do lote 018</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+@keyframes la-pulsa{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes la-bate{0%{transform:scale(2.6) rotate(-18deg);opacity:0}50%{transform:scale(.88) rotate(-4deg);opacity:1}70%{transform:scale(1.05) rotate(-7deg)}100%{transform:scale(1) rotate(-6deg);opacity:1}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+</helmet>
+<div style="background:{{c.fundo}}; color:{{c.tinta}}; font-family:'Newsreader', Georgia, serif; min-height:100vh;">
+  <div style="max-width:1320px; margin:0 auto; padding:20px clamp(16px, 4vw, 56px) 72px; display:flex; flex-direction:column; gap:36px;">
+
+    <header style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:14px;">
+      <a href="Vitrine.dc.html" aria-label="LanceAuto, vitrine" style="display:inline-flex; flex-direction:column; text-decoration:none; background:transparent; color:{{c.tinta}}; border:3px solid {{c.tinta}}; border-radius:7px; box-shadow:4px 4px 0 {{c.sombra}}; overflow:hidden;">
+        <span aria-hidden="true" style="display:flex; justify-content:center; background:#E2A514; color:#FFFFFF; padding:3px 7px 2px 10px; font-family:'IBM Plex Mono', monospace; font-size:8px; font-weight:600; letter-spacing:.42em; line-height:1;">BRASIL</span>
+        <span style="display:flex; align-items:center; gap:8px; margin:0 3px 3px; padding:5px 9px 3px; border:1.5px solid {{c.tinta}}; border-top:none; border-radius:0 0 4px 4px;"><span aria-hidden="true" style="width:5px; height:5px; border-radius:50%; background:{{c.tinta}};"></span><span style="font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:28px; line-height:1; letter-spacing:.1em;">LANCE·AUTO</span><span aria-hidden="true" style="width:5px; height:5px; border-radius:50%; background:{{c.tinta}};"></span></span>
+      </a>
+      <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.1em; color:{{c.tinta2}};">AUDITORIA PÚBLICA · NÃO PRECISA DE LOGIN</span>
+    </header>
+
+    <section style="display:flex; flex-wrap:wrap; gap:28px 40px; align-items:center; justify-content:space-between; border-bottom:4px solid {{c.linha}}; padding:12px 0 28px 22px;">
+      <div style="display:flex; flex-wrap:wrap; gap:18px 28px; align-items:flex-end; flex:1 1 520px; min-width:0;">
+        <div style="position:relative; display:inline-flex; transform:rotate(-4deg);">
+          <svg width="70" height="80" viewBox="0 0 70 80" aria-hidden="true" style="position:absolute; left:-28px; top:-30px; z-index:2; overflow:visible;"><path d="M48 72 C36 56 26 24 4 2" fill="none" stroke="{{c.tinta}}" stroke-width="3"></path><path d="M48 72 C38 50 18 32 -8 26" fill="none" stroke="{{c.tinta}}" stroke-width="3"></path></svg>
+          <div style="background:{{c.linha}}; padding:3px; clip-path:polygon(20px 0,100% 0,100% 100%,20px 100%,0 calc(100% - 20px),0 20px);">
+            <div style="position:relative; background:{{c.papel}}; color:{{c.tinta}}; clip-path:polygon(19px 0,100% 0,100% 100%,19px 100%,0 calc(100% - 19px),0 19px); padding:10px 20px 8px 40px; display:flex; flex-direction:column;">
+              <span style="position:absolute; left:12px; top:50%; width:11px; height:11px; margin-top:-8px; border-radius:50%; background:{{c.fundo}}; border:3px solid {{c.linha}};"></span>
+              <span style="font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.14em;">LOTE</span>
+              <span style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:64px; line-height:.86;">018</span>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1 1 300px; min-width:0; display:flex; flex-direction:column; gap:8px;">
+          <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.12em; color:{{c.tinta2}};">AUDITORIA DO HISTÓRICO</span>
+          <h1 style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:clamp(46px, 6.5vw, 96px); line-height:.84; margin:0; text-transform:uppercase;">Gol GTI 2.0 <span style="color:{{c.tinta2}};">1996</span></h1>
+          <span style="font-family:'IBM Plex Mono', monospace; font-size:14px;">Arrematado por Licitante C3E8 · R$ 33.500,00 · 22/10/2026 19:00:49</span>
+        </div>
+      </div>
+
+      <div aria-live="polite" style="flex:0 1 420px; min-width:0; display:flex; flex-direction:column; gap:14px; align-items:flex-start;">
+        <sc-if value="{{pronto}}" hint-placeholder-val="{{true}}">
+          <span role="status" style="display:inline-block; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:clamp(52px, 7vw, 84px); letter-spacing:.06em; text-transform:uppercase; color:{{v.cor}}; border:6px solid {{v.cor}}; outline:3px solid {{v.cor}}; outline-offset:5px; padding:8px 22px 2px; line-height:1; animation:la-bate .6s cubic-bezier(.2,.8,.3,1) both; transform:rotate(-6deg); margin:10px 0 8px 8px;">{{v.carimbo}}</span>
+          <p style="margin:0; font-size:18px; line-height:1.4;">{{v.frase}}</p>
+        </sc-if>
+        <sc-if value="{{verificando}}" hint-placeholder-val="{{false}}">
+          <span style="display:inline-flex; align-items:center; gap:12px; font-family:'IBM Plex Mono', monospace; font-size:18px; padding:20px 0;"><span style="width:12px; height:12px; border-radius:50%; background:{{c.ocre}}; animation:la-pulsa .7s infinite;"></span>Refazendo a conta, elo por elo…</span>
+        </sc-if>
+        <button type="button" onClick="{{verificar}}" style="min-height:46px; padding:6px 16px 4px; border:3px solid {{c.linha}}; background:{{c.papel}}; color:{{c.tinta}}; box-shadow:4px 4px 0 {{c.sombra}}; font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:18px; text-transform:uppercase; cursor:pointer; border-radius:0;">Verificar de novo</button>
+      </div>
+    </section>
+
+    <div style="display:flex; flex-wrap:wrap; gap:36px; align-items:flex-start;">
+
+      <section aria-labelledby="tab-t" style="flex:2 1 640px; min-width:0; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;">
+          <h2 id="tab-t" style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:40px; line-height:1; margin:0; text-transform:uppercase;">Histórico completo</h2>
+          <span style="flex:1 1 40px; border-top:2px dashed {{c.tracejado}};"></span>
+          <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; color:{{c.tinta2}};">17 LANCES · DO PRIMEIRO AO MARTELO</span>
+        </div>
+
+        <sc-if value="{{mostraFalha}}" hint-placeholder-val="{{false}}">
+          <div role="alert" style="display:flex; gap:12px; align-items:flex-start; background:{{c.papel}}; border:3px solid {{c.ferrugem}}; padding:14px 16px; color:{{c.tinta}}; font-size:17px; line-height:1.4;">
+            <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" style="flex-shrink:0; margin-top:1px;"><path d="M11 2 L21 20 H1 Z" fill="none" stroke="{{c.ferrugem}}" stroke-width="2.5" stroke-linejoin="miter"></path><path d="M11 8 V13 M11 15.5 V17.5" stroke="{{c.ferrugem}}" stroke-width="2.5"></path></svg>
+            <span><strong style="color:{{c.ferrugem}};">Linha 09:</strong> o lance gravado (R$ 27.500,00) não gera o hash guardado para ele, que corresponde a R$ 25.700,00. Alguém mexeu no valor depois do fato, e todos os elos seguintes herdam o problema.</span>
+          </div>
+        </sc-if>
+
+        <div style="overflow-x:auto; background:{{c.papel}}; border:3px solid {{c.linha}}; box-shadow:6px 6px 0 {{c.sombra}};">
+          <table style="width:100%; min-width:780px; border-collapse:collapse; font-family:'IBM Plex Mono', monospace; font-size:14px;">
+            <caption style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);">Histórico de lances do lote 018 com hash de cada linha</caption>
+            <thead>
+              <tr style="text-align:left; font-size:11px; letter-spacing:.12em; color:{{c.tinta2}};">
+                <th scope="col" style="padding:12px 16px; font-weight:500; border-bottom:3px solid {{c.linha}};">Nº</th>
+                <th scope="col" style="padding:12px 8px; font-weight:500; border-bottom:3px solid {{c.linha}};">LICITANTE</th>
+                <th scope="col" style="padding:12px 8px; font-weight:500; border-bottom:3px solid {{c.linha}}; text-align:right;">VALOR</th>
+                <th scope="col" style="padding:12px 8px; font-weight:500; border-bottom:3px solid {{c.linha}};">HORÁRIO</th>
+                <th scope="col" style="padding:12px 8px; font-weight:500; border-bottom:3px solid {{c.linha}};">HASH</th>
+                <th scope="col" style="padding:12px 16px 12px 8px; font-weight:500; border-bottom:3px solid {{c.linha}};">CONFERE?</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{linhas}}" as="l" hint-placeholder-count="17">
+                <tr style="background:{{l.fundo}}; opacity:{{l.opac}};">
+                  <td style="padding:10px 16px; border-bottom:2px dashed {{c.tracejado}}; border-left:6px solid {{l.marca}}; color:{{c.tinta2}};">{{l.n}}</td>
+                  <td style="padding:10px 8px; border-bottom:2px dashed {{c.tracejado}}; white-space:nowrap;">Licitante {{l.quem}}</td>
+                  <td style="padding:10px 8px; border-bottom:2px dashed {{c.tracejado}}; text-align:right; font-weight:600; white-space:nowrap;">{{l.valor}}</td>
+                  <td style="padding:10px 8px; border-bottom:2px dashed {{c.tracejado}}; color:{{c.tinta2}};">{{l.hora}}</td>
+                  <td style="padding:10px 8px; border-bottom:2px dashed {{c.tracejado}}; max-width:300px;">
+                    <span style="display:flex; align-items:flex-start; gap:8px;">
+                      <code style="font-family:'IBM Plex Mono', monospace; font-size:13px; word-break:break-all; flex:1 1 auto;">{{l.hashTxt}}</code>
+                      <button type="button" aria-expanded="{{l.aberto}}" onClick="{{l.alterna}}" style="flex-shrink:0; min-height:30px; padding:2px 8px; border:2px solid {{c.linha}}; background:transparent; color:{{c.tinta}}; font-family:'IBM Plex Mono', monospace; font-size:11px; cursor:pointer; border-radius:0;">{{l.botao}}</button>
+                    </span>
+                  </td>
+                  <td style="padding:10px 16px 10px 8px; border-bottom:2px dashed {{c.tracejado}}; white-space:nowrap; color:{{l.statusCor}}; font-weight:600;">{{l.status}}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; font-family:'IBM Plex Mono', monospace; font-size:12px; color:{{c.tinta2}};">
+          <span>Hash final esperado pelo comprovante: 9f2c…e81a</span>
+          <a href="Comprovante.dc.html" style="color:{{c.tinta2}};">Ver comprovante do lote</a>
+        </div>
+      </section>
+
+      <aside aria-labelledby="como-t" style="flex:1 1 320px; min-width:0; display:flex; flex-direction:column; gap:18px;">
+        <h2 id="como-t" style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:40px; line-height:.9; margin:0; text-transform:uppercase;">Como a gente confere</h2>
+        <p style="margin:0; font-size:18px; line-height:1.45;">Cada lance vira um carimbo digital, o hash. Esse carimbo é feito com os dados do lance <em>e</em> com o carimbo do lance anterior. Fica uma corrente: mexa num elo e todos os de baixo deixam de bater.</p>
+        <div aria-hidden="true" style="display:flex; flex-direction:column; align-items:flex-start; gap:0; font-family:'IBM Plex Mono', monospace; font-size:13px;">
+          <sc-for list="{{elos}}" as="e" hint-placeholder-count="3">
+            <div style="display:flex; flex-direction:column; align-items:flex-start;">
+              <div style="display:flex; align-items:stretch; border:3px solid {{e.borda}}; background:{{c.papel}};">
+                <span style="padding:8px 10px; border-right:3px solid {{e.borda}}; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:22px;">{{e.n}}</span>
+                <span style="padding:8px 12px; display:flex; flex-direction:column; gap:2px;"><span>{{e.dado}}</span><span style="color:{{e.cor}};">{{e.hash}}</span></span>
+              </div>
+              <span style="margin-left:22px; width:3px; height:22px; background:{{e.borda}};"></span>
+            </div>
+          </sc-for>
+          <span style="font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:18px; text-transform:uppercase; padding-top:2px;">… até o martelo</span>
+        </div>
+        <ol style="margin:0; padding:0; list-style:none; border-top:3px solid {{c.linha}};">
+          <li style="display:flex; gap:14px; padding:12px 0; border-bottom:2px dashed {{c.tracejado}}; font-size:16px; line-height:1.4;"><span style="font-family:'IBM Plex Mono', monospace; font-size:13px; padding-top:2px;">1.</span><span>Refazemos o hash de cada linha com os dados que estão na tabela.</span></li>
+          <li style="display:flex; gap:14px; padding:12px 0; border-bottom:2px dashed {{c.tracejado}}; font-size:16px; line-height:1.4;"><span style="font-family:'IBM Plex Mono', monospace; font-size:13px; padding-top:2px;">2.</span><span>Comparamos com o hash guardado na hora do lance.</span></li>
+          <li style="display:flex; gap:14px; padding:12px 0; border-bottom:2px dashed {{c.tracejado}}; font-size:16px; line-height:1.4;"><span style="font-family:'IBM Plex Mono', monospace; font-size:13px; padding-top:2px;">3.</span><span>Tudo bate e o último é igual ao do comprovante? Íntegro. Qualquer diferença? Adulterado, e mostramos onde.</span></li>
+        </ol>
+        <p style="margin:0; font-size:15px; color:{{c.tinta2}};">Você não precisa confiar na gente. Precisa só de uma calculadora de SHA-256 e paciência.</p>
+      </aside>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tema":{"editor":"enum","options":["claro","escuro"],"default":"claro"},"veredito":{"editor":"enum","options":["integro","adulterado"],"default":"integro"},"$preview":{"width":1440,"height":2000}}'>
+const PAL = {
+  claro: { fundo:'#E8DFCB', papel:'#F5EEDF', suave:'#DDD3BC', tinta:'#1E1C19', tinta2:'#5B5449', linha:'#1E1C19', sombra:'#1E1C19', tracejado:'#8A8273', ocre:'#E2A514', sobreOcre:'#1E1C19', ferrugem:'#A43C1E', verde:'#2E6A3E', falha:'rgba(164,60,30,.12)' },
+  escuro: { fundo:'#161513', papel:'#262420', suave:'#2F2C27', tinta:'#ECE4D2', tinta2:'#B3AA99', linha:'#CFC5B0', sombra:'#3A362F', tracejado:'#6E675C', ocre:'#E8AE22', sobreOcre:'#161513', ferrugem:'#E36A43', verde:'#74B585', falha:'rgba(227,106,67,.16)' }
+};
+const FINAL = '9f2c41d07ab36e58c1f0e2d94b7a6c3851e09fd2a4c7be16f3d58a20c947e81a';
+const LANCES = [
+  ['18:12:40','04DE',22000], ['18:14:02','7F3A',22500], ['18:16:55','B21C',23000], ['18:19:21','C3E8',24000],
+  ['18:21:04','04DE',24500], ['18:24:37','7F3A',25500], ['18:27:12','C3E8',26000], ['18:29:50','04DE',26500],
+  ['18:31:18','B21C',27500], ['18:33:41','C3E8',28000], ['18:36:12','9A6F',29000], ['18:38:47','B21C',29500],
+  ['18:40:33','C3E8',30000], ['18:42:10','9A6F',30500], ['18:57:02','C3E8',31000], ['18:58:11','9A6F',32000],
+  ['18:58:49','C3E8',33500]
+];
+function hex(seed) {
+  let x = (seed * 2654435761) >>> 0;
+  let out = '';
+  for (let i = 0; i < 64; i++) { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; out += (x & 15).toString(16); }
+  return out;
+}
+function milhar(n) { return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+const FALHA = 8;
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { abertos: {}, verificando: false, rodada: 0 }; }
+  componentWillUnmount() { clearTimeout(this.t); }
+  renderVals() {
+    const c = PAL[this.props.tema === 'escuro' ? 'escuro' : 'claro'];
+    const s = this.state;
+    const adulterado = this.props.veredito === 'adulterado';
+    const linhas = LANCES.map((b, i) => {
+      const h = i === LANCES.length - 1 ? FINAL : hex(i + 7);
+      const aberto = !!s.abertos[i];
+      let status = 'CONFERE', statusCor = c.verde, marca = 'transparent', fundo = 'transparent', opac = '1';
+      if (adulterado && i === FALHA) { status = 'NÃO CONFERE'; statusCor = c.ferrugem; marca = c.ferrugem; fundo = c.falha; }
+      else if (adulterado && i > FALHA) { status = 'ELO QUEBRADO'; statusCor = c.ferrugem; opac = '.62'; }
+      if (s.verificando) { status = '…'; statusCor = c.tinta2; }
+      return {
+        n: String(i + 1).padStart(2, '0'), quem: b[1], valor: 'R$ ' + milhar(b[2]) + ',00', hora: b[0],
+        hashTxt: aberto ? h : h.slice(0, 6) + '…' + h.slice(-4),
+        aberto: aberto ? 'true' : 'false', botao: aberto ? 'recolher' : 'ver inteiro',
+        alterna: () => this.setState({ abertos: Object.assign({}, this.state.abertos, { [i]: !aberto }) }),
+        status, statusCor, marca, fundo, opac
+      };
+    });
+    const v = adulterado
+      ? { carimbo: 'Adulterado', cor: c.ferrugem, frase: '8 de 17 lances conferem. A corrente quebra na linha 09, e o hash final não bate com o comprovante.' }
+      : { carimbo: 'Íntegro', cor: c.verde, frase: '17 de 17 lances conferem e o hash final é o mesmo do comprovante. Ninguém mexeu em nada depois do martelo.' };
+    const elos = adulterado
+      ? [
+          { n: '08', dado: '04DE · R$ 26.500', hash: 'a41c…09be', borda: c.linha, cor: c.verde },
+          { n: '09', dado: 'B21C · R$ 27.500', hash: 'esperado 5d0e…, achou 77f1…', borda: c.ferrugem, cor: c.ferrugem },
+          { n: '10', dado: 'C3E8 · R$ 28.000', hash: 'herda o erro', borda: c.ferrugem, cor: c.ferrugem }
+        ]
+      : [
+          { n: '01', dado: '04DE · R$ 22.000', hash: 'b7e2…41a0', borda: c.linha, cor: c.verde },
+          { n: '02', dado: '7F3A · R$ 22.500 + b7e2…', hash: '0c9d…f31e', borda: c.linha, cor: c.verde },
+          { n: '03', dado: 'B21C · R$ 23.000 + 0c9d…', hash: '58aa…2b07', borda: c.linha, cor: c.verde }
+        ];
+    return {
+      c, v, linhas, elos,
+      pronto: !s.verificando, verificando: s.verificando,
+      mostraFalha: adulterado && !s.verificando,
+      verificar: () => {
+        if (this.state.verificando) return;
+        this.setState({ verificando: true });
+        this.t = setTimeout(() => this.setState({ verificando: false }), 1400);
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Carteira</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+@keyframes la-vira{0%{transform:rotateX(90deg)}60%{transform:rotateX(-12deg)}100%{transform:rotateX(0)}}
+@keyframes la-entra{0%{transform:translateY(-16px);opacity:0}100%{transform:none;opacity:1}}
+@keyframes la-marca{0%{background-color:rgba(226,165,20,.55)}100%{background-color:rgba(226,165,20,0)}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+</helmet>
+<div style="background:{{c.fundo}}; color:{{c.tinta}}; font-family:'Newsreader', Georgia, serif; min-height:100vh;">
+  <div style="max-width:1320px; margin:0 auto; padding:20px clamp(16px, 4vw, 56px) 64px; display:flex; flex-direction:column; gap:36px;">
+
+    <header style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:14px 24px;">
+      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px 28px;">
+        <a href="Vitrine.dc.html" aria-label="LanceAuto, vitrine" style="display:inline-flex; flex-direction:column; text-decoration:none; background:transparent; color:{{c.tinta}}; border:3px solid {{c.tinta}}; border-radius:7px; box-shadow:4px 4px 0 {{c.sombra}}; overflow:hidden;">
+          <span aria-hidden="true" style="display:flex; justify-content:center; background:#E2A514; color:#FFFFFF; padding:3px 7px 2px 10px; font-family:'IBM Plex Mono', monospace; font-size:8px; font-weight:600; letter-spacing:.42em; line-height:1;">BRASIL</span>
+          <span style="display:flex; align-items:center; gap:8px; margin:0 3px 3px; padding:5px 9px 3px; border:1.5px solid {{c.tinta}}; border-top:none; border-radius:0 0 4px 4px;"><span aria-hidden="true" style="width:5px; height:5px; border-radius:50%; background:{{c.tinta}};"></span><span style="font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:28px; line-height:1; letter-spacing:.1em;">LANCE·AUTO</span><span aria-hidden="true" style="width:5px; height:5px; border-radius:50%; background:{{c.tinta}};"></span></span>
+        </a>
+        <nav aria-label="Principal" style="display:flex; flex-wrap:wrap; gap:4px 20px; font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:19px; text-transform:uppercase; letter-spacing:.04em;">
+          <a href="Vitrine.dc.html" style="color:{{c.tinta}}; padding:10px 0; text-decoration:none;">Vitrine</a>
+          <a href="Carteira.dc.html" aria-current="page" style="color:{{c.tinta}}; padding:10px 0; text-decoration:none; border-bottom:3px solid {{c.tinta}};">Carteira</a>
+          <a href="Arremates.dc.html" style="color:{{c.tinta}}; padding:10px 0; text-decoration:none;">Meus arremates</a>
+        </nav>
+      </div>
+      <span style="display:flex; align-items:center; gap:8px; padding:8px 12px; border:3px solid {{c.linha}}; background:{{c.papel}}; font-family:'IBM Plex Mono', monospace; font-size:13px;">C3E8 <span style="background:{{c.ocre}}; color:{{c.sobreOcre}}; padding:1px 6px; font-weight:600;">VOCÊ</span></span>
+    </header>
+
+    <div style="display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px 24px; border-bottom:4px solid {{c.linha}}; padding-bottom:20px;">
+      <h1 style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:clamp(64px, 9vw, 132px); line-height:.82; margin:0; text-transform:uppercase;">Carteira</h1>
+      <span style="font-family:'IBM Plex Mono', monospace; font-size:13px; letter-spacing:.08em; color:{{c.tinta2}};">LICITANTE C3E8 · QUI 22/OUT · 19:12</span>
+    </div>
+
+    <section aria-label="Resumo do saldo" style="display:flex; flex-wrap:wrap; align-items:stretch; gap:12px;">
+      <div style="flex:1 1 240px; background:{{c.papel}}; border:3px solid {{c.linha}}; box-shadow:6px 6px 0 {{c.sombra}}; padding:18px 20px; display:flex; flex-direction:column; gap:8px;">
+        <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.14em;">SALDO TOTAL</span>
+        <sc-if value="{{flipA}}" hint-placeholder-val="{{true}}"><span style="font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:clamp(30px, 3.4vw, 44px); line-height:1; display:inline-block; animation:la-vira .5s both;">{{totalTxt}}</span></sc-if>
+        <sc-if value="{{flipB}}" hint-placeholder-val="{{false}}"><span style="font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:clamp(30px, 3.4vw, 44px); line-height:1; display:inline-block; animation:la-vira .5s both;">{{totalTxt}}</span></sc-if>
+        <span style="font-size:15px; color:{{c.tinta2}};">Tudo que você depositou, menos o que já arrematou.</span>
+      </div>
+      <span aria-hidden="true" style="align-self:center; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:56px; line-height:1; padding:0 4px;">−</span>
+      <div style="flex:1 1 240px; background:{{c.papel}}; border:3px solid {{c.linha}}; box-shadow:6px 6px 0 {{c.sombra}}; padding:18px 20px; display:flex; flex-direction:column; gap:8px;">
+        <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.14em;">COMPROMETIDO</span>
+        <span style="font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:clamp(30px, 3.4vw, 44px); line-height:1;">R$ 165.000,00</span>
+        <span style="font-size:15px; color:{{c.tinta2}};">Travado onde você lidera: <a href="Arremates.dc.html" style="color:{{c.tinta}};">Lote 019 · Hilux</a>. Volta se alguém cobrir.</span>
+      </div>
+      <span aria-hidden="true" style="align-self:center; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:56px; line-height:1; padding:0 4px;">=</span>
+      <div style="flex:1 1 240px; background:{{c.papel}}; border:5px solid {{c.linha}}; box-shadow:6px 6px 0 {{c.sombra}}; padding:16px 18px; display:flex; flex-direction:column; gap:8px;">
+        <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.14em;">DISPONÍVEL PARA LANCES</span>
+        <sc-if value="{{flipA}}" hint-placeholder-val="{{true}}"><span style="font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:clamp(30px, 3.4vw, 44px); line-height:1; display:inline-block; animation:la-vira .5s .1s both;">{{dispTxt}}</span></sc-if>
+        <sc-if value="{{flipB}}" hint-placeholder-val="{{false}}"><span style="font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:clamp(30px, 3.4vw, 44px); line-height:1; display:inline-block; animation:la-vira .5s .1s both;">{{dispTxt}}</span></sc-if>
+        <span style="font-size:15px; color:{{c.tinta2}};">É este número que o botão “Dar lance” consulta.</span>
+      </div>
+    </section>
+
+    <div style="display:flex; flex-wrap:wrap; gap:36px; align-items:flex-start;">
+
+      <section aria-labelledby="dep-t" style="flex:1 1 360px; min-width:0; max-width:480px; position:relative; background:{{c.papel}}; border:3px solid {{c.linha}}; box-shadow:8px 8px 0 {{c.sombra}}; display:flex; flex-direction:column;">
+        <span aria-hidden="true" style="position:absolute; right:14px; top:-20px; background:{{c.papel}}; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:20px; letter-spacing:.08em; text-transform:uppercase; color:{{c.ferrugem}}; border:3px solid {{c.ferrugem}}; outline:2px solid {{c.ferrugem}}; outline-offset:2px; padding:3px 10px 1px; transform:rotate(4deg); line-height:1;">Saldo simulado</span>
+        <div style="padding:14px 20px; border-bottom:3px solid {{c.linha}};">
+          <h2 id="dep-t" style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:32px; margin:0; text-transform:uppercase; line-height:1;">Depositar</h2>
+        </div>
+        <div style="padding:20px; display:flex; flex-direction:column; gap:16px;">
+          <div role="group" aria-label="Valores rápidos" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px;">
+            <sc-for list="{{rapidos}}" as="r" hint-placeholder-count="3">
+              <button type="button" aria-pressed="{{r.sel}}" onClick="{{r.pick}}" style="min-height:64px; padding:8px 6px; border:3px solid {{c.linha}}; background:{{r.bg}}; color:{{r.fg}}; box-shadow:{{r.sombra}}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer; border-radius:0;">
+                <span style="font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.1em;">R$</span>
+                <span style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:28px; line-height:1;">{{r.label}}</span>
+              </button>
+            </sc-for>
+          </div>
+          <label style="display:flex; flex-direction:column; gap:6px; font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.1em;">OUTRO VALOR
+            <span style="display:flex; border:3px solid {{c.linha}}; background:{{c.fundo}};">
+              <span style="display:flex; align-items:center; padding:0 12px; border-right:3px solid {{c.linha}}; font-family:'IBM Plex Mono', monospace; font-size:18px; font-weight:600;">R$</span>
+              <input type="text" inputmode="numeric" value="{{valorTxt}}" onChange="{{onValor}}" style="flex:1 1 auto; min-width:0; min-height:52px; border:none; background:transparent; color:{{c.tinta}}; font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:24px; padding:6px 12px; border-radius:0;">
+              <span style="display:flex; align-items:center; padding-right:12px; font-family:'IBM Plex Mono', monospace; font-size:18px; color:{{c.tinta2}};">,00</span>
+            </span>
+          </label>
+          <button type="button" onClick="{{depositar}}" style="min-height:60px; background:{{c.ocre}}; color:{{c.sobreOcre}}; border:3px solid {{c.linha}}; box-shadow:5px 5px 0 {{c.sombra}}; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:26px; letter-spacing:.04em; text-transform:uppercase; padding:10px 20px 8px; cursor:pointer; border-radius:0;">Depositar {{botaoTxt}}</button>
+          <p style="margin:0; font-size:16px; line-height:1.45; color:{{c.tinta2}};">Nenhum banco foi incomodado. O dinheiro é de mentira, cai na hora e só vale aqui dentro. Saque não existe, assim como o carro.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="ext-t" style="flex:2 1 520px; min-width:0; background:{{c.papel}}; border:3px solid {{c.linha}}; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:14px 20px; border-bottom:3px solid {{c.linha}};">
+          <h2 id="ext-t" style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:32px; margin:0; text-transform:uppercase; line-height:1;">Extrato</h2>
+          <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.1em; color:{{c.tinta2}};">DEPÓSITOS · ARREMATES · ESTORNOS</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%; min-width:560px; border-collapse:collapse; font-family:'IBM Plex Mono', monospace; font-size:14px;">
+            <thead>
+              <tr style="text-align:left; font-size:11px; letter-spacing:.12em; color:{{c.tinta2}};">
+                <th scope="col" style="padding:10px 20px; font-weight:500; border-bottom:2px solid {{c.linha}};">QUANDO</th>
+                <th scope="col" style="padding:10px 8px; font-weight:500; border-bottom:2px solid {{c.linha}};">MOVIMENTO</th>
+                <th scope="col" style="padding:10px 8px; font-weight:500; border-bottom:2px solid {{c.linha}}; text-align:right;">VALOR</th>
+                <th scope="col" style="padding:10px 20px 10px 8px; font-weight:500; border-bottom:2px solid {{c.linha}}; text-align:right;">SALDO TOTAL</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{novos}}" as="m" hint-placeholder-count="0">
+                <tr style="animation:la-entra .4s both, la-marca 1.8s both;">
+                  <td style="padding:12px 20px; border-bottom:2px dashed {{c.tracejado}}; white-space:nowrap; color:{{c.tinta2}};">{{m.quando}}</td>
+                  <td style="padding:12px 8px; border-bottom:2px dashed {{c.tracejado}};"><span style="font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:18px; text-transform:uppercase;">{{m.tipo}}</span> <span style="font-family:'Newsreader', Georgia, serif; font-size:16px;">{{m.desc}}</span></td>
+                  <td style="padding:12px 8px; border-bottom:2px dashed {{c.tracejado}}; text-align:right; font-weight:600; white-space:nowrap;">{{m.valor}}</td>
+                  <td style="padding:12px 20px 12px 8px; border-bottom:2px dashed {{c.tracejado}}; text-align:right; white-space:nowrap;">{{m.saldo}}</td>
+                </tr>
+              </sc-for>
+              <sc-for list="{{movs}}" as="m" hint-placeholder-count="7">
+                <tr>
+                  <td style="padding:12px 20px; border-bottom:2px dashed {{c.tracejado}}; white-space:nowrap; color:{{c.tinta2}};">{{m.quando}}</td>
+                  <td style="padding:12px 8px; border-bottom:2px dashed {{c.tracejado}};"><span style="font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:18px; text-transform:uppercase;">{{m.tipo}}</span> <span style="font-family:'Newsreader', Georgia, serif; font-size:16px;">{{m.desc}}</span><sc-if value="{{m.estorno}}" hint-placeholder-val="{{false}}"><span style="display:block; font-size:11px; letter-spacing:.1em; color:{{c.tinta2}}; margin-top:2px;">VOLTOU AO DISPONÍVEL · TOTAL NÃO MUDA</span></sc-if></td>
+                  <td style="padding:12px 8px; border-bottom:2px dashed {{c.tracejado}}; text-align:right; font-weight:600; white-space:nowrap;">{{m.valor}}</td>
+                  <td style="padding:12px 20px 12px 8px; border-bottom:2px dashed {{c.tracejado}}; text-align:right; white-space:nowrap;">{{m.saldo}}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <div style="padding:12px 20px 16px; font-family:'IBM Plex Mono', monospace; font-size:12px; color:{{c.tinta2}};">— fim do extrato · nada de juros, nada de tarifa —</div>
+      </section>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tema":{"editor":"enum","options":["claro","escuro"],"default":"claro"},"$preview":{"width":1440,"height":1400}}'>
+const PAL = {
+  claro: { fundo:'#E8DFCB', papel:'#F5EEDF', suave:'#DDD3BC', tinta:'#1E1C19', tinta2:'#5B5449', linha:'#1E1C19', sombra:'#1E1C19', tracejado:'#8A8273', ocre:'#E2A514', sobreOcre:'#1E1C19', ferrugem:'#A43C1E', verde:'#2E6A3E' },
+  escuro: { fundo:'#161513', papel:'#262420', suave:'#2F2C27', tinta:'#ECE4D2', tinta2:'#B3AA99', linha:'#CFC5B0', sombra:'#3A362F', tracejado:'#6E675C', ocre:'#E8AE22', sobreOcre:'#161513', ferrugem:'#E36A43', verde:'#74B585' }
+};
+function milhar(n) { return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+function brl(n) { return 'R$ ' + milhar(n) + ',00'; }
+const COMPROMETIDO = 165000;
+const MOVS = [
+  { quando: '22/out 19:00', tipo: 'Arremate', desc: 'Lote 018 · Gol GTI 1996', valor: '− R$ 33.500,00', saldo: 'R$ 198.000,00' },
+  { quando: '22/out 18:49', tipo: 'Estorno', desc: 'Superado no Lote 017 · Opala Diplomata', valor: '+ R$ 52.500,00', saldo: 'R$ 231.500,00', estorno: true },
+  { quando: '22/out 16:02', tipo: 'Depósito', desc: 'Valor rápido', valor: '+ R$ 100.000,00', saldo: 'R$ 231.500,00' },
+  { quando: '20/out 21:30', tipo: 'Depósito', desc: 'Valor rápido', valor: '+ R$ 50.000,00', saldo: 'R$ 131.500,00' },
+  { quando: '19/out 15:12', tipo: 'Arremate', desc: 'Lote 011 · Fusca 1300 1972', valor: '− R$ 18.500,00', saldo: 'R$ 81.500,00' },
+  { quando: '19/out 14:40', tipo: 'Estorno', desc: 'Superado no Lote 014 · Civic LXS', valor: '+ R$ 46.000,00', saldo: 'R$ 100.000,00', estorno: true },
+  { quando: '18/out 10:05', tipo: 'Depósito', desc: 'Primeiro depósito. Bem-vindo ao pátio', valor: '+ R$ 100.000,00', saldo: 'R$ 100.000,00' }
+];
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { total: 198000, rapido: 50000, valor: null, novos: [], flip: 0, min: 12 };
+  }
+  valorNum() { if (this.state.valor === null) return this.state.rapido; return parseInt(String(this.state.valor).replace(/\D/g, ''), 10) || 0; }
+  renderVals() {
+    const c = PAL[this.props.tema === 'escuro' ? 'escuro' : 'claro'];
+    const s = this.state;
+    const v = this.valorNum();
+    const rapidos = [10000, 50000, 100000].map((n) => {
+      const sel = s.valor === null && s.rapido === n;
+      return { label: milhar(n / 1000) + ' mil', sel: sel ? 'true' : 'false', bg: sel ? c.ocre : c.fundo, fg: sel ? c.sobreOcre : c.tinta, sombra: sel ? '4px 4px 0 ' + c.sombra : 'none', pick: () => this.setState({ rapido: n, valor: null }) };
+    });
+    return {
+      c, rapidos,
+      flipA: s.flip % 2 === 0, flipB: s.flip % 2 === 1,
+      totalTxt: brl(s.total),
+      dispTxt: brl(s.total - COMPROMETIDO),
+      valorTxt: s.valor === null ? milhar(s.rapido) : s.valor,
+      onValor: (e) => this.setState({ valor: e.target.value }),
+      botaoTxt: v > 0 ? brl(v) : '',
+      depositar: () => {
+        const n = this.valorNum();
+        if (n <= 0) return;
+        const total = this.state.total + n;
+        const min = this.state.min + 1;
+        const mov = { quando: '22/out 19:' + (min < 10 ? '0' : '') + min, tipo: 'Depósito', desc: 'Saldo simulado, emoção real', valor: '+ ' + brl(n), saldo: brl(total) };
+        this.setState({ total, min, novos: [mov].concat(this.state.novos), flip: this.state.flip + 1, valor: null });
+      },
+      novos: s.novos,
+      movs: MOVS.map((m) => Object.assign({ estorno: false }, m))
+    };
+  }
+}
+</script>
+</body>
+</html>

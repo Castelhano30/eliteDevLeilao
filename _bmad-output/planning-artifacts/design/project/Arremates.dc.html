@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Meus arremates</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+@keyframes la-pulsa{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+</helmet>
+<div style="background:{{c.fundo}}; color:{{c.tinta}}; font-family:'Newsreader', Georgia, serif; min-height:100vh;">
+  <div style="max-width:1320px; margin:0 auto; padding:20px clamp(16px, 4vw, 56px) 64px; display:flex; flex-direction:column; gap:32px;">
+
+    <header style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:14px 24px;">
+      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px 28px;">
+        <a href="Vitrine.dc.html" aria-label="LanceAuto, vitrine" style="display:inline-flex; flex-direction:column; text-decoration:none; background:transparent; color:{{c.tinta}}; border:3px solid {{c.tinta}}; border-radius:7px; box-shadow:4px 4px 0 {{c.sombra}}; overflow:hidden;">
+          <span aria-hidden="true" style="display:flex; justify-content:center; background:#E2A514; color:#FFFFFF; padding:3px 7px 2px 10px; font-family:'IBM Plex Mono', monospace; font-size:8px; font-weight:600; letter-spacing:.42em; line-height:1;">BRASIL</span>
+          <span style="display:flex; align-items:center; gap:8px; margin:0 3px 3px; padding:5px 9px 3px; border:1.5px solid {{c.tinta}}; border-top:none; border-radius:0 0 4px 4px;"><span aria-hidden="true" style="width:5px; height:5px; border-radius:50%; background:{{c.tinta}};"></span><span style="font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:28px; line-height:1; letter-spacing:.1em;">LANCE·AUTO</span><span aria-hidden="true" style="width:5px; height:5px; border-radius:50%; background:{{c.tinta}};"></span></span>
+        </a>
+        <nav aria-label="Principal" style="display:flex; flex-wrap:wrap; gap:4px 20px; font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:19px; text-transform:uppercase; letter-spacing:.04em;">
+          <a href="Vitrine.dc.html" style="color:{{c.tinta}}; padding:10px 0; text-decoration:none;">Vitrine</a>
+          <a href="Carteira.dc.html" style="color:{{c.tinta}}; padding:10px 0; text-decoration:none;">Carteira</a>
+          <a href="Arremates.dc.html" aria-current="page" style="color:{{c.tinta}}; padding:10px 0; text-decoration:none; border-bottom:3px solid {{c.tinta}};">Meus arremates</a>
+        </nav>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; gap:10px; font-family:'IBM Plex Mono', monospace; font-size:13px;">
+        <a href="Carteira.dc.html" style="display:flex; flex-direction:column; justify-content:center; gap:1px; padding:5px 12px; border:3px solid {{c.linha}}; background:{{c.papel}}; color:{{c.tinta}}; text-decoration:none;"><span style="font-size:10px; letter-spacing:.14em; color:{{c.tinta2}};">DISPONÍVEL</span><span style="font-weight:600;">R$ 33.000,00</span></a>
+        <span style="display:flex; align-items:center; gap:8px; padding:5px 12px; border:3px solid {{c.linha}}; background:{{c.papel}};">C3E8 <span style="background:{{c.ocre}}; color:{{c.sobreOcre}}; padding:1px 6px; font-weight:600;">VOCÊ</span></span>
+      </div>
+    </header>
+
+    <div style="display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px 24px; border-bottom:4px solid {{c.linha}}; padding-bottom:20px;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <h1 style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:clamp(60px, 9vw, 132px); line-height:.82; margin:0; text-transform:uppercase;">Meus arremates</h1>
+        <span style="font-size:19px;">Tudo em que você levantou a mão. Inclusive o que não deu certo.</span>
+      </div>
+      <div role="group" aria-label="Filtrar por status" style="display:flex; flex-wrap:wrap; gap:8px;">
+        <sc-for list="{{abas}}" as="a" hint-placeholder-count="4">
+          <button type="button" aria-pressed="{{a.sel}}" onClick="{{a.pick}}" style="min-height:46px; padding:6px 14px 4px; border:3px solid {{c.linha}}; background:{{a.bg}}; color:{{a.fg}}; font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:18px; text-transform:uppercase; letter-spacing:.04em; cursor:pointer; border-radius:0;">{{a.label}} <span style="font-family:'IBM Plex Mono', monospace; font-size:13px; font-weight:500;">{{a.n}}</span></button>
+        </sc-for>
+      </div>
+    </div>
+
+    <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:22px;">
+      <sc-for list="{{itens}}" as="i" hint-placeholder-count="6">
+        <li style="display:flex; flex-wrap:wrap; background:{{c.papel}}; border:3px solid {{c.linha}}; box-shadow:6px 6px 0 {{c.sombra}};">
+          <div style="flex:0 0 112px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:2px; padding:16px 8px; background:{{i.stubBg}}; color:{{i.stubFg}}; border-right:3px dashed {{c.linha}};">
+            <span style="font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.14em;">LOTE</span>
+            <span style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:52px; line-height:.85;">{{i.num}}</span>
+          </div>
+          <div style="flex:1 1 300px; min-width:0; padding:18px 22px; display:flex; flex-direction:column; gap:8px; justify-content:center;">
+            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px;">
+              <h2 style="font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:32px; line-height:.95; margin:0; text-transform:uppercase;">{{i.titulo}}</h2>
+              <span style="display:inline-flex; align-items:center; gap:6px; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:18px; letter-spacing:.08em; text-transform:uppercase; color:{{i.selo.cor}}; border:3px {{i.selo.borda}} {{i.selo.cor}}; padding:3px 9px 1px; transform:rotate({{i.selo.giro}}); line-height:1;"><sc-if value="{{i.vivo}}" hint-placeholder-val="{{false}}"><span style="width:8px; height:8px; border-radius:50%; background:{{i.selo.cor}}; animation:la-pulsa 1.2s infinite;"></span></sc-if>{{i.selo.txt}}</span>
+            </div>
+            <span style="font-family:'IBM Plex Mono', monospace; font-size:13px; color:{{c.tinta2}};">{{i.meta}}</span>
+            <span style="font-size:17px; line-height:1.4;">{{i.frase}}</span>
+          </div>
+          <div style="flex:1 1 260px; min-width:0; padding:18px 22px; display:flex; flex-direction:column; gap:12px; justify-content:center; border-left:2px dashed {{c.tracejado}};">
+            <div style="display:flex; gap:24px; flex-wrap:wrap; font-family:'IBM Plex Mono', monospace;">
+              <div style="display:flex; flex-direction:column; gap:2px;">
+                <span style="font-size:10px; letter-spacing:.14em; color:{{c.tinta2}};">{{i.rotulo1}}</span>
+                <span style="font-size:20px; font-weight:600;">{{i.valor1}}</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:2px;">
+                <span style="font-size:10px; letter-spacing:.14em; color:{{c.tinta2}};">{{i.rotulo2}}</span>
+                <span style="font-size:20px;">{{i.valor2}}</span>
+              </div>
+            </div>
+            <sc-if value="{{i.ganho}}" hint-placeholder-val="{{false}}">
+              <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+                <a href="Comprovante.dc.html" style="display:inline-flex; align-items:center; min-height:46px; box-sizing:border-box; padding:6px 16px 4px; border:3px solid {{c.linha}}; background:{{c.ocre}}; color:{{c.sobreOcre}}; box-shadow:4px 4px 0 {{c.sombra}}; text-decoration:none; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:19px; text-transform:uppercase;">Ver comprovante</a>
+                <button type="button" onClick="{{i.copiar}}" style="min-height:46px; padding:6px 14px 4px; border:3px solid {{c.linha}}; background:{{c.papel}}; color:{{c.tinta}}; font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:18px; text-transform:uppercase; cursor:pointer; border-radius:0;">{{i.copiarTxt}}</button>
+              </div>
+              <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; color:{{c.tinta2}}; word-break:break-all;">{{i.link}}</span>
+            </sc-if>
+            <sc-if value="{{i.vivo}}" hint-placeholder-val="{{false}}">
+              <a href="{{i.sala}}" style="align-self:flex-start; display:inline-flex; align-items:center; min-height:46px; box-sizing:border-box; padding:6px 16px 4px; border:3px solid {{c.linha}}; background:{{i.acaoBg}}; color:{{i.acaoFg}}; box-shadow:4px 4px 0 {{c.sombra}}; text-decoration:none; font-family:'Big Shoulders Display', sans-serif; font-weight:900; font-size:19px; text-transform:uppercase;">{{i.acao}}</a>
+            </sc-if>
+            <sc-if value="{{i.perdido}}" hint-placeholder-val="{{false}}">
+              <a href="Auditoria.dc.html" style="align-self:flex-start; font-family:'IBM Plex Mono', monospace; font-size:13px; color:{{c.tinta2}}; padding:8px 0;">Conferir na auditoria</a>
+            </sc-if>
+          </div>
+        </li>
+      </sc-for>
+    </ul>
+
+    <sc-if value="{{vazio}}" hint-placeholder-val="{{false}}">
+      <div style="border:3px dashed {{c.tracejado}}; padding:40px 24px; text-align:center; font-size:18px;">Nada aqui. Ou você é muito prudente, ou ainda não chegou a hora.</div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tema":{"editor":"enum","options":["claro","escuro"],"default":"claro"},"$preview":{"width":1440,"height":1400}}'>
+const PAL = {
+  claro: { fundo:'#E8DFCB', papel:'#F5EEDF', suave:'#DDD3BC', tinta:'#1E1C19', tinta2:'#5B5449', linha:'#1E1C19', sombra:'#1E1C19', tracejado:'#8A8273', ocre:'#E2A514', sobreOcre:'#1E1C19', ferrugem:'#A43C1E', verde:'#2E6A3E', sobreCor:'#F5EEDF' },
+  escuro: { fundo:'#161513', papel:'#262420', suave:'#2F2C27', tinta:'#ECE4D2', tinta2:'#B3AA99', linha:'#CFC5B0', sombra:'#3A362F', tracejado:'#6E675C', ocre:'#E8AE22', sobreOcre:'#161513', ferrugem:'#E36A43', verde:'#74B585', sobreCor:'#161513' }
+};
+const ITENS = [
+  { num:'019', titulo:'Hilux SRV 2.8 4x4', meta:'2018 · Diesel · FIPE R$ 189.400', status:'ganhando', frase:'Ninguém cobriu ainda. Encerra às 19:28, faltam 16 minutos.', rotulo1:'SEU LANCE', valor1:'R$ 165.000,00', rotulo2:'POSIÇÃO', valor2:'1º de 4', sala:'SalaGanhando.dc.html' },
+  { num:'024', titulo:'Opala Comodoro 4.1', meta:'1979 · Gasolina · FIPE R$ 41.300', status:'superado', frase:'Licitante B21C passou na frente às 19:09. Encerra às 19:40.', rotulo1:'SEU LANCE', valor1:'R$ 38.000,00', rotulo2:'LANCE ATUAL', valor2:'R$ 39.500,00', sala:'Sala.dc.html' },
+  { num:'018', titulo:'Gol GTI 2.0', meta:'1996 · Gasolina · FIPE R$ 31.200', status:'arrematado', frase:'Martelo batido às 19:00 de hoje, depois de uma prorrogação.', rotulo1:'ARREMATADO POR', valor1:'R$ 33.500,00', rotulo2:'LANCES', valor2:'17', link:'lanceauto.app/c/018-7Q2K' },
+  { num:'017', titulo:'Opala Diplomata 4.1', meta:'1988 · Gasolina · FIPE R$ 48.900', status:'perdido', frase:'Licitante 7F3A levou por R$ 54.000,00. Seu saldo travado voltou.', rotulo1:'SEU MAIOR LANCE', valor1:'R$ 52.500,00', rotulo2:'VENCEDOR', valor2:'R$ 54.000,00' },
+  { num:'011', titulo:'Fusca 1300', meta:'1972 · Gasolina · FIPE R$ 23.600', status:'arrematado', frase:'Arrematado em 19/out. Sem prorrogação, sem drama.', rotulo1:'ARREMATADO POR', valor1:'R$ 18.500,00', rotulo2:'LANCES', valor2:'8', link:'lanceauto.app/c/011-B3MX' },
+  { num:'014', titulo:'Civic LXS 1.8', meta:'2012 · Flex · FIPE R$ 54.700', status:'perdido', frase:'Licitante 7F3A levou por R$ 49.000,00. Foi por pouco. Não tão pouco.', rotulo1:'SEU MAIOR LANCE', valor1:'R$ 46.000,00', rotulo2:'VENCEDOR', valor2:'R$ 49.000,00' }
+];
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { filtro: 'todos', copiado: null }; }
+  componentWillUnmount() { clearTimeout(this.t); }
+  renderVals() {
+    const c = PAL[this.props.tema === 'escuro' ? 'escuro' : 'claro'];
+    const s = this.state;
+    const grupo = (st) => (st === 'ganhando' || st === 'superado') ? 'disputa' : st;
+    const SELO = {
+      ganhando: { txt: 'Ganhando', cor: c.verde, borda: 'solid', giro: '-3deg' },
+      superado: { txt: 'Superado', cor: c.ferrugem, borda: 'solid', giro: '2deg' },
+      arrematado: { txt: 'Arrematado', cor: c.tinta, borda: 'double', giro: '-4deg' },
+      perdido: { txt: 'Perdido', cor: c.tinta2, borda: 'dashed', giro: '1deg' }
+    };
+    const conta = (g) => ITENS.filter((i) => g === 'todos' || grupo(i.status) === g).length;
+    const abas = [['todos', 'Todos'], ['disputa', 'Em disputa'], ['arrematado', 'Arrematados'], ['perdido', 'Perdidos']].map(([id, label]) => {
+      const sel = s.filtro === id;
+      return { label, n: String(conta(id)).padStart(2, '0'), sel: sel ? 'true' : 'false', bg: sel ? c.tinta : 'transparent', fg: sel ? c.fundo : c.tinta, pick: () => this.setState({ filtro: id }) };
+    });
+    const itens = ITENS.filter((i) => s.filtro === 'todos' || grupo(i.status) === s.filtro).map((i) => {
+      const vivo = i.status === 'ganhando' || i.status === 'superado';
+      const ganho = i.status === 'arrematado';
+      return Object.assign({}, i, {
+        selo: SELO[i.status], vivo, ganho, perdido: i.status === 'perdido',
+        stubBg: ganho ? c.ocre : (vivo ? c.suave : c.papel),
+        stubFg: ganho ? c.sobreOcre : c.tinta,
+        acao: i.status === 'superado' ? 'Cobrir lance' : 'Ir para a sala',
+        acaoBg: i.status === 'superado' ? c.ocre : c.papel,
+        acaoFg: i.status === 'superado' ? c.sobreOcre : c.tinta,
+        copiarTxt: s.copiado === i.num ? 'Link copiado' : 'Copiar link',
+        copiar: () => {
+          try { navigator.clipboard.writeText('https://' + i.link); } catch (e) {}
+          this.setState({ copiado: i.num });
+          clearTimeout(this.t);
+          this.t = setTimeout(() => this.setState({ copiado: null }), 2200);
+        },
+        link: i.link || ''
+      });
+    });
+    return { c, abas, itens, vazio: itens.length === 0 };
+  }
+}
+</script>
+</body>
+</html>
