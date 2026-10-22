@@ -29,6 +29,7 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 3. **PRD reconciliado.** Havia duas versões: o PDF antigo (marketplace) e o `.md` novo (Casa de Leilões, teste Verzel). O `.md` é a fonte única e bate com o design.
 4. **Stack definida.** Next.js no front e Express no back, registrada no PRD.
 5. **Decisões em aberto fechadas** e monorepo adotado (tabela acima).
+6. **Git e GitHub.** Repositório iniciado na `main` e publicado (privado, por enquanto) em `Castelhano30/eliteDevLeilao`. Só o `_bmad-output` vai para o git. Envio com `git push` ao fim de cada etapa, e commits sempre só no nome do autor.
 
 ## Próximos passos
 
