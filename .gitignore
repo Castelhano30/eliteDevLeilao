@@ -1,0 +1,24 @@
+# Ferramentas de apoio (ficam fora do repositório)
+_bmad/
+.claude/
+.agents/
+CLAUDE.md
+AGENTS.md
+
+# Dependências e builds
+node_modules/
+dist/
+build/
+.next/
+
+# Segredos e ambiente
+.env
+.env.*
+!.env.example
+
+# Sistema e editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
