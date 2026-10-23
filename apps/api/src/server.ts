@@ -28,7 +28,7 @@ function main() {
   const prisma = createPrisma(env.DATABASE_URL);
   const app = createApp({ env, db: prisma, logger });
   const httpServer = createServer(app);
-  const io = attachSocket(httpServer, env.WEB_ORIGIN);
+  const io = attachSocket(httpServer, env.WEB_ORIGIN, env.JWT_SECRET);
 
   httpServer.listen(env.PORT, () => logger.info({ port: env.PORT }, "API no ar"));
 
