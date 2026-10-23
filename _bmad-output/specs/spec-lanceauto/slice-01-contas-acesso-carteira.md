@@ -363,10 +363,10 @@ Vitest, integração contra Postgres real (`DATABASE_URL_TEST`), com `fileParall
 - Corrigido (fora da fatia): os scripts `prisma`, `migrate:deploy`, `seed` e `seed:demo` usavam a sintaxe antiga do `dotenv-cli`; a v11 pede `dotenv run -f ../../.env -- …`.
 
 ## 17. Definition of Done
-- [ ] Migração `contas_e_carteira` criada, com os 2 CHECKs e a coluna `seq` autoincremento no `LedgerEntry`, aplicada no Neon pelo deploy da API.
-- [ ] `optionalAuth`, `requireAuth`, `requireRole`, JWT com `algorithms:['HS256']`, `sanitizeNext` e senha em bytes (TextEncoder) com testes; chaves do TanStack Query (`["me"]`, `["wallet","summary"]`, `["wallet","ledger"]`) adotadas.
-- [ ] Rotas de auth e carteira com testes verdes (unit + integração) e CI verde.
-- [ ] Acesso, Header por papel, Sair, guardas de rota e Carteira conforme as seções 9.x nos dois temas.
-- [ ] Seed rodado em produção (3 contas); credenciais anotadas para o README.
-- [ ] Smoke no link público: AC-1.36, cadastro novo, depósito, logout, acesso a rota privada sem login.
-- [ ] `progresso.md` atualizado; commits atômicos em português.
+- [x] Migração `contas_e_carteira` criada, com os 2 CHECKs e a coluna `seq` autoincremento no `LedgerEntry`, aplicada no Neon pelo deploy da API. (No Railway: "No pending migrations to apply" no deploy de 23/10.)
+- [x] `optionalAuth`, `requireAuth`, `requireRole`, JWT com `algorithms:['HS256']`, `sanitizeNext` e senha em bytes (TextEncoder) com testes; chaves do TanStack Query (`["me"]`, `["wallet","summary"]`, `["wallet","ledger"]`) adotadas.
+- [x] Rotas de auth e carteira com testes verdes (unit + integração) e CI verde.
+- [x] Acesso, Header por papel, Sair, guardas de rota e Carteira conforme as seções 9.x nos dois temas.
+- [x] Seed rodado em produção (3 contas); credenciais anotadas para o README. (Log do Railway: `Criado:` leiloeiro, ana e bruno.)
+- [x] Smoke no link público: AC-1.36, cadastro novo, depósito, logout, acesso a rota privada sem login. (Por HTTP em 23/10; o roteiro no navegador fica com o Felipe.)
+- [x] `progresso.md` atualizado; commits atômicos em português.
