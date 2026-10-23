@@ -74,9 +74,11 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 
 29. **Causa do deploy quebrado achada (23/10/2026).** O log do Railway mostrou `Build Failed … exit code 2` no build da API. Reproduzi num clone limpo: o `buildCommand` rodava `prisma generate` depois do `tsc`, e a S01 passou a importar tipos do Prisma (`User`, `Wallet`, `Prisma.PrismaClientKnownRequestError`), que só existem depois do generate. Na S00 a API não importava nada do Prisma, por isso passava; na minha máquina o client já estava gerado, por isso o erro não aparecia. Correção: `prisma generate` primeiro em `apps/api/railway.json`. Validado no clone limpo (generate, shared, api, `dist/server.js` gerado). Falta o redeploy no Railway, o smoke público e o seed em produção.
 
+30. **O Railway usa o Dockerfile, não o `railway.json` (23/10/2026).** O log do deploy do `ce850eb` ainda mostrava `npm run build -w packages/shared -w apps/api && npx prisma generate`, comando que só existe em `apps/api/Dockerfile`. Ou seja, o `buildCommand` do `railway.json` não vale enquanto o Railway achar o Dockerfile, e a correção do item 29 sozinha não bastava. Corrigi o Dockerfile: `prisma generate` antes do build, e o CMD passou a rodar o seed (sem derrubar o servidor se falhar), igual ao `startCommand`. `docker build -f apps/api/Dockerfile .` terminou com exit 0. Dúvida em aberto: se o Dockerfile é o caminho desejado no Railway ou se o certo é forçar o Railpack; por ora os dois ficam coerentes entre si.
+
 ### Onde parei
 
-S01 implementada e verde localmente e no CI. Causa do deploy da API achada e corrigida no `railway.json` (item 29); falta confirmar o redeploy verde, rodar o smoke público (AC-1.36) e fechar a DoD da S01 (migração aplicada, seed em produção, smoke).
+S01 implementada e verde localmente e no CI. Causa do deploy da API corrigida no `railway.json` e no `Dockerfile` (itens 29 e 30); falta confirmar o redeploy verde, rodar o smoke público (AC-1.36) e fechar a DoD da S01 (migração aplicada, seed em produção, smoke).
 
 ## Registro de uso de IA
 

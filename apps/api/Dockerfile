@@ -10,7 +10,9 @@ COPY apps/api apps/api
 COPY apps/web/package.json apps/web/package.json
 RUN npm ci
 
-RUN npm run build -w packages/shared -w apps/api \
-  && npx prisma generate --schema apps/api/prisma/schema.prisma
+# O generate vem antes: o código da API importa tipos do client gerado.
+RUN npx prisma generate --schema apps/api/prisma/schema.prisma \
+  && npm run build -w packages/shared \
+  && npm run build -w apps/api
 
-CMD ["sh", "-c", "npx prisma migrate deploy --schema apps/api/prisma/schema.prisma && node apps/api/dist/server.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy --schema apps/api/prisma/schema.prisma && (npx tsx apps/api/prisma/seed.ts || echo seed-falhou-subindo-sem-ele) && node apps/api/dist/server.js"]
