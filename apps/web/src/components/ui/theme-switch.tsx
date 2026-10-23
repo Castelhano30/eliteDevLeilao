@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useId, useSyncExternalStore } from "react";
 import { applyThemeChoice, readThemeChoice, type ThemeChoice } from "@/lib/theme";
 
 const OPTIONS: { value: ThemeChoice; label: string }[] = [
@@ -9,15 +9,20 @@ const OPTIONS: { value: ThemeChoice; label: string }[] = [
   { value: "noite", label: "Noite" },
 ];
 
+const listeners = new Set<() => void>();
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
 /** Select nativo "Tema". Sistema é o padrão e remove a escolha gravada. */
 export function ThemeSwitch() {
   const id = useId();
-  const [choice, setChoice] = useState<ThemeChoice>("sistema");
-
-  // Lê depois de montar, para o HTML do servidor e o primeiro render do cliente serem iguais.
-  useEffect(() => {
-    setChoice(readThemeChoice());
-  }, []);
+  // No servidor e na hidratação vale "sistema"; depois o cliente lê o que está gravado.
+  const choice = useSyncExternalStore(subscribe, readThemeChoice, (): ThemeChoice => "sistema");
 
   return (
     <div className="flex items-center gap-2">
@@ -28,9 +33,8 @@ export function ThemeSwitch() {
         id={id}
         value={choice}
         onChange={(event) => {
-          const next = event.target.value as ThemeChoice;
-          setChoice(next);
-          applyThemeChoice(next);
+          applyThemeChoice(event.target.value as ThemeChoice);
+          listeners.forEach((listener) => listener());
         }}
         className="min-h-12 rounded-nenhum border-[3px] border-linha bg-fundo px-3 font-serif text-[19px] text-tinta"
       >

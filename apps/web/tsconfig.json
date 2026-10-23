@@ -12,6 +12,6 @@
     "plugins": [{ "name": "next" }],
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["next-env.d.ts", "src", "tailwind.config.mts", "vitest.config.mts", ".next/types/**/*.ts"],
+  "include": ["next-env.d.ts", "src", "tailwind.config.mjs", "vitest.config.mts", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
 }

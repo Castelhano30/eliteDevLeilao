@@ -1,7 +1,6 @@
-import type { Config } from "tailwindcss";
-
 /** As cores apontam para variáveis CSS: o tema (claro/noite) troca só as variáveis. */
-const config: Config = {
+/** @type {import("tailwindcss").Config} */
+const config = {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
