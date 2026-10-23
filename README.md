@@ -39,6 +39,16 @@ npm run migrate:deploy -w apps/api
 npm run dev                    # shared em watch, API e web
 ```
 
+### Contas de teste
+
+`npm run seed` cria as três contas abaixo pelos mesmos services da API (e se recusa a rodar se já houver usuários). Senha de todas: `lance1234`.
+
+| Papel | E-mail | Saldo |
+|---|---|---|
+| Leiloeiro | leiloeiro@lanceauto.test | — |
+| Licitante | ana@lanceauto.test | R$ 500.000,00 |
+| Licitante | bruno@lanceauto.test | R$ 300.000,00 |
+
 ### Comandos
 
 | Comando | O que faz |
@@ -66,11 +76,11 @@ Cada serviço lê o próprio arquivo, apontado no painel em "Config file path": 
 **API**
 
 - Build: `npm run build -w packages/shared && npm run build -w apps/api && npx prisma generate --schema apps/api/prisma/schema.prisma`
-- Start: `npx prisma migrate deploy --schema apps/api/prisma/schema.prisma && node apps/api/dist/server.js`
+- Start: `npx prisma migrate deploy --schema apps/api/prisma/schema.prisma && (npx tsx apps/api/prisma/seed.ts || echo seed-falhou-subindo-sem-ele) && node apps/api/dist/server.js`
 - Health check: `/health`
 - Porta pública: 8080 (o Railway injeta `PORT=8080`)
 
-Migrações novas são aplicadas sozinhas a cada start.
+Migrações novas são aplicadas sozinhas a cada start. O seed das contas de teste também roda no start: ele recusa rodar se já houver usuários (sai com código 0), então é seguro a cada deploy, e uma falha nele não derruba a API.
 
 **Web**
 
