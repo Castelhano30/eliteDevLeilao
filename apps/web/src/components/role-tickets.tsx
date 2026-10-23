@@ -39,7 +39,7 @@ export function RoleTickets({ value, onChange, error }: RoleTicketsProps) {
                 className="sr-only"
               />
               <span className="t-cartaz-subtitulo block">{option.title}</span>
-              <span className="t-body-nota block">{option.note}</span>
+              <span className={`t-body-nota block ${checked ? "!text-sobreOcre" : ""}`}>{option.note}</span>
             </label>
           );
         })}
