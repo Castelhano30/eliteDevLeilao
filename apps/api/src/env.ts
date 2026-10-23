@@ -12,7 +12,8 @@ const envSchema = z.object({
   DIRECT_URL: z.string().min(1),
   JWT_SECRET: z.string().min(32, "precisa ter ao menos 32 caracteres"),
   AUDIT_HMAC_KEY: z.string().min(32, "precisa ter ao menos 32 caracteres"),
-  WEB_ORIGIN: z.url(),
+  // Barras no final são descartadas: "https://site.app/" vale como "https://site.app" (o CORS compara a origem exata).
+  WEB_ORIGIN: z.preprocess((value) => (typeof value === "string" ? value.replace(/\/+$/, "") : value), z.url()),
   FIPE_BASE_URL: z.url(),
   FIPE_TOKEN: z.string().optional(),
   WIKI_USER_AGENT: z.string().min(1),

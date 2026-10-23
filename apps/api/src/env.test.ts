@@ -38,4 +38,16 @@ describe("parseEnv", () => {
   it("lê RATE_LIMIT_DISABLED=1 como verdadeiro", () => {
     expect(parseEnv({ ...valid, RATE_LIMIT_DISABLED: "1" }).RATE_LIMIT_DISABLED).toBe(true);
   });
+
+  it("descarta barras no final do WEB_ORIGIN", () => {
+    expect(parseEnv({ ...valid, WEB_ORIGIN: "https://site.app/" }).WEB_ORIGIN).toBe("https://site.app");
+    expect(parseEnv({ ...valid, WEB_ORIGIN: "https://site.app///" }).WEB_ORIGIN).toBe("https://site.app");
+    expect(parseEnv({ ...valid, WEB_ORIGIN: "https://site.app" }).WEB_ORIGIN).toBe("https://site.app");
+  });
+
+  it("segue exigindo um WEB_ORIGIN válido", () => {
+    expect(() => parseEnv({ ...valid, WEB_ORIGIN: "nao-e-url/" })).toThrowError(/WEB_ORIGIN/);
+    const { WEB_ORIGIN: _omit, ...rest } = valid;
+    expect(() => parseEnv(rest)).toThrowError(/WEB_ORIGIN: ausente/);
+  });
 });
