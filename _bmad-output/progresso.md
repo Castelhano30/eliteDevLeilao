@@ -33,13 +33,16 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 
 7. **UX gerado.** `DESIGN.md` e `EXPERIENCE.md` escritos a partir do design e do PRD, com as 40 perguntas abertas (P1 a P40) triadas por recomendação. Divergências entre design e PRD resolvidas a favor do PRD (pseudônimo por lote, cancelamento com estorno, auditoria HMAC-SHA256). Aceitos como `draft` para ganhar agilidade, sem o Reviewer Gate.
 
+8. **Arquitetura gerada.** Spine com 13 decisões (AD-1 a AD-13), contratos REST e Socket.IO, formato da cadeia HMAC v1 e ledger. Sem Reviewer Gate, por agilidade; versões de libs e hosts (Vercel, Render, Neon) ainda a confirmar no dia 1.
+
+9. **SPEC gerada.** `_bmad-output/specs/spec-lanceauto/`: `SPEC.md` curto, `rastreabilidade.md` (131 requisitos do PRD, nenhum órfão) e 10 fatias autossuficientes (S00 a S09). Conflitos entre PRD, UX e arquitetura resolvidos pela precedência; 10 perguntas abertas com sugestão no fim do SPEC.md. Épicos e sprint planning dispensados: a fatia é a unidade de build.
+
 ## Próximos passos
 
 - [x] `bmad-ux`: gerar `DESIGN.md` e `EXPERIENCE.md` a partir do design (aceitos como draft)
-- [ ] `bmad-architecture`: fixar as decisões técnicas
-- [ ] `bmad-create-epics-and-stories`
-- [ ] `bmad-sprint-planning`
-- [ ] `bmad-build`: implementar por história (deploy mínimo já no dia 1)
+- [x] `bmad-architecture`: fixar as decisões técnicas (spine em `planning-artifacts/architecture/`, draft)
+- [x] `bmad-spec`: SPEC + 10 fatias (substitui épicos e sprint planning)
+- [ ] `bmad-build`: implementar uma fatia por vez, em contexto novo, da S00 à S09 (deploy mínimo já na S00)
 
 ## Registro de uso de IA
 
