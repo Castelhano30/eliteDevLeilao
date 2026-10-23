@@ -37,6 +37,8 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 
 9. **SPEC gerada.** `_bmad-output/specs/spec-lanceauto/`: `SPEC.md` curto, `rastreabilidade.md` (131 requisitos do PRD, nenhum órfão) e 10 fatias autossuficientes (S00 a S09). Conflitos entre PRD, UX e arquitetura resolvidos pela precedência; 10 perguntas abertas com sugestão no fim do SPEC.md. Épicos e sprint planning dispensados: a fatia é a unidade de build.
 
+10. **SPEC revisada.** Cinco revisores independentes leram as dez fatias contra o PRD e a arquitetura e acharam cerca de 80 pontos. Entre os mais graves: consulta SQL da S07 que falharia no Postgres, token do comprovante exposto na auditoria pública, seed que violava a regra de datas, SSRF incompleto no download de imagem, eventos de fechamento sem dono e `version`/`entryCount` com dois nomes. Tudo corrigido nas fatias; as decisões que valem para o projeto inteiro (T1 a T13) ficaram no `SPEC.md`. Premissas externas (FIPE v2, Wikipedia, versões, release do Render) ficam para verificar no dia 1.
+
 ## Próximos passos
 
 - [x] `bmad-ux`: gerar `DESIGN.md` e `EXPERIENCE.md` a partir do design (aceitos como draft)
