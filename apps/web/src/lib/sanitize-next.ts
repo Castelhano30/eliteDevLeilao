@@ -1,3 +1,5 @@
+import { homeFor, type Role } from "@lanceauto/shared";
+
 const SAFE_PATH = /^\/[A-Za-z0-9/_\-.?=&%]*$/;
 
 /**
@@ -16,4 +18,20 @@ export function sanitizeNext(next: string | null | undefined): string | null {
   // eslint-disable-next-line no-control-regex
   if (decoded.startsWith("//") || decoded.includes("\\") || /[\u0000-\u001f\u007f]/.test(decoded)) return null;
   return next;
+}
+
+/** Áreas privadas e o papel que pode abri-las (a nav e as guardas seguem a mesma tabela). */
+const ROLE_AREAS: { prefix: string; role: Role }[] = [
+  { prefix: "/carteira", role: "BIDDER" },
+  { prefix: "/arremates", role: "BIDDER" },
+  { prefix: "/painel", role: "AUCTIONEER" },
+];
+
+/** Para onde ir depois de entrar: o `next` limpo, se existir e o papel puder abri-lo; senão a home do papel. */
+export function destinationAfterLogin(role: Role, next: string | null | undefined): string {
+  const clean = sanitizeNext(next);
+  if (!clean) return homeFor(role);
+  const path = clean.split("?")[0] ?? clean;
+  const area = ROLE_AREAS.find(({ prefix }) => path === prefix || path.startsWith(`${prefix}/`));
+  return area && area.role !== role ? homeFor(role) : clean;
 }
