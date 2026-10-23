@@ -39,6 +39,16 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 
 10. **SPEC revisada.** Cinco revisores independentes leram as dez fatias contra o PRD e a arquitetura e acharam cerca de 80 pontos. Entre os mais graves: consulta SQL da S07 que falharia no Postgres, token do comprovante exposto na auditoria pública, seed que violava a regra de datas, SSRF incompleto no download de imagem, eventos de fechamento sem dono e `version`/`entryCount` com dois nomes. Tudo corrigido nas fatias; as decisões que valem para o projeto inteiro (T1 a T13) ficaram no `SPEC.md`. Premissas externas (FIPE v2, Wikipedia, versões, release do Render) ficam para verificar no dia 1.
 
+### 23/10/2026 — S00 Fundação
+
+11. **Ambiente e versões verificados (T13).** Node 24.14.1, npm 11.11.0, Git 2.53, Docker 29.5.3. Versões fixadas (lockfile manda): Next 16.4.2, React 19.3.1, Express 5.3.0, Socket.IO 4.8.4, zod 4.6.7, TanStack Query 5.104.5, Tailwind 4.3.3, Vitest 5.0.5, ESLint 9.39.5, helmet 8.3.0, express-rate-limit 8.7.1, pino 10.4.0. Duas escolhas fora do "mais novo": **Prisma 6.19.3** (o 8 ainda é RC e o 7 tira `url`/`directUrl` do `schema.prisma`, que a SPEC exige) e **TypeScript 5.9.3** (o 7 passa do limite do typescript-eslint, `<6.1`).
+12. **Verificações do dia 1 resolvidas.** (a) `next/font/google`: a fonte "Big Shoulders Display" não existe mais, virou "Big Shoulders" (variável, eixo `opsz`); Newsreader com `opsz` exige `axes: ['opsz']` e **sem** `weight`. (b) `prisma migrate deploy` com a migração `0_init` vazia roda sem erro (local e no Compose). (d) CORS e WebSocket entre Vercel e Render e (c) release do Render: pendentes do deploy.
+13. **Monorepo, shared e API.** Workspaces `apps/web`, `apps/api`, `packages/shared` (compilado para `dist`, CommonJS). API com `/health`, envelope de erro, `makeRateLimiter`, `FakeClock`, `NoopPublisher`, Socket.IO no mesmo servidor e `env.ts` que falha no boot. 19 testes na API e 7 no shared, todos verdes, com Postgres real em `DATABASE_URL_TEST`.
+14. **Web e tema.** Next com tokens dos dois temas, tipografia, movimento e foco em `globals.css`, script de tema antes da pintura (testado), cliente da API que nunca lança, socket singleton e página diagnóstica.
+15. **Compose, lint e CI.** `docker compose up --build` sobe db, api e web (migração `0_init` aplicada no start). ESLint com a regra de `Date` só na API. CI no GitHub verde com Postgres de serviço.
+16. **Imprevistos locais.** As portas 5432, 3000 e 4000 estavam ocupadas por outros projetos da máquina: o banco do Compose ficou na **5433** e o web aceita `WEB_PORT`. Um `Set-Content` do PowerShell 5.1 gravou BOM e corrompeu acentos em três arquivos; corrigido e `.gitattributes` adicionado.
+17. **Em pausa: deploy mínimo** (Neon, Render, Vercel) depende de ações do Felipe nos painéis.
+
 ## Próximos passos
 
 - [x] `bmad-ux`: gerar `DESIGN.md` e `EXPERIENCE.md` a partir do design (aceitos como draft)
