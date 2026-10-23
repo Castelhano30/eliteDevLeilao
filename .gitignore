@@ -2,14 +2,17 @@
 _bmad/
 .claude/
 .agents/
+.tmp/
 CLAUDE.md
-AGENTS.md
 
 # Dependências e builds
 node_modules/
 dist/
 build/
 .next/
+*.tsbuildinfo
+coverage/
+next-env.d.ts
 
 # Segredos e ambiente
 .env
