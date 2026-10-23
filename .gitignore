@@ -25,3 +25,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# Gerado pelo next dev (regras de agente do Next); não versionar
+apps/web/AGENTS.md
