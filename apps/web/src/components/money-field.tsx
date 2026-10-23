@@ -1,0 +1,53 @@
+"use client";
+
+import { useLayoutEffect, useRef, type ChangeEvent } from "react";
+import { Field } from "@/components/ui/field";
+import { maskReais } from "@/lib/money-mask";
+
+export interface MoneyFieldProps {
+  label: string;
+  /** Texto já mascarado, ex.: "10.000". */
+  value: string;
+  onChange: (masked: string) => void;
+  /** Borda e `aria-invalid` sem texto: a mensagem fica numa RefusalMessage colada ao botão. */
+  invalid?: boolean;
+  help?: string;
+  disabled?: boolean;
+  id?: string;
+}
+
+/** Campo de valor em reais inteiros: "R$" + dígitos com ponto de milhar + ",00". Reaplica a máscara a cada tecla ou colagem. */
+export function MoneyField({ label, value, onChange, invalid, help, disabled, id }: MoneyFieldProps) {
+  const pending = useRef<{ input: HTMLInputElement; caret: number } | null>(null);
+
+  // O React recoloca o cursor no fim ao trocar o valor; devolvemos para onde o usuário estava.
+  useLayoutEffect(() => {
+    const target = pending.current;
+    if (target && document.activeElement === target.input) target.input.setSelectionRange(target.caret, target.caret);
+    pending.current = null;
+  }, [value]);
+
+  const handle = (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.target;
+    const masked = maskReais(input.value, input.selectionStart ?? input.value.length);
+    pending.current = { input, caret: masked.caret };
+    onChange(masked.value);
+  };
+
+  return (
+    <Field
+      id={id}
+      label={label}
+      prefix="R$"
+      suffix=",00"
+      inputMode="numeric"
+      autoComplete="off"
+      placeholder="0"
+      value={value}
+      onChange={handle}
+      invalid={invalid}
+      help={help}
+      disabled={disabled}
+    />
+  );
+}
