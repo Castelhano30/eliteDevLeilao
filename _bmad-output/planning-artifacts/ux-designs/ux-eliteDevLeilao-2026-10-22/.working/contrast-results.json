@@ -1,0 +1,47 @@
+﻿{
+  "scope": "opaque palette pairs only; no rendered UI audit",
+  "results": [
+    {
+      "pair": "rotuloRelogio / painel claro",
+      "foreground": "#8A8273",
+      "background": "#141311",
+      "ratio": 4.88
+    },
+    {
+      "pair": "BRASIL decorativo / faixa logo",
+      "foreground": "#FFFFFF",
+      "background": "#E2A514",
+      "ratio": 2.18
+    },
+    {
+      "pair": "sobreCor / verde claro",
+      "foreground": "#F5EEDF",
+      "background": "#2E6A3E",
+      "ratio": 5.6
+    },
+    {
+      "pair": "sobreCor / ferrugem claro",
+      "foreground": "#F5EEDF",
+      "background": "#A43C1E",
+      "ratio": 5.6
+    },
+    {
+      "pair": "ferrugem / papel noite",
+      "foreground": "#E36A43",
+      "background": "#262420",
+      "ratio": 4.73
+    },
+    {
+      "pair": "sobreCor / verde noite",
+      "foreground": "#161513",
+      "background": "#74B585",
+      "ratio": 7.55
+    },
+    {
+      "pair": "sobreCor / ferrugem noite",
+      "foreground": "#161513",
+      "background": "#E36A43",
+      "ratio": 5.57
+    }
+  ]
+}
