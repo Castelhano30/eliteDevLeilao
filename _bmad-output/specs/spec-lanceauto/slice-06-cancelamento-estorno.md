@@ -90,7 +90,7 @@ Hash da linha CANCEL (campos nulos viram string vazia):
 `hash = HMAC(key, "v1|entry|{lotId}|{seq}|CANCEL|||{at}|{prevHash}")` com `at` ISO UTC em ms (`2026-10-22T14:00:00.123Z`) e `prevHash = Lot.lastHash` atual (genesis se `seq = 1`). `seal = HMAC(key, "v1|seal|{lotId}|{entryCount}|{lastHash}")` com o `entryCount` novo (inclui a linha CANCEL).
 
 Consultas que mudam:
-- `GET /wallet` → `leadingLots`: lotes com `leaderId = eu AND cancelledAt IS NULL AND settledAt IS NULL` (lote cancelado nunca aparece como "travado").
+- `GET /wallet` → `leadingLots`: lotes com `leaderId = eu AND cancelledAt IS NULL AND settledAt IS NULL`. **Já implementado na S03 (e reforçado na S05); aqui só se acrescenta o teste (AC-6.23).**
 - `GET /wallet` → `entries[]`: cada entrada traz `lotId` e `lotNumber` (nulo se não houver lote). Se a S01/S03 não expuseram `lotNumber`, adicione agora em `packages/shared`.
 - `GET /my/lots` (S02): a linha de cancelado ganha `cancelledAt` (ISO UTC) e `refundedCents` (`number | null`: `currentBidCents` se havia líder, senão `null`). Acrescente os dois campos ao DTO `MyLotRow` em `packages/shared` (aditivo).
 - `LotState` (S02) precisa expor `cancelledAt`; se ainda não expõe, adicione.
@@ -103,7 +103,7 @@ Consultas que mudam:
 | Campo | Valor |
 |---|---|
 | Papel | `AUCTIONEER` dono do lote |
-| Corpo | `{ "confirmEntryCount": number }` inteiro ≥ 0 (zod) |
+| Corpo | `{ "confirmEntryCount": number }` (zod `.int().min(0).max(Number.MAX_SAFE_INTEGER)`; acima disso é `VALIDATION`) |
 | Sucesso | `200 LotState` com `status: "CANCELLED"`, `cancelledAt`, `serverTime`, `bidCount`, `currentBidCents` (último), sem dados do líder |
 | Ordem de checagem | token → papel → corpo → lote existe → dono → já cancelado → já passou do fim → contagem → efeitos |
 
@@ -126,30 +126,30 @@ Transação, passo a passo (`modules/lots`, `cancelLot(userId, lotId, confirmEnt
 5. `lot.cancelledAt != null` → `LOT_CANCELLED`.
 6. `now >= lot.endsAt` ou `lot.settledAt != null` → `LOT_ENDED`.
 7. `lot.entryCount !== confirmEntryCount` → `LOT_CHANGED` com `details.entryCount = lot.entryCount`.
-8. Se `lot.leaderId`: `SELECT … FROM "Wallet" WHERE "userId" IN ($leaderId) ORDER BY "userId" FOR UPDATE`; `committedCents -= lot.currentBidCents`; atualiza a carteira (a CHECK `committed >= 0` protege); insere `LedgerEntry { kind: REFUND, amountCents: currentBidCents, lotId, totalAfter, committedAfter }`.
-9. Insere `Bid { kind: CANCEL, seq: lot.entryCount + 1, bidderId: null, pseudonym: null, amountCents: null, at: now, prevHash: lot.lastHash, hash }`.
-10. `UPDATE "Lot" SET "cancelledAt"=now, "entryCount"=entryCount+1, "lastHash"=hash, "seal"=sealHash(lotId, entryCount+1, hash)`.
+8. Se `lot.leaderId`: `SELECT … FROM "Wallet" WHERE "userId" IN ($leaderId) ORDER BY "userId" FOR UPDATE`. **Ler `total` e `committed` da linha devolvida por este `FOR UPDATE`** (nunca de leitura anterior; mesma regra da S03 §4.3): `committedAfter = committed − lot.currentBidCents`, `totalAfter = total`. Se `committed < lot.currentBidCents`, lançar erro interno (500) **sem alterar nada** (rollback total). Atualiza a carteira (a CHECK `committed >= 0` é a rede de segurança); insere `LedgerEntry { kind: REFUND, amountCents: currentBidCents, lotId, totalAfter, committedAfter }`.
+9. Insere `Bid { kind: CANCEL, seq: lot.entryCount + 1, bidderId: null, pseudonym: null, amountCents: null, at: now, prevHash: lot.lastHash, hash }` com `hash = entryHash(key, { lotId, seq, kind: 'CANCEL', pseudonym: null, amountCents: null, at: now, prevHash: lot.lastHash })` (chave sempre primeiro; nulos viram `""`).
+10. `UPDATE "Lot" SET "cancelledAt"=now, "entryCount"=entryCount+1, "lastHash"=hash, "seal"=sealHash(key, lotId, entryCount+1, hash)`.
 11. Commit. O service devolve os eventos; a rota publica depois do commit.
 
 Eventos devolvidos pelo service (ordem de publicação):
 | # | Evento | Sala | Payload |
 |---|---|---|---|
 | 1 | `lot:cancelled` | `lot:{id}` | `{ lotId, version: entryCount novo, serverTime }` |
-| 2 | `showcase:lot` | `showcase` | `LotCard` com `status: "CANCELLED"` (clientes removem o cartão da Vitrine e movem a linha do Painel) |
+| 2 | `showcase:lot` | `showcase` | `LotCard` com `status: "CANCELLED"` e `version` (= `entryCount` novo). A Vitrine remove o cartão; o Painel **refaz `GET /my/lots`** (o `LotCard` não traz `refundedCents`/`cancelledAt`; a linha de "Cancelados" vem da resposta) |
 | 3 | `wallet:updated` | `user:{leaderId}` (só se houve estorno) | `{ totalCents, committedCents, availableCents, serverTime }` |
 
 ## 7. Contratos Socket.IO
 
 Nenhum evento novo: os três acima já estão definidos na S04; esta fatia passa a EMITI-los. Consumo no cliente:
-- `lot:cancelled`: Sala refaz `GET /lots/:id` (traz `cancelledAt`) e troca para o estado Cancelado; cancela qualquer campo de lance em edição. `version <= atual` é descartado (regra S04).
-- `showcase:lot` com `status: "CANCELLED"`: Vitrine remove o cartão; Painel move a linha para "Cancelados"; diálogo aberto para esse lote fecha com aviso (ver §9).
+- `lot:cancelled`: o payload não traz `cancelledAt`; o reducer único `applyLotEvent` (S04) devolve `'refetch'` e a Sala refaz `GET /lots/:id` (traz `cancelledAt`) e troca para o estado Cancelado; descarta qualquer campo de lance em edição. `version <= atual` é descartado (regra S04).
+- `showcase:lot` com `status: "CANCELLED"`: Vitrine remove o cartão; ao receber de **lote próprio**, o Painel refaz `GET /my/lots` e a linha só entra em "Cancelados" com os dados da resposta (inclui `refundedCents` e `cancelledAt`); diálogo aberto para esse lote fecha com aviso (ver §9).
 - `wallet:updated`: chip e Carteira atualizam (já ligados na S04).
 
 ## 8. Mensagens
 
 | Código/uso | HTTP | Texto pt-BR | Onde aparece |
 |---|---|---|---|
-| `LOT_CANCELLED` (resposta a lance, de S03) | 409 | "O leiloeiro cancelou este lote. Nada foi vendido e todo saldo travado voltou." | `RefusalMessage` colada ao botão de lance, se o lance chegou depois do cancelamento |
+| `LOT_CANCELLED` (resposta a lance, de S03) | 409 | "Este lote foi cancelado pelo leiloeiro." (texto do PRD; ver §16 item 7) | `RefusalMessage` colada ao botão de lance, se o lance chegou depois do cancelamento |
 | `ROLE_NOT_ALLOWED` no cancelar | 403 | "Só leiloeiros cancelam lotes." (texto a revisar) | erro genérico; a UI não oferece o botão |
 | `FORBIDDEN` | 403 | "Este lote é de outro leiloeiro. Só o dono pode cancelar." (texto a revisar) | `FeedbackState` no Painel |
 | `NOT_FOUND` | 404 | "Esse lote não existe mais." (texto a revisar) | `FeedbackState` no Painel |
@@ -166,8 +166,8 @@ Nenhum evento novo: os três acima já estão definidos na S04; esta fatia passa
 | Botões | — | "Voltar" (secundário) · "Cancelar o lote" (primário ocre) · em envio "Cancelando…" | `CancelDialog` |
 | Confirmação no Painel | — | "Lote {NNN} cancelado." + se houve estorno " Estorno de R$ X,00 devolvido a quem liderava." (texto a revisar) | live region do Painel |
 | Sala cancelada | — | "O leiloeiro cancelou este lote. Nada foi vendido e todo saldo travado voltou." | aviso na Sala |
-| Extrato, estorno | — | "Saldo liberado · lote {NNN} cancelado" + nota "Total não muda." | linha do extrato (`REFUND`) |
-| Extrato, superado | — | "Saldo liberado · lance superado" + nota "Total não muda." | linha do extrato (`RELEASE`) |
+| Extrato, estorno | — | "Estorno · lote cancelado" (+ número do lote) e nota "TOTAL NÃO MUDA" | linha do extrato (`REFUND`); texto canônico da S01, constante em `packages/shared` |
+| Extrato, superado | — | "Saldo liberado · lance superado" e nota "TOTAL NÃO MUDA" | linha do extrato (`RELEASE`); texto canônico da S03, mesma constante |
 
 Voz: sem exclamação, sem emoji, valores e códigos em Plex Mono; o dinheiro do estorno é simulado mas o texto nunca brinca com o saldo (INV-18).
 
@@ -191,7 +191,7 @@ Estrutura já existente (S02/S05): resumo (Total recebido, placares AO VIVO / AG
 | `LOT_ENDED` / `LOT_CANCELLED` | Diálogo fecha; foco volta ao botão de origem se a linha ainda existir (senão ao título da seção); `FeedbackState` de aviso (borda `ferrugem` para erro) acima das tabelas com o texto de §8; a lista é refeita por `GET /my/lots` |
 | `FORBIDDEN` / `NOT_FOUND` | Diálogo fecha; aviso como acima; lista refeita |
 | Falha de rede | Diálogo permanece; mensagem ambígua de §8; ao tentar de novo, o cliente primeiro refaz `GET /my/lots`; se o lote já está cancelado, trata como sucesso |
-| Evento de lance com diálogo aberto | `showcase:lot` do mesmo lote atualiza a contagem exibida; aviso "Chegou lance novo: agora são {N}." (texto a revisar) em `aria-live="polite"` |
+| Evento de lance com diálogo aberto | `showcase:lot` do mesmo lote atualiza a contagem exibida; aviso "Chegou lance novo: agora são {N}." (texto a revisar) em `aria-live="polite"` — **se sobrar tempo**; o mínimo obrigatório é o `LOT_CHANGED` |
 | Evento de fechamento/cancelamento do mesmo lote com diálogo aberto | Diálogo fecha; aviso conforme `LOT_ENDED` ou `LOT_CANCELLED` |
 | Carregando/erro de lista | `FeedbackState` (S00) com "Tentar novamente"; dados anteriores mantidos e marcados como desatualizados |
 
@@ -216,7 +216,7 @@ O cliente guarda `confirmEntryCount` = último `bidCount` visto para o lote (equ
 
 ### 9.3 Carteira (T4) — extrato
 
-Linha `REFUND`: tipo (Big Shoulders caixa-alta) **ESTORNO**; descrição "Saldo liberado · lote {NNN} cancelado"; nota mono "Total não muda."; valor `R$ X,00` em mono, sem sinal de entrada de dinheiro; coluna de Total depois igual à anterior. Linha `RELEASE`: tipo **LIBERADO**, descrição "Saldo liberado · lance superado", mesma nota. Cores: nenhuma cor de sucesso (verde é só "ganhando"/"íntegro"); texto `tinta`. A S01 renderiza o extrato; confira os rótulos e alinhe só estes dois, sem renomear os demais tipos.
+Os textos do extrato são **canônicos e únicos**, definidos em constantes de `packages/shared` (S01/S03 já os usam; esta fatia **não os altera**): `REFUND` = tipo **ESTORNO**, descrição "Estorno · lote cancelado" com o número do lote `{NNN}` na linha; `RELEASE` = tipo **LIBERADO**, descrição "Saldo liberado · lance superado"; ambos com a nota mono "TOTAL NÃO MUDA". Valor `R$ X,00` em mono, sem sinal de entrada de dinheiro; coluna de Total depois igual à anterior. Cores: nenhuma cor de sucesso (verde é só "ganhando"/"íntegro"); texto `tinta`. Esta fatia só confere que a linha `REFUND` existe e usa a constante; não renomeia nada na S01/S03.
 
 ### 9.4 Vitrine (T1)
 
@@ -246,7 +246,7 @@ Comportamento:
 - Ao abrir, foco no título (`tabindex="-1"`); `Tab` circula só dentro do diálogo; o resto da página fica `inert`.
 - `Esc` e "Voltar" fecham sem cancelar; ignorados enquanto `submitting`.
 - Ao fechar sem cancelar, o foco volta ao botão "Cancelar" que o abriu; se o lote foi cancelado/encerrado, ao título da seção correspondente.
-- Contagem e título acompanham `bidCount` em tempo real; singular/plural corretos ("1 lance", "2 lances"); com 0 lances usa a variante "Ninguém deu lance ainda." e, se um lance chegar com o diálogo aberto, o título e o texto trocam para a variante com lances (aviso polite "Chegou lance novo…").
+- Contagem e título acompanham `bidCount` em tempo real; singular/plural corretos ("1 lance", "2 lances"). A troca da variante "0 lances" para "com lances" com o diálogo aberto (aviso polite "Chegou lance novo…") é **opcional / se sobrar tempo**; sem ela, o `LOT_CHANGED` do servidor já cobre a corrida e o diálogo atualiza a contagem na resposta.
 - `submitting`: confirmar mostra "Cancelando…" e fica inerte (evita envio duplo).
 - Não mostra nome, e-mail nem pseudônimo do líder.
 
@@ -277,16 +277,16 @@ O lote cancelado não aparece na Vitrine e aparece em "Cancelados" do Painel.
 - **AC-6.11 [auto]** Dado lote com `now == endsAt` (FakeClock) ou `now > endsAt` ainda não liquidado, ou já liquidado; Quando L cancela; Então `409 LOT_ENDED` e nada muda.
 - **AC-6.12 [auto]** Dado lote ao vivo com `endsAt − now = 1 s`; Quando L cancela com contagem correta; Então cancela (`now < endsAt`).
 - **AC-6.13 [auto]** Dado lote cancelado cujo `endsAt` já passou; Quando o job de fechamento roda; Então não liquida (sem `SALE_*`, sem `Receipt`, `settledAt` continua nulo).
-- **AC-6.14 [auto]** Dado cancelamento concluído; Quando o service retorna; Então devolve 3 eventos nesta ordem: `lot:cancelled` (`version = entryCount` novo), `showcase:lot` (`CANCELLED`), `wallet:updated` ao líder; a rota só publica depois do commit; sem líder, não há `wallet:updated`.
+- **AC-6.14 [auto]** Dado cancelamento concluído; Quando o service retorna; Então devolve 3 eventos nesta ordem: `lot:cancelled` (`version = entryCount` novo), `showcase:lot` (`CANCELLED`, com `version`), `wallet:updated` ao líder; a rota só publica depois do commit; sem líder, não há `wallet:updated`.
 - **AC-6.15 [manual]** Dado B na Sala do lote em outro navegador; Quando L confirma o cancelamento; Então, sem recarregar, a Sala de B mostra carimbo "CANCELADO" (`tinta2`), o aviso "O leiloeiro cancelou este lote. Nada foi vendido e todo saldo travado voltou.", sem formulário, e o chip de B volta ao disponível anterior. (AC7-estilo, AC10)
 - **AC-6.16 [manual]** Dado a Vitrine aberta em outro navegador; Quando o lote é cancelado; Então o cartão some sem recarregar.
 - **AC-6.17 [manual]** Dado Painel com lote de 2 lances; Quando L clica "Cancelar"; Então o diálogo exibe o título "Cancelar o lote 0NN com 2 lances?", o texto de estorno, "Não dá para desfazer.", foco no título, fundo inerte, `Esc` fecha sem cancelar e devolve o foco ao botão de origem.
 - **AC-6.18 [manual]** Dado Painel com lote sem lances; Quando L clica "Cancelar"; Então título "Cancelar o lote 0NN?" e texto "Ninguém deu lance ainda." (sem frase de estorno).
-- **AC-6.19 [manual]** Dado diálogo aberto mostrando 2 lances; Quando um lance novo entra (contagem 3) e L confirma antes do evento chegar; Então `LOT_CHANGED`: o diálogo continua aberto, mostra "3 lances", exibe "Entrou lance enquanto você decidia. Agora são 3 lances. Confirme de novo.", e nova confirmação cancela e estorna o NOVO líder.
+- **AC-6.19 [auto]** Dado lote com 2 lances e L com `confirmEntryCount: 2` em mãos; Quando um terceiro lance entra e depois L envia o cancelamento com 2; Então `409 LOT_CHANGED` com `details.entryCount = 3`, nada muda, e um novo `POST` com `confirmEntryCount: 3` cancela e estorna o NOVO líder (mesma cobertura do AC-6.9, com o novo líder). Manual (só o que é reproduzível à mão): com o diálogo aberto, quando a contagem muda por evento, o título passa a mostrar a nova contagem; e, ao receber `LOT_CHANGED`, o diálogo continua aberto com "Entrou lance enquanto você decidia. Agora são {N} lances. Confirme de novo."
 - **AC-6.20 [manual]** Dado "Cancelar" em lote do Painel; Quando cancela com sucesso; Então a linha sai de Ao vivo/Agendados e entra em "Cancelados" (com Estorno `R$ X,00`), a live region anuncia "Lote 0NN cancelado.", e o foco vai ao título da seção "Cancelados".
-- **AC-6.21 [manual]** Dado extrato de B após cancelamento; Então aparece "ESTORNO · Saldo liberado · lote 0NN cancelado · Total não muda."; e uma linha de lance superado aparece como "LIBERADO · Saldo liberado · lance superado".
+- **AC-6.21 [manual]** Dado extrato de B após cancelamento; Então aparece "ESTORNO · Estorno · lote cancelado (lote 0NN) · TOTAL NÃO MUDA"; e uma linha de lance superado aparece como "LIBERADO · Saldo liberado · lance superado · TOTAL NÃO MUDA" (textos canônicos da S01/S03; esta fatia não os altera).
 - **AC-6.22 [manual]** Dado botões "Cancelar" de várias linhas; Então cada um tem nome acessível único (`Cancelar lote 019, Hilux SRX 2020`), alvo ≥ 44px, e os controles do diálogo são alcançáveis só por teclado.
-- **AC-6.23 [auto]** Dado `GET /wallet` do líder estornado; Então `leadingLots` não contém o lote cancelado e `committedCents` = soma dos lances dos lotes ao vivo que ele lidera.
+- **AC-6.23 [auto]** (só teste; a consulta já é da S03) Dado `GET /wallet` do líder estornado; Então `leadingLots` não contém o lote cancelado e `committedCents` = soma dos lances dos lotes ao vivo que ele lidera.
 - **AC-6.24 [manual]** Dado `prefers-reduced-motion`; Então o carimbo Cancelado aparece direto no estado final.
 
 ## 13. Casos de borda e concorrência
@@ -300,7 +300,6 @@ O lote cancelado não aparece na Vitrine e aparece em "Cancelados" do Painel.
 | Lote sem lances | Cancela sem `REFUND`; linha CANCEL `seq=1`. |
 | Líder superado e que voltou a liderar | Só o líder atual (`lot.leaderId`) recebe estorno; carteiras de quem foi superado não são tocadas. |
 | Líder sem carteira ou carteira inconsistente | Não deve ocorrer (carteira nasce no cadastro); se `committed < currentBid` a CHECK derruba a tx e devolve erro 500 sem alterar nada (nenhum cancelamento parcial). |
-| `confirmEntryCount` enorme | `LOT_CHANGED` (não há erro de overflow; validar inteiro seguro). |
 | Cancelar lote agendado cujo `startsAt` é daqui a segundos | Permitido. |
 | Cliente sem socket | Painel confia na resposta `200`; a lista é refeita por `GET /my/lots`. |
 | Cancelamento com líder que já tem vários lotes | Só o `currentBidCents` deste lote é liberado. |
@@ -309,14 +308,14 @@ O lote cancelado não aparece na Vitrine e aparece em "Cancelados" do Painel.
 ## 14. Testes exigidos
 
 Unitários (`domain/`):
-- `entryHash` da linha CANCEL: string canônica exata `v1|entry|{lotId}|{seq}|CANCEL|||{at}|{prevHash}`; mudar `seq`/`at`/`prevHash` muda o hash.
-- `sealHash` com `entryCount` incluindo a linha CANCEL.
+- `entryHash(key, {lotId, seq, kind:'CANCEL', pseudonym:null, amountCents:null, at, prevHash})` da linha CANCEL: string canônica exata `v1|entry|{lotId}|{seq}|CANCEL|||{at}|{prevHash}`; mudar `seq`/`at`/`prevHash` muda o hash.
+- `sealHash(key, lotId, entryCount, lastHash)` com `entryCount` incluindo a linha CANCEL.
 
 Integração (Postgres real, `FakeClock`):
 - Cancelamento sem lances; com lances; estorno ao líder correto; `LedgerEntry REFUND`; `total` inalterado; CHECKs preservadas.
 - Todos os erros de §6, um por caso (`UNAUTHENTICATED`, `ROLE_NOT_ALLOWED`, `VALIDATION`, `NOT_FOUND`, `FORBIDDEN`, `LOT_CANCELLED`, `LOT_ENDED` em `now == endsAt`, `LOT_CHANGED`) e prova de que nada muda em cada falha.
 - Cadeia: depois do cancelamento, recalcular `hash`/`seal` de ponta a ponta com a chave de teste bate (linha CANCEL participa).
-- Concorrência: `Promise.all([cancel, bid])` repetido 50 vezes com ordens aleatórias; sempre uma das duas saídas da §13; asserção final: `committedCents` de cada carteira = soma dos lances de lotes ao vivo que ela lidera; `Σ ledger` coerente com `Wallet`; sem deadlock (timeout do teste).
+- Concorrência: `Promise.all([cancel, bid])` repetido 20 vezes com ordens aleatórias; sempre uma das duas saídas da §13; asserção final: `committedCents` de cada carteira = soma dos lances de lotes ao vivo que ela lidera; `Σ ledger` coerente com `Wallet`; sem deadlock (timeout do teste).
 - `Promise.all` de 5 cancelamentos do mesmo lote: um sucesso, quatro `LOT_CANCELLED`, um `REFUND`.
 - Job de fechamento ignora lote cancelado vencido.
 - `GET /lots` exclui cancelado; `GET /lots/:id` responde cancelado; `GET /my/lots` inclui cancelado com `cancelledAt` e `refundedCents`; `GET /wallet.leadingLots` exclui cancelado.
@@ -329,12 +328,12 @@ Web (Vitest, lógica pura): reducer/estado do diálogo (idle → submitting → 
 
 | Onde | Mudança |
 |---|---|
-| S01 Carteira/extrato | Rótulos de `REFUND` e `RELEASE` (§9.3); entradas com `lotNumber` |
+| S01/S03 Carteira/extrato | Textos de `REFUND`/`RELEASE` ficam **como na S01/S03** (constantes em `packages/shared`; nenhum AC delas muda); só garantir que as entradas tragam `lotNumber` |
 | S02 Painel | Botão "Cancelar" nas linhas; seção "Cancelados"; `MyLotRow` ganha `cancelledAt` e `refundedCents` |
 | S02 Sala | Estado Cancelado (§9.2) |
 | S03 `GET /wallet` | `leadingLots` exclui cancelados e liquidados |
 | S03 `bids[]` | Só `kind=BID` |
-| S04 | A S04 define os eventos; esta fatia emite `lot:cancelled`, `showcase:lot` (CANCELLED) e `wallet:updated` |
+| S04 | A S04 define os eventos e o reducer `applyLotEvent` (`version` = `entryCount`); esta fatia emite `lot:cancelled`, `showcase:lot` (CANCELLED, com `version`) e `wallet:updated`. `lot:cancelled` sem `cancelledAt` ⇒ `'refetch'` |
 | S07 | Usa `refundedCents`/`cancelledAt` para o estado Cancelado de Meus arremates |
 | S08 | Mostra a linha CANCEL na Auditoria e liga os links "Auditoria do lote" (Painel) e "Auditar este lote" (Sala cancelada) |
 | S09 | Varredura final de a11y do diálogo e do estado Cancelado nos dois temas |
@@ -348,6 +347,8 @@ Conflitos resolvidos (precedência progresso.md > PRD > arquitetura > EXPERIENCE
 4. **Linha CANCEL em lote sem lances**: a arquitetura só cita linha CANCEL "com lances"; o PRD pede registrar o cancelamento no histórico e a auditoria é aberta para qualquer lote. Decisão da spec: a linha CANCEL é sempre gravada, para ter regra única e histórico completo. Ver pergunta 1.
 5. **Linha CANCEL na cadeia (P11)**: a triagem sugeria não cobrir o cancelamento no HMAC; a arquitetura (AD-8) o inclui e conta no veredito. Vence a arquitetura.
 6. **Mensagem de `ROLE_NOT_ALLOWED`**: o texto de EXPERIENCE ("Leiloeiro vende, não compra…") é de lance; no cancelar a mensagem é outra (§8).
+7. **Texto de `LOT_CANCELLED` na recusa de lance**: o PRD diz "Este lote foi cancelado pelo leiloeiro."; o EXPERIENCE e a primeira versão da S03/S06 usavam o texto longo ("O leiloeiro cancelou este lote. Nada foi vendido e todo saldo travado voltou."). Vence o PRD: o `RefusalMessage` usa o texto do PRD; o texto longo fica só no aviso da Sala cancelada (§9.2). A S03 deve alinhar a tabela de mensagens e o AC-3.4 ao texto do PRD.
+8. **Textos do extrato (`REFUND`/`RELEASE`)**: a versão anterior desta fatia reescrevia os rótulos já fixados nos AC da S01/S03. Vencem os textos da S01/S03, como constantes únicas em `packages/shared`; a S06 não os altera.
 
 Perguntas abertas:
 1. Confirmar que o cancelamento de lote SEM lances também gera a linha CANCEL na cadeia (sugestão: sim, como especificado). Alternativa: só gravar `cancelledAt` e a Auditoria mostrar o cancelamento a partir da coluna.

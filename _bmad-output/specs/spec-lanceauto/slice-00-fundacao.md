@@ -34,7 +34,7 @@ Repositório com só `_bmad-output/` versionado (branch `main`, remoto `Castelha
 
 **Invariantes que valem aqui**
 - INV-2 Dinheiro em centavos; UI em reais inteiros `R$ 31.000,00` (",00" fixo), em IBM Plex Mono. `MAX_DEPOSIT_CENTS = 1_000_000_000`.
-- INV-3 Datas ISO UTC `Z`; `new Date()`/`Date.now()` proibidos fora de `infra/clock.ts`; UI em America/Sao_Paulo.
+- INV-3 Datas ISO UTC `Z`; em `apps/api/src`, `new Date()`/`Date.now()` proibidos fora de `infra/clock.ts` e dos testes; no web, `Date` só em `lib/server-clock.ts` e nos formatadores de data; `packages/shared` nunca usa `Date.now()`. Services gravam `createdAt`/`at` com `clock.now()` explícito (nunca `@default(now())` como fonte de verdade). UI em America/Sao_Paulo.
 - INV-4 Mutação só por REST; Socket.IO só transmite; eventos depois do commit via `Publisher`.
 - INV-16 Erro: `{ "error": { "code", "message", "details"? } }`.
 - INV-17 Contratos em `packages/shared`; `web` nunca importa `apps/api`.
@@ -42,14 +42,19 @@ Repositório com só `_bmad-output/` versionado (branch `main`, remoto `Castelha
 
 ## 4. Regras de negócio
 Esta fatia não implementa regra de leilão. Regras de engenharia (todas verificáveis):
-- R-0.1 Um único repositório com npm workspaces: `apps/web`, `apps/api`, `packages/shared`. `web` e `api` dependem de `shared`; `shared` só depende de `zod`; `web` nunca importa `apps/api`. (MONO · AD-13)
-- R-0.2 `apps/api/src/env.ts` valida com zod e **falha no boot** se faltar variável. `AUDIT_HMAC_KEY` ≥ 32 bytes; `JWT_SECRET` ≥ 32 caracteres. (Config)
-- R-0.3 `Date`/`Date.now()` só em `infra/clock.ts`. Regra de lint (`no-restricted-syntax`/`no-restricted-globals`) fora desse arquivo e de testes. (AD-10)
+- R-0.1 Um único repositório com npm workspaces: `apps/web`, `apps/api`, `packages/shared`. `web` e `api` dependem de `shared`; `shared` só depende de `zod`; `web` nunca importa `apps/api`. (MONO · AD-13) `packages/shared` guarda também as constantes de texto compartilhadas (ex.: textos canônicos do extrato `LEDGER_TEXT`: `RELEASE` "Saldo liberado · lance superado", `REFUND` "Estorno · lote cancelado", nota "TOTAL NÃO MUDA"); as fatias importam, não redigitam.
+- R-0.2 `apps/api/src/env.ts` valida com zod e **falha no boot** se faltar variável. `AUDIT_HMAC_KEY`: string UTF-8 de ≥ 32 caracteres (gerar com `openssl rand -hex 32`; o `.env.example` e o CI trazem um valor de dev válido, nunca usado em produção); `JWT_SECRET` ≥ 32 caracteres. (Config)
+- R-0.3 Em `apps/api/src`, `Date`/`Date.now()` só em `infra/clock.ts` (e nos testes). Regra de lint (`no-restricted-syntax`/`no-restricted-globals`) **escopada a `apps/api/src`**, com exceção para esse arquivo e para os testes; a regra não vale para o web (onde `Date` é permitido só em `lib/server-clock.ts` e nos formatadores de data) nem quebra o lint do `shared` (que apenas não usa `Date.now()`). (AD-10)
 - R-0.4 Toda resposta de erro usa o envelope; erros não previstos viram `{code:"INTERNAL", message:"Algo travou do nosso lado. Tente de novo em instantes."}` HTTP 500 e vão para o log com `requestId`, sem stack para o cliente.
-- R-0.5 CORS aceita só `WEB_ORIGIN`; `helmet` ligado; rate-limit é utilitário reutilizável (`makeRateLimiter({windowMs,max})`), aplicado só a partir da S01.
+- R-0.5 CORS aceita só `WEB_ORIGIN`; `helmet` ligado (a API não serve HTML; **sem CSP no web**, para o script inline do tema funcionar). Rate-limit é utilitário reutilizável `makeRateLimiter({ windowMs, max, keyGenerator?, skip? })`, aplicado só a partir da S01. O handler do limiter **lança `AppError(RATE_LIMITED)`** (envelope padrão, nunca texto puro). Em produção `app.set('trust proxy', 1)` (atrás do Render o IP real vem de `X-Forwarded-For`; sem isso o limite por IP vira global e o `express-rate-limit` v7 acusa `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR`). `RATE_LIMIT_DISABLED=1` faz o `skip` ligar sempre (usado nos testes); só os ACs de rate limit o reativam. `AUTH_RATE_LIMIT_MAX` (padrão 30) ajusta o teto de `/auth/*`. Ambas as variáveis constam no `.env.example`.
 - R-0.6 Services recebem `Clock`; produção usa `SystemClock`, testes/seed usam `FakeClock` (`now()`, `set(date)`, `advance(ms)`).
 - R-0.7 Rotas só validam (zod), autenticam e chamam service; services devolvem `DomainEvent[]`; a rota entrega ao `Publisher` depois do commit (nesta fatia `NoopPublisher`). (AD-1)
 - R-0.8 Nada que o usuário digitou é perdido por falha de rede (princípio do `apiClient`/formulários: erros voltam como objeto, não lançam sem tratamento).
+- R-0.9 **`packages/shared` compila para `dist`** (`tsc`, `exports`/`main`/`types` apontando para `dist`); `web` e `api` consomem o pacote compilado (sem `transpilePackages`, sem importar TS cru). `npm run build` na raiz respeita a ordem **shared → api → web** (scripts por workspace encadeados); `dev` roda `shared` em modo watch. (MONO)
+- R-0.10 **Build e start de produção da API (Render):** build `npm ci && npm run build -w packages/shared -w apps/api && npx prisma generate --schema apps/api/prisma/schema.prisma`; start `npx prisma migrate deploy --schema apps/api/prisma/schema.prisma && node apps/api/dist/server.js`. **Web (Vercel):** Root Directory `apps/web`, com install executado na raiz do workspace e `shared` já compilado (comando de build do projeto: `npm run build -w packages/shared && npm run build -w apps/web`). (DEP)
+- R-0.11 **Docker Compose:** o `db` declara `healthcheck` (`pg_isready`) e `api` usa `depends_on: { db: { condition: service_healthy } }`, para o `migrate deploy` não falhar na primeira subida. `NEXT_PUBLIC_API_URL` entra no build do `web` como **build-arg** e aponta para `http://localhost:{PORT}` (quem chama a API é o navegador, não o container; o nome do serviço do Compose não resolve fora dele). `DIRECT_URL` sempre definido no Compose e no `.env.example` (igual a `DATABASE_URL` em ambiente local). (DKR)
+- R-0.12 **Ordem de trabalho do dia 1:** primeiro o esqueleto mínimo no ar (monorepo, `shared` compilando, API com `/health`, página diagnóstica, banco, CI e deploy nos três hosts); só depois os primitivos de UI e o `/kit`. O deploy triplo (Vercel/Render/Neon) é o ponto de maior risco do cronograma e não pode esperar pelo acabamento visual. Se o tempo apertar, primitivos que só uma fatia posterior usa (`Stamp`, `LotTag`, `Perforation`) e o `/kit` completo passam a **"se sobrar tempo"** e são criados na fatia que os consome (S02/S05); o resto do kit (Button, Field, RefusalMessage, FeedbackState, Dialog, DataTable, Logo, PageShell, SkipLink, ThemeSwitch, IdentityChip, FilterTabs) entra nesta fatia.
+- R-0.13 **Testes de integração da API:** Vitest com `fileParallelism: false` (um Postgres compartilhado em `DATABASE_URL_TEST`, limpeza com `TRUNCATE … CASCADE` entre testes); `globalSetup` roda `prisma migrate deploy` contra `DATABASE_URL_TEST`; o CI faz o mesmo antes dos testes.
 
 ## 5. Modelo de dados
 `apps/api/prisma/schema.prisma` com **apenas** `generator` e `datasource` (sem modelos):
@@ -57,7 +62,7 @@ Esta fatia não implementa regra de leilão. Regras de engenharia (todas verific
 generator client { provider = "prisma-client-js" }
 datasource db { provider = "postgresql"; url = env("DATABASE_URL"); directUrl = env("DIRECT_URL") }
 ```
-Não criar enums nem tabelas. `prisma migrate deploy` roda no start da API e passa sem migrações pendentes (a primeira migração real é da S01). `/health` testa o banco com `SELECT 1` via `$queryRaw`.
+Não criar enums nem tabelas. Como `schema.prisma` usa `env("DIRECT_URL")`, o Prisma falha se a variável não existir: **`DIRECT_URL` é sempre definida** (`.env.example`, Compose, CI); em ambiente local é igual a `DATABASE_URL`. No Neon, `DATABASE_URL` é a URL **pooled** com `?pgbouncer=true&connect_timeout=15` e `DIRECT_URL` a conexão direta (usada pelo `migrate deploy`). Para o `prisma migrate deploy` não depender de comportamento de "pasta de migrações inexistente" (varia por versão), a S00 cria uma **migração inicial vazia `0_init`** (`prisma/migrations/0_init/migration.sql` só com um comentário); a primeira migração real é da S01. `prisma migrate deploy` roda no start da API e passa sem migrações pendentes. `/health` testa o banco com `SELECT 1` via `$queryRaw`.
 
 ## 6. Contratos REST
 | Rota | Papel | Resposta | Erros |
@@ -84,10 +89,10 @@ Envelope de erro e tabela de códigos que o `ErrorCode` de `shared` já deve con
 | `NOT_FOUND` | 404 | — |
 | `EXTERNAL_UNAVAILABLE` | 503 | `{ source: "FIPE"\|"WIKIPEDIA" }` |
 | `INTERNAL` | 500 | — |
-| `RATE_LIMITED` | 429 | — (mensagem: "Calma, uma coisa de cada vez. Tente de novo em instantes.") |
+| `RATE_LIMITED` | 429 | — (mensagem padrão: "Calma, uma coisa de cada vez. Tente de novo em instantes."; cada rota pode sobrescrever a mensagem, o código já nasce aqui e as fatias **não** o "acrescentam") |
 
 ## 7. Contratos Socket.IO
-Socket.IO 4.x montado no mesmo `http.Server` do Express, caminho padrão `/socket.io`, CORS só `WEB_ORIGIN`. Aceita conexão com `auth: { token? }` opcional; **nesta fatia o token não é validado** (a S01 valida e entra o socket em `user:{id}`). Sem salas e sem eventos de negócio. Constantes de nomes de eventos em `packages/shared/events.ts`:
+Socket.IO 4.x montado no mesmo `http.Server` do Express, caminho padrão `/socket.io`, CORS só `WEB_ORIGIN`. Aceita conexão com `auth: { token? }` opcional; **nesta fatia o token não é validado** (a S01 valida e entra o socket em `user:{id}`). Sem salas e sem eventos de negócio. O cliente cria o socket com `io(url, { autoConnect: false, auth: (cb) => cb({ token: getToken() }) })` (`auth` como **função**, para o handshake sempre levar o token atual) e conecta ao montar; login e logout fazem `socket.disconnect(); socket.connect()`. Constantes de nomes de eventos em `packages/shared/events.ts`:
 `bid:placed`, `lot:closed`, `lot:cancelled`, `showcase:lot`, `wallet:updated` (S→C); `lot:join`, `showcase:join` (C→S). Payloads serão tipados pelas fatias donas.
 
 `DomainEvent` = `{ type: EventName; room: string; payload: unknown }`. `Publisher` = `{ publish(events: DomainEvent[]): void }`. `NoopPublisher` descarta.
@@ -97,10 +102,10 @@ Texto do erro interno e do rate-limit na tabela da seção 6. Textos da página 
 
 ## 9. Telas e estados
 ### 9.1 Layout raiz (`app/layout.tsx`)
-- `<html lang="pt-BR">`, `data-theme` definido por **script inline antes da pintura** (ver 10.1).
+- `<html lang="pt-BR" suppressHydrationWarning>`, `data-theme` definido por **script inline antes da pintura** (ver 10.1), injetado no `<head>` do layout com `<script dangerouslySetInnerHTML>`; o `suppressHydrationWarning` evita o aviso de mismatch do React, já que o script altera o atributo antes da hidratação. O web não define CSP (o script inline não é bloqueado).
 - "Pular para o conteúdo" (SkipLink) como primeiro elemento focável, visível ao receber foco, alvo `#conteudo` no `<main>`.
 - Landmarks: `header`, `nav` (com `aria-label`), `main id="conteudo"`.
-- Providers: TanStack Query, cliente Socket.IO (singleton, conecta ao montar; sem salas).
+- Providers: TanStack Query, cliente Socket.IO (singleton, `autoConnect:false` com `auth` em função, conecta ao montar; sem salas).
 - Largura máxima do conteúdo 1320px, margem lateral `clamp(16px,4vw,56px)`.
 
 ### 9.2 Página diagnóstica (`/`)
@@ -140,7 +145,7 @@ Tailwind: `theme.extend.colors` mapeia cada chave para `var(--c-…)` (ex. `fund
 
 **Tema — mecanismo:** padrão `prefers-color-scheme` (sistema). Chave manual em `localStorage["lanceauto-tema"]` ∈ `"claro"|"noite"` (ausente = sistema). Script inline no `<head>` (antes da pintura) lê a chave (em try/catch) e, se existir, define `document.documentElement.dataset.theme`; se não existir, não define (CSS segue o sistema). Sistema acompanha mudança do SO; escolha manual prevalece.
 
-**Tipografia** (3 famílias via `next/font/google`; fallback Georgia/serif para Newsreader, monospace para Plex): Big Shoulders Display 600/800/900; IBM Plex Mono 400/500/600; Newsreader 400/600 normal e itálico, opsz 6..72. Regra de ouro: lote, R$, cronômetro, pseudônimo e hash **sempre** em IBM Plex Mono; cartaz (títulos, botões, carimbos) sempre CAIXA-ALTA em Big Shoulders 800–900, entrelinha apertada. Classes utilitárias (`.t-<nome>`):
+**Tipografia** (3 famílias via `next/font/google`; fallback Georgia/serif para Newsreader, monospace para Plex): Big Shoulders Display 600/800/900; IBM Plex Mono 400/500/600; Newsreader 400/600 normal e itálico, opsz 6..72 (**verificar no dia 1** se o `next/font/google` aceita `weight` estático junto do eixo `opsz`; se não aceitar, usar a fonte variável com `axes: ['opsz']` e omitir `weight`). Regra de ouro: lote, R$, cronômetro, pseudônimo e hash **sempre** em IBM Plex Mono; cartaz (títulos, botões, carimbos) sempre CAIXA-ALTA em Big Shoulders 800–900, entrelinha apertada. Classes utilitárias (`.t-<nome>`):
 
 | Classe | Família | Tamanho | Peso | Entrelinha | Extra |
 |---|---|---|---|---|---|
@@ -188,7 +193,8 @@ Nenhum estado depende de animação para ser percebido.
 
 **Contraste (verificado, não regredir):** rótulo relógio #8A8273 sobre painel #141311 = 4,88:1; papel sobre verde ou ferrugem (claro) = 5,60:1; ferrugem noite sobre papel noite = 4,73:1. "BRASIL" branco sobre faixa #E2A514 = 2,18:1 → **restrito à marca decorativa**, nunca em texto de interface. Texto de interface ≥ 4,5:1 (3:1 para texto grande e controles/foco).
 
-### 10.2 Primitivos (cada um em `apps/web/src/components/ui/`, com variantes visíveis em `/kit`)
+### 10.2 Primitivos (15, cada um em `apps/web/src/components/ui/`, com variantes visíveis em `/kit`)
+Lista: Logo, Button, Field, RefusalMessage, FeedbackState, Stamp, LotTag, Perforation, DataTable, FilterTabs, Dialog, IdentityChip, ThemeSwitch, SkipLink, PageShell (a SPEC.md e outras fatias que citam "14" referem-se a esta lista, que tem 15). Por R-0.12, `Stamp`, `LotTag` e `Perforation` são **"se sobrar tempo"** nesta fatia: se não couberem no dia 1, nascem na fatia que os consome (S02/S05) com a mesma especificação abaixo.
 
 **Logo (logo-placa).** Link para `/` com `aria-label="LanceAuto, vitrine"`. Placa Mercosul: contorno 4px `tinta`, raio externo 10px (manual) / 7px (telas, `t-logo-tela` 30px), sombra `6px 6px 0` (`4px 4px 0` nas telas). Faixa superior `faixaPlaca` com "BRASIL" `brasilTexto` (Plex Mono 12px/600, ls .5em; nas telas 8px, ls .42em), **decorativo `aria-hidden`**. Placa inferior: `margin:0 4px 4px`, `padding:8px 16px 5px`, borda 2px sem o lado de cima, raio `0 0 6px 6px`, dois pontos redondos de 8px nas laterais, texto "LANCE·AUTO" Big Shoulders 800 (56px manual; 28–30px nas telas) ls .1em. Contorno e letras seguem a cor de texto do tema; faixa e branco fixos.
 
@@ -241,10 +247,10 @@ Responsivo: **sem media queries de largura**; reflow por `flex-wrap`, `grid` com
 Nenhum dado. Cria o esqueleto: `apps/api/prisma/seed.ts` (função `main` vazia que loga "sem dados ainda") e scripts `npm run seed` e `npm run seed:demo` apontando para ele. `fipe-fixture.json` fica para S02.
 
 ## 12. Critérios de aceite
-- AC-0.1 [auto] Dado `docker compose up` com `.env` copiado do `.env.example`, quando chamo `GET /health`, então recebo `200 {"ok":true,"db":true}`.
+- AC-0.1 [manual] Dado `docker compose up` com `.env` copiado do `.env.example`, quando chamo `GET /health`, então recebo `200 {"ok":true,"db":true}` (o CI não sobe o Compose; o teste automatizado de `/health` é o da §14).
 - AC-0.2 [auto] Dado o banco parado, quando chamo `GET /health`, então recebo `503 {"ok":false,"db":false}`.
 - AC-0.3 [auto] Dado `JWT_SECRET` ausente, quando a API sobe, então o processo encerra com mensagem listando a variável faltante.
-- AC-0.4 [auto] Dado `AUDIT_HMAC_KEY` com menos de 32 bytes, quando a API sobe, então encerra com erro.
+- AC-0.4 [auto] Dado `AUDIT_HMAC_KEY` com menos de 32 caracteres, quando a API sobe, então encerra com erro.
 - AC-0.5 [auto] Dado uma rota que lança `Error` genérico, quando é chamada, então a resposta é `500` com `{error:{code:"INTERNAL",message:"Algo travou do nosso lado. Tente de novo em instantes."}}` sem stack, e o log tem o `requestId`.
 - AC-0.6 [auto] Dado `AppError(VALIDATION,{fields:{email:"x"}})`, quando lançado, então a resposta é `400` com o envelope e `details.fields`.
 - AC-0.7 [auto] Dado `FakeClock.set(2026-10-22T14:00:00.000Z)`, quando um service pede `clock.now()`, então recebe exatamente esse instante; e `advance(120000)` o move para 14:02:00.000Z.
@@ -255,11 +261,14 @@ Nenhum dado. Cria o esqueleto: `apps/api/prisma/seed.ts` (função `main` vazia 
 - AC-0.12 [manual] Dado `prefers-reduced-motion: reduce`, quando abro `/kit`, então carimbos, pontos e placas aparecem no estado final, sem animação.
 - AC-0.13 [manual] Dado `/kit` a 320px e a 390px e com zoom 200%, quando rolo, então não há rolagem horizontal da página (só dentro do DataTable).
 - AC-0.14 [manual] Dado `NODE_ENV=production`, quando abro `/kit`, então recebo 404.
-- AC-0.15 [auto] Dado um push no GitHub, quando o Actions roda, então lint, typecheck e testes passam com um Postgres de serviço.
+- AC-0.15 [manual] Dado um push no GitHub, quando o Actions roda, então lint, typecheck e testes passam com um Postgres de serviço (verificado olhando a execução do workflow, não por teste automatizado).
 - AC-0.16 [auto] Dado `formatBRL(3100000)` então `"R$ 31.000,00"`; `formatBRL(1000000000)` então `"R$ 10.000.000,00"`; `parseReais("31.000")` então `3100000`; entrada vazia ou não numérica então `null`.
+- AC-0.17 [auto] Dado `makeRateLimiter({windowMs:60000,max:2})` sem `RATE_LIMIT_DISABLED`, quando a mesma chave faz 3 requisições, então a 3ª recebe `429` com o envelope `{error:{code:"RATE_LIMITED",message:…}}` (JSON, não texto puro); com `RATE_LIMIT_DISABLED=1` nenhuma é limitada; `keyGenerator` customizado separa as contagens por chave.
+- AC-0.18 [auto] Dado `npm run build` na raiz a partir de um clone limpo, quando termina, então `packages/shared/dist` existe, `apps/api/dist/server.js` roda e `apps/web` compila importando `@lanceauto/shared` (ou o nome do pacote adotado) sem `transpilePackages`.
+- AC-0.19 [manual] Dado o `.env.example` copiado para `.env`, quando a API sobe, então `AUDIT_HMAC_KEY` de dev (≥ 32 caracteres) e `DIRECT_URL` já estão presentes e o boot não falha.
 
 ## 13. Casos de borda
-- `DIRECT_URL` ausente em dev local: cair para `DATABASE_URL` (Neon exige as duas em produção).
+- `DIRECT_URL` ausente: o schema não consegue "cair" para `DATABASE_URL` (o Prisma falha ao ler `env("DIRECT_URL")`); por isso ela é **sempre** definida no `.env.example`, no Compose e no CI (igual a `DATABASE_URL` fora do Neon). Se faltar, o `env.ts` falha no boot com a variável listada.
 - API hibernada no Render (plano grátis): a página diagnóstica mostra "Consultando…" e depois ok; não tratar como erro antes de ~15 s (timeout do `apiClient` de leitura = 15 s no diagnóstico).
 - `localStorage` indisponível (janela privada): tema segue o sistema; nada quebra.
 - Socket que não conecta (WebSocket bloqueado): linha "Socket: desconectado" sem derrubar a página.
@@ -269,10 +278,12 @@ Nenhum dado. Cria o esqueleto: `apps/api/prisma/seed.ts` (função `main` vazia 
 - `shared/money`: `formatBRL`, `parseReais`, limites 0, 1, `MAX_DEPOSIT_CENTS`, `MAX_DEPOSIT_CENTS+1` (validação é da S01), pontos de milhar.
 - `api/env`: faltando variável, chave curta, ok.
 - `api/errors`: envelope e `INTERNAL`.
+- `api/rate-limit`: AC-0.17 (envelope, `skip`, `keyGenerator`).
+- Configuração: `vitest.config` da API com `fileParallelism: false`, `globalSetup` que roda `prisma migrate deploy` em `DATABASE_URL_TEST`; testes de integração usam `TRUNCATE … CASCADE` entre casos (R-0.13).
 - `api/clock`: `FakeClock`.
 - `api/health`: com banco (integração, `DATABASE_URL_TEST`) e com banco derrubado (mock do prisma).
 - `web`: função de aplicar tema (script inline testável como função pura) lendo chave válida/ausente/inválida.
-- CI: workflow `.github/workflows/ci.yml` com serviço `postgres:16`, `npm ci`, `lint`, `typecheck`, `test`.
+- CI: workflow `.github/workflows/ci.yml` com serviço `postgres:16`, `npm ci`, `npm run build -w packages/shared`, `prisma migrate deploy` em `DATABASE_URL_TEST`, `lint`, `typecheck`, `test`.
 
 ## 15. Retrofits e integrações
 - S01 adiciona a primeira migração, valida o token do handshake do socket e preenche o Header.
@@ -284,12 +295,15 @@ Nenhum dado. Cria o esqueleto: `apps/api/prisma/seed.ts` (função `main` vazia 
 - C6 (tema): DESIGN pede select nativo "Tema" e sistema por padrão; arquitetura pede chave manual em localStorage → unificado em 10.1; dark mode continua "opcional" no PRD, mas entra aqui por custo baixo (O5).
 - DESIGN "cartão sempre ilustração, nunca foto" vs PRD (imagem real): vale PRD; tratado na S02 (CarPhoto).
 - Aberta (sugestão): versões exatas de Node/Next/Prisma e hosts (Vercel, Render, Neon) **não foram verificadas na web**; confirmar no dia 1 e deixar o lockfile mandar. Sugestão: Node LTS ativo, Next.js e Prisma no major atual, `bcryptjs`, `jsonwebtoken`, `pino`, `helmet`, `express-rate-limit`, Vitest, Tailwind, TanStack Query.
+- **Verificações do dia 1** (tarefas, não decisões): (a) `next/font/google` com Newsreader `opsz` + `weight` (ver 10.1); (b) `prisma migrate deploy` com a migração `0_init` vazia na versão instalada; (c) o plano gratuito do Render executa o comando de start com `migrate deploy` e seed (ver S09); (d) CORS e transporte WebSocket entre Vercel e Render funcionando no deploy mínimo.
 
 ## 17. Definition of Done
 - [ ] Monorepo com workspaces; `npm run dev`, `build`, `lint`, `typecheck`, `test` na raiz.
-- [ ] `.env.example` completo: `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `AUDIT_HMAC_KEY`, `WEB_ORIGIN`, `FIPE_BASE_URL`, `FIPE_TOKEN?`, `WIKI_USER_AGENT`, `PORT`, `NEXT_PUBLIC_API_URL` (+ `DATABASE_URL_TEST`).
-- [ ] `docker-compose.yml` com db, api (roda `prisma migrate deploy` no start) e web.
+- [ ] `.env.example` completo: `DATABASE_URL`, `DIRECT_URL` (sempre), `JWT_SECRET`, `AUDIT_HMAC_KEY` (valor de dev ≥ 32 caracteres), `WEB_ORIGIN`, `FIPE_BASE_URL`, `FIPE_TOKEN?`, `WIKI_USER_AGENT`, `WIKIPEDIA_BASE_URL` (para poder derrubar a Wikipedia na verificação do AC13), `PORT`, `NEXT_PUBLIC_API_URL`, `AUTH_RATE_LIMIT_MAX` (padrão 30), `RATE_LIMIT_DISABLED` (+ `DATABASE_URL_TEST`).
+- [ ] `packages/shared` compila para `dist`; `npm run build` na raiz na ordem shared → api → web (R-0.9); comandos de build/start da API e Root Directory da Vercel documentados (R-0.10).
+- [ ] `docker-compose.yml` com db (healthcheck), api (`depends_on: service_healthy`; roda `prisma migrate deploy` no start) e web (`NEXT_PUBLIC_API_URL` como build-arg, R-0.11).
+- [ ] Migração inicial vazia `0_init` criada; `trust proxy` e `makeRateLimiter` conforme R-0.5.
 - [ ] CI verde no GitHub.
 - [ ] Deploy mínimo no ar (AC-0.8) com `JWT_SECRET` e `AUDIT_HMAC_KEY` definidos em produção; URLs registradas no README.
-- [ ] Tokens dos dois temas, fontes, tipografia, movimento e foco no código; `/kit` com todos os primitivos.
+- [ ] Tokens dos dois temas, fontes, tipografia, movimento e foco no código; `/kit` com os primitivos (Stamp, LotTag e Perforation são "se sobrar tempo", R-0.12; o deploy mínimo vem antes dos primitivos).
 - [ ] README esqueleto (visão geral, stack, como rodar, link do deploy) e `progresso.md` atualizado.

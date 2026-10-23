@@ -30,7 +30,7 @@ Roteiro de demonstração (dois navegadores, seed da S03):
 | Auditoria ao vivo (é retrato com "Verificar de novo", sem stream) | S08 |
 | Adapter Redis / mais de uma instância da API | fora de escopo (Deferred) |
 | Replay de eventos perdidos (a reconciliação é snapshot, não replay) | fora de escopo |
-| Chave de idempotência de lance (duplo clique já cai em `ALREADY_WINNING`) | fora de escopo |
+| Chave de idempotência de lance (reenvio idêntico cai em `BELOW_MINIMUM`/`OWN_LEAD` pela ordem da S03; a UI previne com o botão inerte durante o envio) | fora de escopo |
 
 ## 3. Ponto de partida
 
@@ -38,12 +38,12 @@ Já existe (S00–S03; confirmar nomes no código):
 - API: `DomainEvent` e `Publisher` com `NoopPublisher` (S00); Socket.IO montado no mesmo servidor aceitando `auth.token` opcional (S00) e validando o JWT para entrar em `user:{id}` (S01); services que devolvem `DomainEvent[]` (bid, depósito, criação de lote) e rotas que os entregam ao `Publisher` depois do commit (S01–S03); `Clock`/`FakeClock`.
 - Shared: nomes de eventos (S00), `LotCard`, `LotState`, `lotStatus` (S02), DTO de lance (S03).
 - Web: `socket` singleton sem salas (S00), `apiClient`, TanStack Query, `useServerClock` alimentado só por respostas HTTP (S02), `Cronometro` com `SeloProrrogacao` (S02), Sala com painel de lance, `PlacarPosicao`, `FaixaStatus`, histórico (S03), Vitrine/Painel/Carteira/BalanceChip lendo por HTTP (S01–S03).
-- `LotState` carrega `bids[]` públicos, `entryCount` (usado como `version`), `endsAt`, `originalEndsAt`, `serverTime`, e se logado `myPseudonym/myRank/myBestBidCents`. Se `entryCount` ainda não está exposto no `LotState`, expor agora em `packages/shared` com o nome `version`.
+- `LotState` carrega `bids[]` públicos, `entryCount`, `endsAt`, `originalEndsAt`, `serverTime`, e se logado `myPseudonym/myRank/myBestBidCents`. **Nome único:** `LotState`, `LotSummary` (S03) e `LotCard` expõem `version` (= `entryCount` depois da operação) e mantêm `entryCount` como alias de compatibilidade. O reducer e o cache do cliente leem **só `version`**; os eventos usam só `version`. Se `version` ainda não está em `packages/shared`, adicionar agora (retrofit na S03: nomear o campo `version` na resposta do lance, no `GET /lots/:id` e no `bid:placed`).
 
 Invariantes que valem aqui:
-- INV-1 Servidor é fonte de verdade de tempo, saldo e valores. Sem atualização otimista; relógio da tela = `Date.now()+offset` (offset = serverTime − Date.now() de cada resposta/evento).
+- INV-1 Servidor é fonte de verdade de tempo, saldo e valores. Sem atualização otimista; relógio da tela = `Date.now()+offset` (offset = serverTime − Date.now(), recalculado só em respostas HTTP e acks, ver R-4.10).
 - INV-4 Toda mutação por REST via service; Socket.IO só transmite (exceto `lot:join`/`showcase:join` que respondem snapshot). Service devolve `DomainEvent[]`; a rota entrega ao `Publisher` DEPOIS do commit.
-- INV-3 Datas ISO UTC com `Z` (ms). `new Date()` proibido fora de `infra/clock.ts`. UI mostra America/Sao_Paulo.
+- INV-3 Datas ISO UTC com `Z` (ms). `new Date()`/`Date.now()` proibidos em `apps/api/src` fora de `infra/clock.ts`. No web, `Date.now()` só dentro de `serverClock` (e `Date` nos formatadores de data). UI mostra America/Sao_Paulo.
 - INV-9 Prorrogação: lance aceito com `endsAt − now <= 2 min` ⇒ `endsAt = now + 2 min`; sem teto; `originalEndsAt` nunca muda.
 - INV-13 Privacidade: DTO público NUNCA contém userId, nome ou e-mail. Eventos de sala só levam pseudônimo; saldo só vai para `user:{id}`.
 - INV-14 Telas públicas leem só o banco; nenhum evento depende de FIPE/Wikipedia.
@@ -59,13 +59,15 @@ Invariantes que valem aqui:
 | R-4.3 | O `Publisher` é o único lugar que carimba `serverTime` nos payloads (`clock.now()` em ISO UTC). | AD-10 |
 | R-4.4 | Uma sala por lote (`lot:{id}`), uma sala `showcase` pública, uma sala privada `user:{id}` atribuída só pelo servidor a partir do JWT. O cliente não pode pedir `user:*`. | AD (Eventos) |
 | R-4.5 | `version` de eventos de lote = `entryCount` do lote DEPOIS da operação. Lance e cancelamento incrementam `entryCount` (cancelamento grava a linha CANCEL na cadeia); fechamento não incrementa. | AD-8 · AD-5 |
-| R-4.6 | Regra do cliente para `bid:placed` e `lot:cancelled`: aplicar se `version == atual + 1`; ignorar se `version <= atual`; se `version > atual + 1` há salto: não aplicar, refazer `GET /lots/:id`. | AD (Eventos) |
+| R-4.6 | Regra do cliente para `bid:placed` e `lot:cancelled`: aplicar se `version == atual + 1`; ignorar se `version <= atual`; se `version > atual + 1` há salto: não aplicar, refazer `GET /lots/:id`. Exceção: `lot:cancelled` não traz `cancelledAt` no payload, então mesmo com `version == atual + 1` o reducer devolve `refetch` (o estado só fecha depois do `GET`; o cliente não presume). | AD (Eventos) |
 | R-4.7 | `lot:closed` é terminal e idempotente: aplicar se `version >= atual` (não descartar quando igual, porque o fechamento não incrementa `entryCount`); se `version > atual` fazer também `GET` (houve salto). | Esclarecimento de AD (Eventos) — ver §16 |
 | R-4.8 | A reconciliação ao (re)conectar é um `GET /lots/:id` por HTTP, feito DEPOIS de emitir `lot:join` (entrar na sala primeiro evita buraco entre snapshot e eventos). O snapshot só substitui o cache se `snapshot.version >= cache.version`. | PRD Tempo real (“recarrega o estado por HTTP”) · AD (`lot:join`) |
-| R-4.9 | Sem socket conectado e sincronizado, a Sala NÃO envia lance. Nunca há reenvio automático de lance após falha ambígua (sem resposta/timeout). | EXPERIENCE P16 (recomendação) |
-| R-4.10 | O relógio exibido é `endsAt − (Date.now() + offset)`. Toda resposta HTTP, ack e evento com `serverTime` recalcula o offset. O relógio do aparelho nunca decide nada. | AD-10 · AC6 |
+| R-4.9 | A Sala NÃO envia lance em dois casos: (a) `reconnecting` (já esteve `live` e caiu) e (b) refetch em andamento por salto de `version`. Em `connecting` (primeira conexão) o lance fica bloqueado só nos primeiros 10 s; passado esse prazo, o botão é habilitado mesmo sem socket, porque o servidor valida tudo (`expectedCurrentCents`) e o requisito central do PRD (dar lance) não pode depender do WebSocket (CORS/transport falhando no deploy). Nunca há reenvio automático de lance após falha ambígua (sem resposta/timeout). | EXPERIENCE P16 (ajustada) · ARCHITECTURE-SPINE (páginas aceitam ficar sem socket) |
+| R-4.10 | O relógio exibido é `endsAt − (Date.now() + offset)`. O offset é recalculado **só em respostas HTTP e acks**, guardando a medição de menor latência observada (o atraso de rede de cada evento não entra no offset, senão o cronômetro dá saltos). Um evento só ajusta o offset se o seu `serverTime` for maior que o último `serverTime` aceito (evento atrasado ou fora de ordem não mexe no relógio). O relógio do aparelho nunca decide nada. | AD-10 · AC6 |
 | R-4.11 | Prorrogação é percebida por todos: o evento traz `endsAt` novo e `extended: true`; cronômetro, selo "+2 MIN" e aviso atualizam em todas as telas abertas do lote, não só na de quem deu o lance. | PRD R10 · AC6 |
 | R-4.12 | Cada licitante só recebe `wallet:updated` da própria carteira: o novo líder (HOLD) e o líder anterior (RELEASE). | PRD R8 · AD (Eventos) |
+| R-4.13 | `showcase:lot` carrega `version` (= `entryCount`). O upsert do cartão descarta o evento se `version < card.version` (dois lances quase simultâneos podem publicar fora de ordem e o cartão ficaria com o valor antigo); em `lot:closed`/`SOLD`/`UNSOLD` aplica com `>=` (fechamento não incrementa `entryCount`). | Decisão desta fatia (derivada de AD (Eventos)) |
+| R-4.14 | **Um único reducer**: `applyLotEvent` (§10) substitui o `applyBid` da S03 para todos os eventos de lote; a resposta do `POST` de lance também passa por ele. | Decisão desta fatia |
 
 ## 5. Modelo de dados
 
@@ -73,11 +75,11 @@ Nenhuma mudança de banco, nenhuma migração.
 
 ## 6. Contratos REST
 
-Nenhuma rota nova. Mudanças de comportamento (ver §15): as rotas de S01–S03 passam a entregar eventos reais ao `Publisher` (hoje `NoopPublisher`). `GET /lots/:id` precisa devolver `version` (= `entryCount`) se ainda não devolve.
+Nenhuma rota nova. Mudanças de comportamento (ver §15): as rotas de S01–S03 passam a entregar eventos reais ao `Publisher` (hoje `NoopPublisher`). `GET /lots/:id` devolve `version` (= `entryCount`; `entryCount` segue como alias).
 
 ## 7. Contratos Socket.IO
 
-Conexão: `io(API_URL, { auth: { token? } })`. Token válido ⇒ servidor entra o socket em `user:{userId}`. Token ausente, inválido ou expirado ⇒ conecta como visitante (sem erro). Reconexão automática do cliente: padrão do Socket.IO (atraso 1 s crescendo até 5 s, tentativas infinitas).
+Conexão (cliente): `io(API_URL, { autoConnect: false, auth: (cb) => cb({ token: getToken() }) })` — `auth` como **função**, para que cada (re)conexão leia o token atual; no login/logout/cadastro faz `socket.disconnect(); socket.connect()`. Token válido ⇒ servidor entra o socket em `user:{userId}`. Token ausente, inválido ou expirado ⇒ conecta como visitante (sem erro). Reconexão automática do cliente: padrão do Socket.IO (atraso 1 s crescendo até 5 s, tentativas infinitas). Servidor: `new Server(http, { pingInterval: 10000, pingTimeout: 10000, cors })` — a queda é detectada em até ~20 s (os padrões 25 s + 20 s deixam a Sala parecendo viva por até 45 s).
 
 **Cliente → servidor**
 
@@ -87,16 +89,16 @@ Conexão: `io(API_URL, { auth: { token? } })`. Token válido ⇒ servidor entra 
 | `lot:leave` | `{ lotId: uuid }` | nenhum. Sai da sala. Adição técnica mínima à lista da arquitetura (ver §16). |
 | `showcase:join` | — | nenhum. Entra em `showcase`. |
 
-O cliente emite `lot:join` (e/ou `showcase:join`) a cada evento `connect`, inclusive reconexões. Qualquer outro evento enviado pelo cliente é ignorado.
+O `SocketProvider` é um singleton no layout raiz: a Sala monta **depois** de o socket já estar conectado, então o evento `connect` não dispara de novo. Por isso o hook `useLotRoom(lotId)` emite `lot:join` **no mount, se `socket.connected`, e também a cada evento `connect`** (reconexões), e `lot:leave` no unmount; `useShowcaseLive()` faz o mesmo com `showcase:join` (Vitrine e Painel). Sem isso a Sala nunca entra em `lot:{id}`. Qualquer outro evento enviado pelo cliente é ignorado.
 
 **Servidor → cliente** (todo payload carrega `serverTime` ISO UTC, carimbado pelo `Publisher`)
 
 | Evento | Sala | Payload | Quando é emitido |
 | --- | --- | --- | --- |
-| `bid:placed` | `lot:{id}` | `{ lotId, version, bid: { seq, pseudonym, amountCents, at }, currentBidCents, bidCount, endsAt, extended, serverTime }` | Lance aceito (S03). `extended` = este lance prorrogou o fim. `version` = `entryCount` novo (= `bid.seq`). |
+| `bid:placed` | `lot:{id}` | `{ lotId, version, bid: { seq, pseudonym, amountCents, at }, currentBidCents, bidCount, bidderCount, endsAt, extended, serverTime }` | Lance aceito (S03). `extended` = este lance prorrogou o fim. `version` = `entryCount` novo (= `bid.seq`). `bidderCount` = licitantes distintos (o servidor calcula; o cliente não deduz por pseudônimo). |
 | `lot:closed` | `lot:{id}` | `{ lotId, version, outcome: "SOLD"\|"UNSOLD", finalBidCents?, winnerPseudonym?, finalHash?, serverTime }` | Definido aqui, emitido na S05. |
 | `lot:cancelled` | `lot:{id}` | `{ lotId, version, serverTime }` | Definido aqui, emitido na S06. |
-| `showcase:lot` | `showcase` | `LotCard` + `serverTime` | Lote criado (S02, retrofit), lance/prorrogação (S03), fechamento (S05), cancelamento (S06). |
+| `showcase:lot` | `showcase` | `LotCard` (com `version`) + `serverTime` | Lote criado (S02, retrofit), lance/prorrogação (S03), fechamento (S05), cancelamento (S06). |
 | `wallet:updated` | `user:{id}` | `{ totalCents, committedCents, availableCents, serverTime }` | Depósito (S01, retrofit); lance aceito: ao novo líder e ao líder anterior (se houver); fechamento: vencedor e leiloeiro (S05); cancelamento: líder estornado (S06). |
 
 Ordem de emissão de um lance: `bid:placed` (sala do lote) → `showcase:lot` → `wallet:updated` do novo líder → `wallet:updated` do líder anterior. Todos pós-commit.
@@ -129,7 +131,7 @@ Estados novos de conexão (somam-se aos de lance da S03; ficam em cima do painel
 
 | Estado de conexão | Tratamento |
 | --- | --- |
-| `connecting` (primeira conexão, antes do 1º snapshot) | Dados do SSR/HTTP visíveis. Botão de lance desabilitado com o texto de bloqueio. Sem banner até 3 s; passados 3 s, banner "Sem sinal com o pátio. Tentando reconectar." (cobre cold start do Render, que pode levar dezenas de segundos). |
+| `connecting` (primeira conexão, antes do 1º snapshot) | Dados do SSR/HTTP visíveis. Botão de lance desabilitado com o texto de bloqueio. Sem banner até 3 s; passados 3 s, banner "Sem sinal com o pátio. Tentando reconectar." (cobre cold start do Render, que pode levar dezenas de segundos). **Passados 10 s em `connecting`, o botão de lance é habilitado** (R-4.9): o servidor valida com `expectedCurrentCents`, e o lance não pode ficar inerte se o WebSocket falhar no deploy. |
 | `live` | Sem banner. Botão de lance habilitado pelas regras da S03. |
 | `reconnecting` (caiu depois de estar `live`) | ConnectionBanner com as duas linhas. Cronômetro continua contando com o último offset. Dados antigos permanecem visíveis. Botão "Dar lance" desabilitado (`disabled` real) + texto de bloqueio em `aria-describedby`. Valor digitado e atalhos preservados. |
 | Reconectou, snapshot HTTP aplicado | Banner "De volta ao pátio. Estado do lote atualizado." por 4 s e some; botão volta. |
@@ -138,7 +140,7 @@ Estados novos de conexão (somam-se aos de lance da S03; ficam em cima do painel
 Comportamento ao vivo:
 - **Novo lance de outro licitante:** placa vira (`la-vira`), linha nova entra no topo do histórico (`la-entra` + `la-marca`), contador de lances sobe, `PlacarPosicao` recalcula, campo de lance sobe para o novo mínimo SE o usuário não editou o campo (se editou, o valor fica e a regra "Mínimo aceito agora" passa a mostrar o novo mínimo). Para o licitante superado a faixa troca para "Você foi superado" e o rodapé do campo vira "Nada travado neste lote".
 - **Lance do próprio usuário:** a resposta HTTP aplica o estado; o `bid:placed` que chega depois com o mesmo `version` é descartado (R-4.6). Sem duplicar linha.
-- **Posição:** `myBestBidCents` e `myRank` são recalculados no cliente com `computeMyStanding(bids, myPseudonym)` (função pura em `packages/shared`): `myBestBidCents` = maior lance com `pseudonym == myPseudonym`; `myRank = 1 + nº de pseudônimos distintos cujo maior lance > myBestBidCents`; N = pseudônimos distintos. Sem `myPseudonym` (visitante, leiloeiro, nunca deu lance) retorna `null`.
+- **Posição:** o servidor é a verdade (`myRank`, `myBestBidCents` e `bidderCount` no snapshot do `GET`/ack e `bidderCount` no `bid:placed`). Entre snapshots, o cliente usa `computeMyStanding(bids, myPseudonym)` (função pura em `packages/shared`) **só como aproximação**: `myBestBidCents` = maior lance com `pseudonym == myPseudonym`; `myRank = 1 + nº de pseudônimos distintos cujo maior lance > myBestBidCents`; N = `bidderCount` do evento quando houver. Com colisão de 4 hex no pseudônimo o valor local pode divergir; o próximo snapshot (incluindo o `GET` após o lance e após reconectar) o substitui. Sem `myPseudonym` (visitante, leiloeiro, nunca deu lance) retorna `null`.
 - **Prorrogação (`extended: true` ou `endsAt > originalEndsAt`):** `SeloProrrogacao` "+2 MIN" no `Cronometro` (animação `la-mais` a cada nova prorrogação, estática em reduced-motion) e parágrafo de aviso com o novo fim. O aviso e o selo ficam até o encerramento. Vale para todo espectador.
 - **Últimos 2 min:** `Cronometro` na variante alerta quando `restante <= 120 000 ms` (inclusive, alinhado a INV-9; se a S02 usou `<`, trocar para `<=`). Após uma prorrogação o restante fica ≈ 2:00 e o cronômetro permanece em "ÚLTIMOS 2 MIN" (não volta ao normal).
 - **00:00 local:** o botão de lance fica desabilitado assim que o relógio chega a 0; o resultado só aparece pelo servidor (S05). Aqui basta o bloqueio.
@@ -148,9 +150,9 @@ Acessibilidade: ConnectionBanner `role="status"` `aria-live="polite"`. Parágraf
 
 ### 9.2 Vitrine (`/`)
 
-- Entra em `showcase` a cada `connect`. `showcase:lot` faz upsert do `LotCard` no cache da lista (por `id`), reordena (ao vivo por `endsAt↑`, agendado por `startsAt↑`, encerrado por `endsAt↓`) e recalcula a barra "Pátio aberto" (N ao vivo, N agendados).
+- Entra em `showcase` a cada `connect`. `showcase:lot` faz upsert do `LotCard` no cache da lista (por `id`; descarta o evento se `version < card.version`, R-4.13), reordena (ao vivo por `endsAt↑`, agendado por `startsAt↑`, encerrado por `endsAt↓`) e recalcula a barra "Pátio aberto" (N ao vivo, N agendados).
 - Card com `status = CANCELLED` é removido da lista.
-- Lote NOVO (id desconhecido) com filtro/busca ativos (`q` ou marca ou aba ≠ Todos): não decidir no cliente; `invalidate` da consulta com debounce de 500 ms para o servidor aplicar o filtro. Sem filtro: inserir direto.
+- Lote NOVO (id desconhecido) com filtro/busca ativos (`q` ou marca ou aba ≠ Todos): não decidir no cliente; `invalidate` da consulta com debounce de 500 ms para o servidor aplicar o filtro. Sem filtro: inserir direto. (**Se sobrar tempo:** o debounce com filtro; o mínimo é ignorar o lote novo e deixar a próxima consulta resolver.)
 - Migração de seção por tempo: agendado→ao vivo em `startsAt` é calculado no cliente com `lotStatus(card, now)` e o relógio do servidor (sem evento). Ao vivo→encerrado só quando o servidor confirmar: um card com `endsAt` passado e status ainda `LIVE/CLOSING` fica em "Ao vivo" com cronômetro "00:00" e rótulo "Apurando o resultado…" e a consulta da lista é refeita a cada 3 s enquanto existir card assim (a S05 emite o evento que o tira de lá).
 - Cronômetro do card ao vivo usa o mesmo offset e reflete prorrogação (novo `endsAt` do evento).
 - Aviso de conexão: o mesmo ConnectionBanner no topo da área de conteúdo quando `reconnecting`; as listas seguem navegáveis. Ao reconectar: `showcase:join` + `GET /lots` (mesmos filtros atuais).
@@ -164,12 +166,12 @@ Acessibilidade: ConnectionBanner `role="status"` `aria-live="polite"`. Parágraf
 
 ### 9.4 Carteira, BalanceChip e Header
 
-- `SocketProvider` no layout raiz: conecta ao montar; quando o token muda (login, logout, cadastro) atualiza `socket.auth` e faz `disconnect()` + `connect()` para trocar de sala privada. Logout reconecta como visitante.
-- `wallet:updated`: aplica `totalCents/committedCents/availableCents` direto em `['wallet']` (chip e Carteira atualizam juntos) e dispara `invalidate` de `['wallet']` com debounce de 300 ms para trazer as linhas novas do extrato e `leadingLots`. Na Carteira, Total e Disponível "viram" (flip) quando o valor muda e há linha nova no topo do extrato; anúncio por região viva (a da S01).
-- Ao reconectar: `invalidate(['wallet'])`.
+- `SocketProvider` no layout raiz: conecta ao montar (`auth` como função que lê o token atual, §7); quando o token muda (login, logout, cadastro) faz `socket.disconnect(); socket.connect()` para trocar de sala privada (o handshake relê o token novo). Logout reconecta como visitante.
+- Chaves do TanStack Query (definidas na S01): `["wallet","summary"]` (o `WalletDto` que o BalanceChip lê) e `["wallet","ledger"]` (extrato paginado + `leadingLots`). `wallet:updated`: aplica `totalCents/committedCents/availableCents` com `setQueryData(["wallet","summary"], …)` (chip e Carteira atualizam juntos) e dispara `invalidate(["wallet","ledger"])` com debounce de 300 ms para trazer as linhas novas do extrato e `leadingLots`. Nunca escrever o formato do `summary` em `["wallet"]` solto. Na Carteira, Total e Disponível "viram" (flip, **se sobrar tempo**) quando o valor muda e há linha nova no topo do extrato; anúncio por região viva (a da S01).
+- Ao reconectar: `invalidate(["wallet"])` (prefixo: invalida `summary` e `ledger`).
 - Duas abas do mesmo usuário recebem o mesmo evento (cada socket entra em `user:{id}`).
 
-### 9.5 Visibilidade da aba e rede do navegador
+### 9.5 Visibilidade da aba e rede do navegador (**se sobrar tempo**; cortável sem ferir o PRD)
 
 - `visibilitychange` para visível e `online` do navegador: se o socket está desconectado, `socket.connect()`; se está conectado, refaz o snapshot da página atual (Sala: `GET /lots/:id`; Vitrine: `GET /lots`; Carteira: `GET /wallet`). Cobre aba dormindo no celular.
 
@@ -186,10 +188,10 @@ Uso: Sala, Vitrine, Painel (topo da área de conteúdo, no fluxo).
 Retorna `'connecting' | 'live' | 'reconnecting'`, `lastSyncedAt`. `live` só depois do join + snapshot HTTP aplicado. Fonte única para o banner e para desabilitar o botão de lance.
 
 ### Helpers sem UI (testáveis)
-- `serverClock.sync(serverTime)` / `useServerClock()`: recalcula `offset = Date.parse(serverTime) − Date.now()` a cada resposta HTTP, ack e evento. (Alimentação por HTTP já existe da S02; aqui entra a alimentação por socket.)
-- `applyLotEvent(state, event)`: reducer puro que devolve `{ state, action: 'applied' | 'ignored' | 'refetch' }` seguindo R-4.6/R-4.7. Caminho sugerido: `apps/web/src/lib/realtime/lot-reducer.ts`.
-- `upsertShowcaseCard(list, card)` e `sortShowcase(list)`: puros.
-- `computeMyStanding(bids, myPseudonym)`: em `packages/shared`.
+- `serverClock.sync(serverTime, sentAt?)` / `useServerClock()`: recalcula `offset = Date.parse(serverTime) − Date.now()` em cada resposta HTTP e ack, mantendo a medição de menor latência (R-4.10); evento só ajusta se `serverTime` > último aceito. Único lugar do web que chama `Date.now()`. (Alimentação por HTTP já existe da S02; aqui entram acks e a regra do evento.)
+- `applyLotEvent(state, event)`: reducer puro que devolve `{ state, action: 'applied' | 'ignored' | 'refetch' }` seguindo R-4.6/R-4.7; lê só `version`. **Substitui o `applyBid` da S03** (R-4.14): a resposta do `POST` de lance e o `bid:placed` passam por ele. `lot:cancelled` devolve `refetch` (R-4.6). Caminho sugerido: `apps/web/src/lib/realtime/lot-reducer.ts`.
+- `upsertShowcaseCard(list, card)` e `sortShowcase(list)`: puros; o upsert descarta `card.version < atual.version` (R-4.13).
+- `computeMyStanding(bids, myPseudonym)`: em `packages/shared`; só aproximação, o servidor manda `myRank`/`bidderCount` (§9.1).
 
 Caminhos sugeridos (confirmar com o código): API `apps/api/src/infra/realtime.ts`; Web `apps/web/src/lib/realtime/{socket.ts, SocketProvider.tsx, use-lot-room.ts, use-showcase-live.ts, use-wallet-live.ts, connection-status.ts}` e `components/ConnectionBanner.tsx`.
 
@@ -213,8 +215,8 @@ Nenhum dado novo. O roteiro manual usa o lote ao vivo (30 dias, com lances dos d
 - **AC-4.12 [auto]** Dado `POST /lots` válido, então a sala `showcase` recebe `showcase:lot` com o `LotCard` do lote novo (status `SCHEDULED` ou `LIVE`).
 - **AC-4.13 [auto]** Dado `applyLotEvent` com estado em `version 5`, quando chega `bid:placed` `version 6`, então `applied`; `version 6` de novo ⇒ `ignored`; `version 5` ⇒ `ignored`; `version 8` ⇒ `refetch` sem alterar o estado.
 - **AC-4.14 [auto]** Dado estado em `version 5`, quando chega `lot:closed` `version 5`, então `applied` (terminal); `lot:closed` `version 7` ⇒ `refetch`; `lot:closed` repetido ⇒ resultado idêntico (idempotente).
-- **AC-4.15 [auto]** Dado `lot:cancelled` `version 6` com estado em `version 5`, então `applied` e dispara `GET` para obter `cancelledAt`; com estado em `version 4` ⇒ `refetch`.
-- **AC-4.16 [manual]** Dado A na Sala (`live`), quando a rede de A cai, então em até 25 s (timeout padrão de ping) aparece "Sem sinal com o pátio. Tentando reconectar." com "Última atualização às hh:mm:ss.", o botão "Dar lance" fica `disabled`, o valor digitado permanece e o cronômetro continua contando.
+- **AC-4.15 [auto]** Dado `lot:cancelled` `version 6` com estado em `version 5`, então o reducer devolve `refetch` (o payload não traz `cancelledAt`; o estado só fecha depois do `GET`); com estado em `version 4` ⇒ `refetch`; com estado em `version 6` ou maior ⇒ `ignored`.
+- **AC-4.16 [manual]** Dado A na Sala (`live`), quando a rede de A cai, então em até 20 s (`pingInterval` 10 s + `pingTimeout` 10 s; o modo Offline do DevTools costuma fechar o WebSocket antes) aparece "Sem sinal com o pátio. Tentando reconectar." com "Última atualização às hh:mm:ss.", o botão "Dar lance" fica `disabled`, o valor digitado permanece e o cronômetro continua contando.
 - **AC-4.17 [manual]** Dado A offline e B tendo dado 2 lances nesse intervalo, quando a rede de A volta, então o cliente reemite `lot:join`, faz `GET /lots/:id`, o histórico mostra os 2 lances uma única vez e na ordem certa, o banner exibe "De volta ao pátio. Estado do lote atualizado." e some em 4 s, e o botão volta.
 - **AC-4.18 [auto]** Dado cliente que sai da sala (`disconnect`), perde um `bid:placed`, e reconecta, quando o fluxo de reconexão termina, então o cache do lote equivale a `GET /lots/:id` do mesmo instante (mesmo `version`, mesmos `bids`, mesmo `endsAt`) sem linhas duplicadas.
 - **AC-4.19 [auto]** Dado que o lance perdido na desconexão era uma prorrogação, quando o cliente reconcilia, então `endsAt` e o estado `extended` (`endsAt > originalEndsAt`) estão corretos sem ter recebido o evento.
@@ -227,10 +229,14 @@ Nenhum dado novo. O roteiro manual usa o lote ao vivo (30 dias, com lances dos d
 - **AC-4.26 [manual]** Dado A logado e depois "Sair", então o socket reconecta como visitante e A deixa de receber `wallet:updated`; ao logar como B, o chip mostra o saldo de B sem recarregar.
 - **AC-4.27 [manual]** Dado reduced-motion ativo, então nenhuma animação (`la-vira`, `la-mais`, pulso do banner) roda, e todos os estados (selo, aviso, placa) aparecem direto no estado final.
 - **AC-4.28 [auto]** Dado API sem nenhuma chamada a FIPE/Wikipedia durante conexão, join e eventos, então eventos e snapshots funcionam com as APIs externas bloqueadas (AC13 permanece válido).
+- **AC-4.29 [auto]** Dado `upsertShowcaseCard` com o cartão em `version 7`, quando chega `showcase:lot` `version 6`, então é descartado e o cartão segue em `version 7`; `version 8` ⇒ aplicado; `showcase:lot` `SOLD/UNSOLD` com `version` igual ao atual ⇒ aplicado (`>=`).
+- **AC-4.30 [manual]** Dado o socket já conectado (usuário veio da Vitrine) e a Sala montando em seguida, quando B dá lance, então a Sala recebe o `bid:placed` sem recarregar (o `lot:join` saiu no mount, não só no `connect`); ao navegar para outra Sala, a anterior sai com `lot:leave`.
+- **AC-4.31 [manual]** Dado o WebSocket bloqueado (ex.: origem sem CORS no Socket.IO) na primeira visita, então a Sala mostra o banner após 3 s e, passados 10 s em `connecting`, o botão "Dar lance" é habilitado e um lance válido é aceito pelo HTTP.
+- **AC-4.32 [auto]** Dado `bid:placed` com `bidderCount`, então o payload traz o mesmo `bidderCount` que `GET /lots/:id` para o mesmo instante e nenhum campo com `userId`.
 
 ## 13. Casos de borda e concorrência
 
-- **Dois lances quase simultâneos:** A e B confirmam em sequência e as rotas publicam fora de ordem (B antes de A). O cliente recebe `version 7` com estado em 5 ⇒ salto ⇒ `GET`; o `version 6` que chega depois é descartado (`<= atual`). Estado final correto.
+- **Dois lances quase simultâneos:** A e B confirmam em sequência e as rotas publicam fora de ordem (B antes de A). O cliente recebe `version 7` com estado em 5 ⇒ salto ⇒ `GET`; o `version 6` que chega depois é descartado (`<= atual`). Estado final correto. O cartão da Vitrine segue a mesma regra por `showcase:lot` (descarta `version < card.version`).
 - **Mesmo `version` duas vezes:** (resposta HTTP + evento do próprio lance) ⇒ o segundo é descartado.
 - **Evento chega entre `lot:join` e a resposta do `GET`:** o evento é aplicado sobre o cache antigo; o `GET` só substitui se `snapshot.version >= cache.version`; se o evento já levou o cache além do snapshot, o snapshot é descartado.
 - **Servidor reinicia ou hiberna (Render):** todos os sockets caem; o cliente reconecta sozinho com backoff; durante o cold start o banner permanece; na volta cada Sala/Vitrine refaz join + snapshot.
@@ -267,9 +273,10 @@ Web (Vitest, lógica pura): `applyLotEvent` (ordem, duplicata, salto, terminal i
 | S01 `POST /wallet/deposits` | O service passa a devolver `DomainEvent` `wallet:updated` para `user:{id}`; a rota entrega ao `Publisher`. Carteira ganha o flip e a linha nova por evento. |
 | S02 `POST /lots` | Devolve `DomainEvent` `showcase:lot` (`LotCard` do lote novo). |
 | S02 `Cronometro` | Variante alerta com `<= 120 000 ms`; `SeloProrrogacao` reanima a cada nova prorrogação. |
-| S02 `GET /lots/:id` | Garante `version` (= `entryCount`). |
-| S03 `POST /lots/:id/bids` | Já devolve eventos: confirmar que são `bid:placed`, `showcase:lot`, `wallet:updated` (novo líder e líder anterior) com os payloads de §7 e que `extended` reflete a regra. |
-| S03 Sala | Adiciona leitura de `useConnectionStatus` para desabilitar o botão e `useLotRoom` para aplicar eventos. |
+| S02/S03 `GET /lots/:id`, `LotCard`, `LotSummary` | Expõem `version` (= `entryCount`, alias mantido); `LotCard` ganha `version`. |
+| S03 `POST /lots/:id/bids` | Já devolve eventos: confirmar que são `bid:placed` (com `version` e `bidderCount`), `showcase:lot` (com `version`), `wallet:updated` (novo líder e líder anterior) com os payloads de §7 e que `extended` reflete a regra. |
+| S03 Sala | Adiciona leitura de `useConnectionStatus` para desabilitar o botão e `useLotRoom` (join no mount + a cada `connect`) para aplicar eventos. O `applyBid` da S03 passa a ser `applyLotEvent` (R-4.14). |
+| S01 Carteira / BalanceChip | Chaves `["wallet","summary"]` e `["wallet","ledger"]` (§9.4). |
 | S05 | Emite `lot:closed` + `showcase:lot` + `wallet:updated` (vencedor e leiloeiro); Sala trata 00:00/encerrado. |
 | S06 | Emite `lot:cancelled` + `showcase:lot` + `wallet:updated` (líder estornado). |
 | S07 | Meus arremates passa a usar `showcase:lot`/`wallet:updated` para refetch. |

@@ -20,7 +20,7 @@ Roteiro de demonstração (avaliador):
 3. No comprovante (S05) clicar "Verificar na auditoria": mesma página.
 4. Abrir a auditoria do lote ao vivo: Íntegro, sem comparação com comprovante ("Lote ainda aberto…").
 5. Abrir a auditoria do lote cancelado do seed: aparecem os lances e a linha "Cancelado pelo leiloeiro"; Íntegro.
-6. No psql: `ALTER TABLE "Bid" DISABLE TRIGGER <trigger>`, `UPDATE "Bid" SET "amountCents"=… WHERE seq=3`, reativar. Recarregar a auditoria: carimbo **Adulterado**, banner `role="alert"` "Linha 03: …", linha 03 "NÃO CONFERE" e as seguintes "ELO QUEBRADO".
+6. No psql (local ou `docker compose exec db psql -U … -d …`): `ALTER TABLE "Bid" DISABLE TRIGGER bid_no_update_delete`, `UPDATE "Bid" SET "amountCents"=… WHERE seq=3`, reativar. Recarregar a auditoria: carimbo **Adulterado**, banner `role="alert"` "Linha 03: …", linha 03 "NÃO CONFERE" e as seguintes "ELO QUEBRADO".
 7. Apagar os dois últimos lances de outro lote: carimbo Adulterado, banner de selo ("O selo do lote registra N lances, mas só M foram encontrados"), todas as linhas restantes "CONFERE", sem apontar linha inexistente.
 8. "Verificar de novo": o servidor repete o veredito e a hora da verificação muda.
 
@@ -39,8 +39,9 @@ Roteiro de demonstração (avaliador):
 
 Já existe (não reimplementar; usar):
 
-- `apps/api/src/domain/audit-chain.ts` com `genesisHash`, `entryHash`, `sealHash` (S02/S03), mesmos formatos de INV-12. Esta fatia **adiciona** `verifyChain` ao mesmo arquivo.
-- Tabelas `Lot` (`entryCount`, `lastHash`, `seal`, `startsAt`, `startingBidCents`, `minIncrementCents`), `Bid` (com `kind BID|CANCEL`, `bidderId?`, `pseudonym?`, `amountCents?`, `at`, `prevHash`, `hash`; trigger append-only da S03), `Receipt` (`finalHash`, `token`) e `User`.
+- `apps/api/src/domain/audit-chain.ts` com `genesisHash(key, lot)`, `entryHash(key, {lotId, seq, kind, pseudonym, amountCents, at, prevHash})` e `sealHash(key, lotId, entryCount, lastHash)` (S02/S03; **chave sempre primeiro**), mesmos formatos de INV-12. Esta fatia **adiciona** `verifyChain` ao mesmo arquivo. Se alguma fatia anterior mostrar assinatura diferente, vale esta (T5).
+- Rate limiter da S00/S01 (`makeRateLimiter({windowMs,max,keyGenerator,skip})`, handler que lança `AppError(RATE_LIMITED)`), `trust proxy = 1` em produção e `RATE_LIMIT_DISABLED=1` nos testes.
+- Tabelas `Lot` (`entryCount`, `lastHash`, `seal`, `startsAt`, `startingBidCents`, `minIncrementCents`), `Bid` (com `kind BID|CANCEL`, `bidderId?`, `pseudonym?`, `amountCents?`, `at`, `prevHash`, `hash`; trigger append-only da S03), `Receipt` (`finalHash`, `amountCents`, `token`; o token nunca vai para o DTO da auditoria) e `User`.
 - `env.AUDIT_HMAC_KEY`, `Clock`, `AppError`/envelope, `optionalAuth` (decodifica token se houver; token inválido vira visitante).
 - Web: `apiClient`, TanStack Query, `Stamp`, `DataTable`, `FeedbackState`, `Button`, `LotTag`, `PageShell`, `lotCardHref` (S02), `useTheme`.
 - `packages/shared`: `ErrorCode`, `lotStatus`, `money`.
@@ -75,6 +76,8 @@ Invariantes que valem aqui:
 | R-8.13 | Marca "você": quando há token válido e a linha `BID` pertence ao usuário (`Bid.bidderId = sub`), `mine=true`. `bidderId` nunca sai do servidor. Fora disso `mine=false`. | PRD P3; AD-9 |
 | R-8.14 | A tela é um **retrato**: mostra o instante da verificação (`verifiedAt`) e não atualiza sozinha. "Verificar de novo" refaz a chamada. | P30 |
 | R-8.15 | Sem paginação. O custo é O(n) em HMACs sobre as linhas do lote. | AD-8 |
+| R-8.16 | **Consistência fora da cadeia** (`consistencyIssue`): (a) lote com `settledAt` e `bidCount > 0` e sem `cancelledAt` exige `Receipt`, e `receipt.amountCents` deve ser igual ao `amountCents` da última linha `BID`; (b) lote sem lances e `settledAt` não pode ter `Receipt`; (c) `cancelledAt` preenchido ⇔ a última linha da cadeia é `CANCEL` (e `CANCEL` só pode ser a última linha). Falha em (a)/(b) vira `RECEIPT_MISMATCH`; falha em (c) vira `SEAL_MISMATCH`. Só vale depois da cadeia: `BROKEN_AT` continua com precedência. Se a S06 decidir não gravar `CANCEL` em lote sem lances (Q3 do SPEC.md), relaxar (c) para "linha `CANCEL` ⇒ `cancelledAt` preenchido". | Revisão: tira o "OK" de lote vendido sem comprovante ou cancelado só no campo |
+| R-8.17 | **Rate limit:** `GET /lots/:id/audit` limita a 60 req/min por IP (chave por IP; `trust proxy = 1` em produção). Estouro ⇒ `RATE_LIMITED` 429 no envelope. `RATE_LIMIT_DISABLED=1` desliga nos testes, exceto no AC-8.40, que instancia o limiter ligado. | Decisão: o endpoint é público e recalcula HMAC a cada chamada |
 
 ### `verifyChain` (em `domain/audit-chain.ts`, puro; recebe `key` e dados, sem Prisma, sem `Date.now`)
 
@@ -87,9 +90,12 @@ export type AuditRow = {
 export type AuditLot = {
   id: string; startsAt: Date; startingBidCents: number; minIncrementCents: number;
   entryCount: number; lastHash: string; seal: string;
+  bidCount: number; settledAt: Date | null; cancelledAt: Date | null;   // só para consistencyIssue (R-8.16)
 };
 export type RowStatus = 'OK' | 'MISMATCH' | 'BROKEN_LINK';
 export type BreakReason = 'SEQ_GAP' | 'PREV_LINK' | 'HASH';
+export type ConsistencyIssue =
+  | 'RECEIPT_MISSING' | 'RECEIPT_AMOUNT' | 'RECEIPT_UNEXPECTED' | 'CANCEL_FLAG';
 export type ChainResult = {
   verdict: 'OK' | 'BROKEN_AT' | 'SEAL_MISMATCH' | 'RECEIPT_MISMATCH';
   firstBad: { seq: number; expectedSeq: number; reason: BreakReason } | null;
@@ -97,31 +103,36 @@ export type ChainResult = {
   foundCount: number;                // rows.length
   registeredCount: number;           // lot.entryCount
   sealOk: boolean;
-  receiptOk: boolean | null;         // null = sem comprovante
+  receiptOk: boolean | null;         // null = sem comprovante; compara só o hash final
+  consistencyIssue: ConsistencyIssue | null;   // R-8.16
 };
 
 export function verifyChain(
   key: string,
   lot: AuditLot,
   rows: AuditRow[],                  // já ORDER BY seq ASC
-  receipt: { finalHash: string } | null,
+  receipt: { finalHash: string; amountCents: number } | null,
 ): ChainResult {
   const genesis = genesisHash(key, lot);
   let expectedPrev = genesis;
   let firstBad: ChainResult['firstBad'] = null;
   const rowStatus: RowStatus[] = [];
 
-  rows.forEach((r, i) => {
-    if (firstBad) { rowStatus.push('BROKEN_LINK'); return; }
+  // for…of (não forEach): o TS estreitaria firstBad para null depois de um callback
+  for (const [i, r] of rows.entries()) {
+    if (firstBad) { rowStatus.push('BROKEN_LINK'); continue; }
     const expectedSeq = i + 1;
     let reason: BreakReason | null = null;
     if (r.seq !== expectedSeq) reason = 'SEQ_GAP';
     else if (!eq(r.prevHash, expectedPrev)) reason = 'PREV_LINK';
-    else if (!eq(r.hash, entryHash(key, lot.id, r.seq, r.kind,
-              r.pseudonym ?? '', r.amountCents ?? '', r.at.toISOString(), r.prevHash))) reason = 'HASH';
+    else if (!eq(r.hash, entryHash(key, {
+      lotId: lot.id, seq: r.seq, kind: r.kind,
+      pseudonym: r.pseudonym ?? '', amountCents: r.amountCents ?? '',
+      at: r.at.toISOString(), prevHash: r.prevHash,
+    }))) reason = 'HASH';
     if (reason) { firstBad = { seq: r.seq, expectedSeq, reason }; rowStatus.push('MISMATCH'); }
     else { expectedPrev = r.hash; rowStatus.push('OK'); }
-  });
+  }
 
   const tip = rows.length ? rows[rows.length - 1].hash : genesis;      // hash GRAVADO da última linha
   const sealOk =
@@ -130,12 +141,25 @@ export function verifyChain(
     eq(lot.lastHash, tip);
   const receiptOk = receipt ? eq(receipt.finalHash, lot.lastHash) : null;
 
+  // R-8.16: consistência fora da cadeia (não depende de hash)
+  const last = rows[rows.length - 1];
+  const lastBid = [...rows].reverse().find((r) => r.kind === 'BID');
+  const cancelRowsOk = rows.every((r, i) => r.kind !== 'CANCEL' || i === rows.length - 1);
+  const cancelFlagOk = cancelRowsOk && ((lot.cancelledAt !== null) === (last?.kind === 'CANCEL'));
+  let consistencyIssue: ConsistencyIssue | null = null;
+  if (!cancelFlagOk) consistencyIssue = 'CANCEL_FLAG';
+  else if (lot.settledAt && !lot.cancelledAt) {
+    if (lot.bidCount > 0 && !receipt) consistencyIssue = 'RECEIPT_MISSING';
+    else if (lot.bidCount > 0 && receipt && receipt.amountCents !== lastBid?.amountCents) consistencyIssue = 'RECEIPT_AMOUNT';
+    else if (lot.bidCount === 0 && receipt) consistencyIssue = 'RECEIPT_UNEXPECTED';
+  }
+
   const verdict = firstBad ? 'BROKEN_AT'
-    : !sealOk ? 'SEAL_MISMATCH'
-    : receiptOk === false ? 'RECEIPT_MISMATCH'
+    : !sealOk || consistencyIssue === 'CANCEL_FLAG' ? 'SEAL_MISMATCH'
+    : receiptOk === false || (consistencyIssue !== null) ? 'RECEIPT_MISMATCH'
     : 'OK';
   return { verdict, firstBad, rowStatus, foundCount: rows.length,
-           registeredCount: lot.entryCount, sealOk, receiptOk };
+           registeredCount: lot.entryCount, sealOk, receiptOk, consistencyIssue };
 }
 // eq(a,b): comprimentos iguais && timingSafeEqual(Buffer.from(a,'utf8'), Buffer.from(b,'utf8'))
 ```
@@ -146,6 +170,7 @@ Observações do algoritmo:
 - Adulterar `startsAt`, `startingBidCents` ou `minIncrementCents` do lote muda o genesis: a linha 1 acusa `PREV_LINK`; com 0 linhas, `lot.lastHash ≠ genesis` e dá `SEAL_MISMATCH`.
 - `sealOk`, `receiptOk` e `foundCount` são calculados **mesmo quando há `BROKEN_AT`**, só para a frase ser honesta (R-8.12).
 - Inserir uma linha com `seq` repetido é impossível (`@@unique([lotId, seq])`); inserir com `seq` novo falha em `HASH` (sem a chave não há hash válido).
+- `consistencyIssue` cobre o que o hash não alcança: `Receipt` apagado de lote vendido, `Receipt.amountCents` trocado e `Lot.cancelledAt` limpo/preenchido sem a linha `CANCEL` correspondente. **Ainda não coberto** (vira limitação no README, §15): `Bid.bidderId` (fora do hash; trocar o dono de um lance passa despercebido, mas o pseudônimo, que está no hash, continua o mesmo), `Lot.leaderId`, `Lot.currentBidCents` e os saldos/ledger (a auditoria cobre o histórico de lances, não a contabilidade).
 
 ## 5. Modelo de dados
 
@@ -163,7 +188,7 @@ Não criar: coluna de veredito, tabela de verificações, cache.
 | --- | --- |
 | Papel | Público. `Authorization: Bearer` opcional (só para `mine`) |
 | 200 | `AuditView` abaixo |
-| Erros | `NOT_FOUND` 404 se o lote não existe ou o `id` não é UUID válido (nunca `VALIDATION`) |
+| Erros | `NOT_FOUND` 404 se o lote não existe ou o `id` não é UUID válido (nunca `VALIDATION`) · `RATE_LIMITED` 429 (R-8.17: 60 req/min por IP; mensagem do limiter da S00) |
 | Headers | `Cache-Control: no-store` |
 | Corpo da requisição | Nenhum |
 
@@ -195,11 +220,12 @@ type AuditView = {
     foundCount: number;                     // entries.length
     registeredCount: number;                // lot.entryCount (o que o selo registra)
     sealOk: boolean;
-    receiptChecked: boolean;
+    receiptChecked: boolean;                // true se há Receipt ou se o lote vendido deveria ter um (R-8.16)
     receiptOk: boolean | null;
+    consistencyIssue: 'RECEIPT_MISSING' | 'RECEIPT_AMOUNT' | 'RECEIPT_UNEXPECTED' | 'CANCEL_FLAG' | null;
   };
   finalHash: string;                        // lot.lastHash gravado (hash final do lote)
-  receipt: { finalHash: string; token: string; receiptCode: string } | null;
+  receipt: { finalHash: string; receiptCode: string } | null;   // SEM token (T9)
   verifiedAt: string;                       // ISO UTC, vem do Clock
   serverTime: string;
 };
@@ -208,11 +234,11 @@ type AuditView = {
 Regras do DTO:
 
 - `entries[].hash` e `finalHash` são sempre os valores **gravados**. Não existe campo "expectedHash" nem "originalAmount".
-- `receipt` só existe se há `Receipt` (lote arrematado). `receipt.token` é público por natureza (é o mesmo do link do comprovante).
+- `receipt` só existe se há `Receipt` (lote arrematado). **O token do comprovante nunca sai desta rota** (S05 R-5.12: só o vencedor logado o recebe, em `myReceiptToken` do `GET /lots/:id`). Quem sabe o `lotId` não pode, pela auditoria, abrir o comprovante de ninguém. `receiptCode` (`NNN-XXXX`) expõe só 4 caracteres do token e é aceito. O link "Ver comprovante do lote" da tela só aparece se o `GET /lots/:id` autenticado do mesmo lote trouxer `myReceiptToken` (a página faz essa chamada extra apenas com sessão de licitante).
 - Sem `userId`, `bidderId`, nome, e-mail, `leaderId`.
 - `lot.status` vem de `lotStatus(lot, clock.now())` (INV-11).
 
-Teste de privacidade (obrigatório): a resposta serializada não contém nenhum `id`, `email`, `name` dos usuários do seed nem as chaves `userId`, `bidderId`, `leaderId`, `passwordHash`.
+Teste de privacidade (obrigatório): a resposta serializada não contém nenhum `id`, `email`, `name` dos usuários do seed nem as chaves `userId`, `bidderId`, `leaderId`, `passwordHash`, e **não contém o `token` do `Receipt`** (busca por substring do token completo e da chave `token`).
 
 ## 7. Contratos Socket.IO
 
@@ -233,6 +259,10 @@ Frases do veredito (`{N}` e `{X}` com dois dígitos não; use número simples; "
 | `SEAL_MISMATCH` com contagem diferente | Adulterado | "As {N} linhas encontradas conferem entre si, mas o selo do lote registra {M}. Faltam {M−N} no fim da corrente." (se M>N) / "Há {N−M} linhas além do que o selo registra." (se M<N) |
 | `SEAL_MISMATCH` com contagem igual | Adulterado | "As {N} linhas conferem entre si, mas o selo do lote não bate com a contagem e o hash final gravados." |
 | `RECEIPT_MISMATCH` | Adulterado | "A corrente e o selo conferem, mas o hash final do comprovante é outro. O comprovante foi alterado ou não pertence a este lote." |
+| `RECEIPT_MISMATCH` com `RECEIPT_MISSING` | Adulterado | "A corrente e o selo conferem, mas este lote consta como arrematado e o comprovante não existe." (texto a revisar) |
+| `RECEIPT_MISMATCH` com `RECEIPT_AMOUNT` | Adulterado | "A corrente e o selo conferem, mas o valor do comprovante não é o do último lance." (texto a revisar) |
+| `RECEIPT_MISMATCH` com `RECEIPT_UNEXPECTED` | Adulterado | "A corrente e o selo conferem, mas existe um comprovante para um lote que fechou sem lances." (texto a revisar) |
+| `SEAL_MISMATCH` com `CANCEL_FLAG` | Adulterado | "As {N} linhas conferem entre si, mas o cancelamento do lote e a corrente não concordam." (texto a revisar) |
 
 Banners de problema (`role="alert"`, só em veredito ≠ OK):
 
@@ -242,7 +272,8 @@ Banners de problema (`role="alert"`, só em veredito ≠ OK):
 | `BROKEN_AT` + `SEQ_GAP` | "Linha {NN}: a sequência pulou. Era esperada a linha {MM}." |
 | `BROKEN_AT` + `PREV_LINK` | "Linha {NN}: o elo com a linha anterior não fecha." |
 | `SEAL_MISMATCH` | "O selo do lote não fecha com a corrente. Nenhuma linha existente está errada, mas faltam ou sobram registros." (texto a revisar) |
-| `RECEIPT_MISMATCH` | "O hash do comprovante não é o hash final deste lote." |
+| `RECEIPT_MISMATCH` | "O hash do comprovante não é o hash final deste lote." (com `consistencyIssue`: usar a frase correspondente da tabela anterior) |
+| `RATE_LIMITED` (429) | Tela de erro de rede com a mensagem do servidor + "Tentar novamente" (texto a revisar) |
 
 Estados e sistema:
 
@@ -269,7 +300,7 @@ Quem acessa: todos, inclusive logado. Cabeçalho **mínimo**: `Logo` + legenda "
 
 Estrutura (desktop 1440; max 1320; gutter `clamp(16px,4vw,56px)`):
 
-1. Cabeçalho do lote: `LotTag` (número, 3 dígitos), título do carro (display-titulo), meta mono ("ano · lances: N · status em texto: AO VIVO / AGENDADO / EM APURAÇÃO / ARREMATADO / SEM LANCES / CANCELADO"), links "Ver sala do lote" (`/lotes/[id]`) e, se há `receipt`, "Ver comprovante do lote" (`/c/{token}`).
+1. Cabeçalho do lote: `LotTag` (número, 3 dígitos), título do carro (display-titulo), meta mono ("ano · lances: N · status em texto: AO VIVO / AGENDADO / EM APURAÇÃO / ARREMATADO / SEM LANCES / CANCELADO"), links "Ver sala do lote" (`/lotes/[id]`) e, **somente para o vencedor logado** (o `GET /lots/:id` autenticado do mesmo lote devolve `myReceiptToken`), "Ver comprovante do lote" (`/c/{myReceiptToken}`). Visitante e demais usuários não veem esse link; o `receipt` da auditoria não traz token (T9).
 2. Caixa de veredito (papel, borda 3px, sombra 6px): carimbo à esquerda; à direita a frase; abaixo "Verificado em …" e o botão secundário "Verificar de novo". Contadores mono: "LINHAS NA CORRENTE {N}" · "REGISTRADAS NO SELO {M}" · "HASH FINAL" (abreviado + ver inteiro) · "HASH DO COMPROVANTE" (abreviado + ver inteiro; só se há comprovante).
 3. Banner de problema (só se ≠ OK), `role="alert"`, borda `ferrugem`.
 4. Tabela da corrente (`DataTable`, caption oculta "Histórico de lances do lote {NNN}") — colunas: **Nº** · **Licitante** · **Valor** · **Horário** · **Hash** · **Situação**.
@@ -350,7 +381,7 @@ Nenhuma criação. Verificação: todos os lotes do seed (ao vivo, agendado, arr
 - AC-8.2 [auto] Dado um lote com 5 lances onde se altera `amountCents` da seq 3 direto no banco (trigger desativado), quando a auditoria roda, então `BROKEN_AT`, `firstBad={seq:3, reason:'HASH'}`, status `[OK,OK,MISMATCH,BROKEN_LINK,BROKEN_LINK]`, `okCount=2`. (AC11 / A1)
 - AC-8.3 [auto] Dado o mesmo lote, quando se altera `pseudonym` da seq 2, ou `at` da seq 4, ou `hash` da seq 3, então `BROKEN_AT` na própria seq alterada (2, 4, 3). (A1)
 - AC-8.4 [auto] Dado o lote com a seq 3 apagada, quando audita, então `BROKEN_AT`, `firstBad={seq:4, expectedSeq:3, reason:'SEQ_GAP'}`; a linha 4 `MISMATCH`, a 5 `BROKEN_LINK`. (A2)
-- AC-8.5 [auto] Dado o lote com uma linha inserida na seq 6 com `hash`/`prevHash` forjados (hex qualquer), quando audita, então `BROKEN_AT` seq 6 (`HASH` ou `PREV_LINK`); e, com `UPDATE seq=seq+1 WHERE seq>=3` seguido de INSERT na seq 3, `BROKEN_AT` seq 3. (A3)
+- AC-8.5 [auto] Dado o lote com uma linha inserida na seq 6 com `hash`/`prevHash` forjados (hex qualquer), quando audita, então `BROKEN_AT` seq 6 (`HASH` ou `PREV_LINK`); e, abrindo espaço na seq 3 sem violar o `@@unique([lotId, seq])` (que não é deferível: `UPDATE … SET seq = seq + 1` falharia linha a linha) com `UPDATE "Bid" SET seq = seq + 1000 WHERE "lotId"=$1 AND seq >= 3` seguido de `UPDATE … SET seq = seq - 999 WHERE seq >= 1003`, dentro da mesma transação, e INSERT de uma linha forjada na seq 3, `BROKEN_AT` seq 3. (A3)
 - AC-8.6 [auto] Dado o lote com as duas últimas linhas apagadas (3 restantes; `entryCount=5`), quando audita, então `SEAL_MISMATCH`, `foundCount=3`, `registeredCount=5`, `firstBad=null`, as 3 linhas `OK`; nenhuma linha extra no DTO. (A4)
 - AC-8.7 [auto] Dado o mesmo cenário em que o atacante também reduz `lot.entryCount` para 3 e `lot.lastHash` para o hash da seq 3 (sem recalcular o selo), quando audita, então `SEAL_MISMATCH`. Se também troca `lot.seal` por 64 hex quaisquer, continua `SEAL_MISMATCH`. (A4)
 - AC-8.8 [auto] Dado uma cadeia inteira recalculada com uma chave **errada** (atacante sem a chave) gravada no lugar da original, quando audita com a chave verdadeira, então `BROKEN_AT` seq 1. (A5; ver §13 para o que não é testável)
@@ -360,7 +391,7 @@ Nenhuma criação. Verificação: todos os lotes do seed (ao vivo, agendado, arr
 - AC-8.12 [auto] Dado o lote cancelado com 3 lances e a linha `CANCEL` (seq 4), quando audita, então `OK`, 4 entradas, a última `kind=CANCEL` com `pseudonym=null`, `amountCents=null`; se `at` da linha CANCEL é alterado, `BROKEN_AT` seq 4. (R15)
 - AC-8.13 [auto] Dado lote ao vivo com lances, quando audita, então `OK`, `receipt=null`, `receiptChecked=false`, `receiptOk=null`.
 - AC-8.14 [auto] Dado o seed completo, quando se audita cada lote, então todos `OK`.
-- AC-8.15 [auto] Dado 20 lances concorrentes sendo aceitos no lote e 20 chamadas de auditoria em paralelo, então nenhuma auditoria devolve outro veredito além de `OK` (leitura `RepeatableRead`).
+- AC-8.15 [auto] Dado um lote ao vivo em que Ana e Bruno **alternam** 20 lances válidos em sequência (cada um cobrindo o outro; o líder não cobre o próprio lance e lances do mesmo valor seriam recusados, então não são concorrentes entre si) enquanto 20 chamadas de auditoria rodam em paralelo (`Promise.all`, limiter desligado por `RATE_LIMIT_DISABLED=1`), então nenhuma auditoria devolve outro veredito além de `OK` (leitura `RepeatableRead`) e cada `foundCount` coincide com o `registeredCount` da mesma resposta.
 
 **Privacidade**
 
@@ -374,6 +405,11 @@ Nenhuma criação. Verificação: todos os lotes do seed (ao vivo, agendado, arr
 
 - AC-8.21 [auto] Dado `GET /lots/<uuid inexistente>/audit` e `GET /lots/abc/audit`, então 404 `NOT_FOUND` com envelope `{error:{code,message}}`.
 - AC-8.22 [auto] Dado qualquer resposta de sucesso, então `Cache-Control: no-store` e `verifiedAt` vem do `Clock` (com `FakeClock` o valor é o instante fixado).
+- AC-8.36 [auto] (T9) Dado o lote arrematado do seed, quando `GET /lots/:id/audit` (sem token, com token da Ana e com token do vencedor), então a resposta serializada **não contém** a chave `token` nem o valor do token do `Receipt`; `receipt` traz só `finalHash` e `receiptCode`.
+- AC-8.37 [auto] (R-8.16) Dado o lote arrematado em que o `Receipt` é apagado direto no banco, quando audita, então `RECEIPT_MISMATCH` com `consistencyIssue='RECEIPT_MISSING'` e linhas todas `OK`; com `Receipt.amountCents` trocado, `RECEIPT_AMOUNT`.
+- AC-8.38 [auto] (R-8.16) Dado o lote cancelado do seed em que `cancelledAt` é limpo direto no banco (ou, ao contrário, um lote ao vivo ganha `cancelledAt`), quando audita, então `SEAL_MISMATCH` com `consistencyIssue='CANCEL_FLAG'`.
+- AC-8.39 [auto] (limitação documentada) Dado `UPDATE "Bid" SET "bidderId"=<outro usuário>` numa linha, quando audita, então `OK` (a limitação está no README; o teste fixa o comportamento para ninguém o tomar por bug).
+- AC-8.40 [auto] (R-8.17) Dado o limiter ligado (instância criada pela fábrica, `RATE_LIMIT_DISABLED` ausente), quando 61 chamadas a `GET /lots/:id/audit` partem do mesmo IP em 1 minuto (`FakeClock` ou janela curta injetada), então as 60 primeiras dão 200 e a 61ª dá 429 `RATE_LIMITED` no envelope `{error:{code,message}}`. Este AC roda isolado: os demais ACs (inclusive o AC-8.15, que faz 20 chamadas) usam o limiter desligado.
 
 **Tela**
 
@@ -409,9 +445,9 @@ Nenhuma criação. Verificação: todos os lotes do seed (ao vivo, agendado, arr
 
 ## 14. Testes exigidos
 
-Unit (`domain/audit-chain.test.ts`, Vitest, sem banco):
+Unit (`domain/audit-chain.test.ts`, Vitest, sem banco; as chamadas usam as assinaturas com chave primeiro, T5):
 
-1. `verifyChain` com cadeia válida de 0, 1 e 5 linhas → `OK`.
+1. `verifyChain` com cadeia válida de 0, 1 e 5 linhas → `OK`. Inclui os casos de `consistencyIssue` (R-8.16): vendido sem `Receipt`, `amountCents` do `Receipt` diferente, `Receipt` em lote sem lances, `cancelledAt` sem linha `CANCEL` e vice-versa, `CANCEL` fora da última posição.
 2. Tabela de adulterações em memória: alterar cada campo (`seq`, `kind`, `pseudonym`, `amountCents`, `at`, `prevHash`, `hash`) de cada linha → `BROKEN_AT` na linha certa, `rowStatus` correto.
 3. Remover linha do meio → `SEQ_GAP` na seguinte; remover finais → `SEAL_MISMATCH` com `foundCount<registeredCount`; trocar `lot.seal` / `lot.lastHash` / `lot.entryCount` → `SEAL_MISMATCH`.
 4. `receipt.finalHash` diferente → `RECEIPT_MISMATCH`; `receipt=null` → `receiptOk=null`.
@@ -422,11 +458,11 @@ Unit (`domain/audit-chain.test.ts`, Vitest, sem banco):
 
 Integração (`modules/audit/audit.int.test.ts`, Postgres real `DATABASE_URL_TEST`, `FakeClock`):
 
-9. Helper `withAppendOnlyTriggerDisabled(prisma, fn)`: `ALTER TABLE "Bid" DISABLE TRIGGER <nome do trigger da S03>` → `fn()` → `ENABLE TRIGGER` em `finally`.
+9. Helper `withAppendOnlyTriggerDisabled(prisma, fn)`: **uma única transação** (`prisma.$transaction`): `ALTER TABLE "Bid" DISABLE TRIGGER bid_no_update_delete` → `fn(tx)` (os `UPDATE`/`DELETE`/`INSERT` de adulteração, todos pelo `tx`) → `ALTER TABLE "Bid" ENABLE TRIGGER bid_no_update_delete` → commit. O DDL do Postgres é transacional: se `fn` lançar, o rollback desfaz também o `DISABLE`, e o trigger nunca fica desligado para outro teste (T2). A suíte de integração da API roda com `fileParallelism: false` (S00), pois o `ALTER TABLE` pega lock exclusivo e o `TRUNCATE … CASCADE` da limpeza também.
 10. AC-8.1 a AC-8.14, cada um como caso (monta o lote pelos services: criar lote, depositar, lances, fechar com `FakeClock`, cancelar).
-11. AC-8.15 concorrência com `Promise.all`.
-12. AC-8.16 a AC-8.22 (privacidade, `mine`, 404, `no-store`, `Clock`).
-13. Sanidade do trigger: sem desativá-lo, `UPDATE "Bid"` e `DELETE FROM "Bid"` falham (garante que o teste de adulteração está de fato burlando a proteção).
+11. AC-8.15 (lances alternados em sequência + 20 auditorias em `Promise.all`).
+12. AC-8.16 a AC-8.22 e AC-8.36 a AC-8.39 (privacidade, token fora da auditoria, `mine`, 404, `no-store`, `Clock`, consistência, limitação de `bidderId`); AC-8.40 (rate limit) em arquivo separado com o limiter ligado.
+13. Sanidade do trigger: sem desativá-lo, `UPDATE "Bid"` e `DELETE FROM "Bid"` falham (garante que o teste de adulteração está de fato burlando a proteção). Teste extra: depois de qualquer caso de adulteração (inclusive os que lançam), `SELECT tgenabled FROM pg_trigger WHERE tgname='bid_no_update_delete'` devolve `O` (habilitado).
 
 Web (Vitest, lógica pura): `abbreviateHash`, mapeamento `status → rótulo/ícone`, `verdictSentence`.
 
@@ -476,10 +512,18 @@ Veredito possível: **íntegro**, **adulterado na linha N** (primeiro registro c
 
 Reforços no código: um trigger do PostgreSQL rejeita `UPDATE` e `DELETE` na tabela de lances (os testes o desativam de propósito para simular quem tem acesso ao banco). Dá para reproduzir a detecção à mão:
 
+Com o Docker Compose, abra o `psql` dentro do serviço do banco (ajuste usuário e banco ao seu `.env`; os valores padrão do `.env.example` estão na seção de variáveis):
+
+```bash
+docker compose exec db psql -U <usuario> -d <banco>
+```
+
+O `id` do lote é o UUID que aparece na URL da Sala (`/lotes/<id>`), ou sai de `SELECT id, number, title FROM "Lot" ORDER BY number;`. Depois:
+
 ```sql
-ALTER TABLE "Bid" DISABLE TRIGGER <nome_do_trigger>;
+ALTER TABLE "Bid" DISABLE TRIGGER bid_no_update_delete;
 UPDATE "Bid" SET "amountCents" = "amountCents" + 100 WHERE "lotId" = '<id>' AND seq = 3;
-ALTER TABLE "Bid" ENABLE TRIGGER <nome_do_trigger>;
+ALTER TABLE "Bid" ENABLE TRIGGER bid_no_update_delete;
 -- agora abra /lotes/<id>/auditoria: "Adulterado", linha 03
 ```
 
@@ -491,6 +535,8 @@ ALTER TABLE "Bid" ENABLE TRIGGER <nome_do_trigger>;
 - Evolução possível: assinar com Ed25519 e publicar a chave pública, para verificar no próprio navegador.
 - Reforço possível: o usuário do banco usado pela aplicação pode ficar sem permissão de `UPDATE`/`DELETE` na tabela de lances.
 - O pseudônimo tem 4 caracteres hexadecimais; dois licitantes do mesmo lote podem, raramente, ter o mesmo pseudônimo.
+- O dono de um lance (`bidderId`) e o líder atual do lote ficam fora do hash: trocar o dono de um lance direto no banco não é detectado pela cadeia (o pseudônimo, que está no hash, não muda). A auditoria cobre o histórico de lances, não a contabilidade (saldos e extrato).
+- A auditoria é pública e recalcula a cadeia a cada chamada, então tem limite de 60 requisições por minuto por IP. Atrás de proxy (Render) o IP vem de `X-Forwarded-For` (`trust proxy` = 1). Quem avalia de uma rede corporativa com IP compartilhado pode, raramente, receber "muitas requisições": basta esperar um minuto.
 ````
 
 ## 16. Conflitos resolvidos e perguntas abertas
@@ -507,16 +553,18 @@ Conflitos resolvidos (por precedência):
 
 Perguntas abertas (sugestão marcada):
 
-1. **Rate limit em `GET /lots/:id/audit`.** A rota é pública e recalcula HMAC a cada chamada. Sugestão: limite generoso (60 req/min/IP). O brief só exige rate limit em `/auth/*` e no lance. Confirmar se entra.
+1. ~~Rate limit em `GET /lots/:id/audit`~~ **Decidido: entra** (60 req/min/IP, R-8.17, AC-8.40), com `trust proxy` = 1 em produção.
 2. **Tempo mínimo de 400 ms no estado "Verificando".** Sugestão para o estado ser perceptível (EXPERIENCE diz "por um instante"). Pode ser removido sem afetar contratos.
 3. **S06 grava linha `CANCEL` em cancelamento sem lances?** Esta fatia aceita os dois casos; a frase de "cancelado sem lances" é "texto a revisar". Alinhar com a S06.
 4. **Lotes com milhares de lances:** sem requisito; sem paginação. Sugestão: nenhuma ação (o seed e a avaliação têm dezenas de lances).
+5. **Cartão Encerrado da Vitrine vai direto para a auditoria (AC-8.34)?** É coerente com o protótipo, mas o PRD descreve Vitrine → Sala, e a Sala encerrada (S05) mostra resultado e comprovante. Sugestão atual: manter o cartão indo para a auditoria só se o usuário confirmar; senão, o cartão Encerrado vai para a Sala e a Sala já traz "Auditar este lote". **Pergunta para o usuário.** Se a resposta for "Sala", AC-8.34 e a linha `lotCardHref` de §15 deixam de valer.
 
 ## 17. Definition of Done
 
 - [ ] `verifyChain` com todos os casos de §14 verdes; `domain/` continua puro (sem Prisma, Express, `Date.now`).
-- [ ] `GET /lots/:id/audit` público, `no-store`, leitura `RepeatableRead`, DTO sem identificadores de usuário.
-- [ ] Testes de adulteração via SQL cru cobrindo A1–A4 e a prova negativa de A5; teste de sanidade do trigger.
+- [ ] `GET /lots/:id/audit` público, `no-store`, leitura `RepeatableRead`, DTO sem identificadores de usuário **e sem o token do comprovante**, com rate limit de 60/min/IP.
+- [ ] Testes de adulteração via SQL cru cobrindo A1–A4 e a prova negativa de A5; helper de adulteração numa única transação; teste de sanidade do trigger (inclusive "trigger habilitado depois de cada caso").
+- [ ] `consistencyIssue` (R-8.16) implementado e testado (AC-8.37 a AC-8.39).
 - [ ] Teste de privacidade em todos os endpoints públicos (AC12).
 - [ ] Tela T9 completa nos dois temas e a 390px; estados de §9 conferidos.
 - [ ] Retrofits de links de §15 feitos e conferidos manualmente.

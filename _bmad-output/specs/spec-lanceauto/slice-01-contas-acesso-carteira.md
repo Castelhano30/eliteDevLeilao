@@ -33,12 +33,12 @@ Roteiro:
 | Recuperação de senha, troca de papel, edição de perfil | Nunca (fora de escopo PRD) |
 
 ## 3. Ponto de partida
-Da S00: monorepo, `env.ts`, `AppError` + envelope, `Clock`, `makeRateLimiter`, `Publisher`/`NoopPublisher`, Socket.IO sem salas, `shared` (`ErrorCode`, `money`, nomes de eventos), tokens/tema, primitivos (`Button`, `Field`, `RefusalMessage`, `FeedbackState`, `DataTable`, `FilterTabs`, `IdentityChip`, `Dialog`, `ThemeSwitch`, `Logo`, `SkipLink`, `PageShell`), `apiClient`, TanStack Query, cliente Socket.IO, Prisma sem modelos.
+Da S00: monorepo com `packages/shared` compilado para `dist`, `env.ts`, `AppError` + envelope, `Clock`, `makeRateLimiter({windowMs,max,keyGenerator?,skip?})` (handler lança `AppError(RATE_LIMITED)`; `trust proxy` em produção; `RATE_LIMIT_DISABLED` e `AUTH_RATE_LIMIT_MAX` no `.env.example`), `Publisher`/`NoopPublisher`, Socket.IO sem salas, `shared` (`ErrorCode` já com `RATE_LIMITED`, `money`, nomes de eventos, `LEDGER_TEXT`), tokens/tema, primitivos (`Button`, `Field`, `RefusalMessage`, `FeedbackState`, `DataTable`, `FilterTabs`, `IdentityChip`, `Dialog`, `ThemeSwitch`, `Logo`, `SkipLink`, `PageShell`; `Stamp`, `LotTag` e `Perforation` só se a S00 chegou a criá-los, senão nascem na fatia que os usa), `apiClient`, TanStack Query, cliente Socket.IO (`auth` em função), migração `0_init` vazia, Prisma sem modelos. Testes de integração da API rodam com `fileParallelism:false` (S00 R-0.13).
 
 **Invariantes que valem aqui**
 - INV-1 Servidor é fonte de verdade; sem atualização otimista (saldo só muda após a resposta).
 - INV-2 Dinheiro em centavos (`BigInt` no banco, `number` nas bordas com assert ≤ `Number.MAX_SAFE_INTEGER`); UI em reais inteiros `R$ 31.000,00`; `MAX_DEPOSIT_CENTS = 1_000_000_000` por depósito.
-- INV-3 Datas ISO UTC; UI em America/Sao_Paulo.
+- INV-3 Datas ISO UTC; UI em America/Sao_Paulo. Services gravam `createdAt` com `clock.now()` **explícito** (`User`, `LedgerEntry`), não com `@default(now())`; assim o seed com `FakeClock` produz datas coerentes. Testes de sequência ordenam por `totalAfter`/`seq`, nunca por `createdAt`.
 - INV-5 Depósito trava só a própria carteira (`SELECT … FOR UPDATE`).
 - INV-6 `Wallet` é cache; cada mudança insere `LedgerEntry` na mesma tx; CHECK `committed >= 0` e `total >= committed`; disponível = total − comprometido, calculado, nunca gravado.
 - INV-13 DTO público nunca contém userId/nome/e-mail (aqui só DTOs privados do próprio usuário).
@@ -48,17 +48,17 @@ Da S00: monorepo, `env.ts`, `AppError` + envelope, `Clock`, `makeRateLimiter`, `
 ## 4. Regras de negócio
 - R-1.1 Cada conta tem exatamente um papel, `BIDDER` ou `AUCTIONEER`, escolhido no cadastro e imutável. (PRD Papéis · INV-15)
 - R-1.2 E-mail é normalizado em minúsculas (`trim().toLowerCase()`) e único. (AD-11)
-- R-1.3 Senha tem 8 a 72 caracteres (72 = limite do bcrypt); armazenada só como hash `bcryptjs` custo 10. Sem recuperação de senha. (AD-11 · PRD fora de escopo)
+- R-1.3 Senha tem no mínimo 8 caracteres e no máximo **72 bytes UTF-8** (72 = limite do bcrypt), medidos com `new TextEncoder().encode(password).length` **no schema zod compartilhado** (`packages/shared` roda no navegador e não tem `Buffer`); armazenada só como hash `bcryptjs` custo 10. Mensagem do máximo: "A senha pode ter até 72 caracteres." Sem recuperação de senha. (AD-11 · PRD fora de escopo)
 - R-1.4 Toda conta (licitante e leiloeiro) nasce com `Wallet` zerada, criada na mesma transação do `User`. (AD-4 · `POST /auth/register`)
 - R-1.5 Cadastro autentica na hora: devolve token (o usuário não precisa logar de novo).
-- R-1.6 JWT HS256 assinado com `JWT_SECRET`, validade 7 dias, claims `sub` (id) e `role`; sem refresh; logout = descartar o token no cliente. (AD-11)
+- R-1.6 JWT HS256 assinado com `JWT_SECRET`, validade 7 dias, claims `sub` (id) e `role`; sem refresh; logout = descartar o token no cliente. A verificação fixa o algoritmo: `jwt.verify(token, secret, { algorithms: ['HS256'] })` (rejeita `none` e outros). `GET /me` devolve `401 UNAUTHENTICATED` se o `sub` não existir mais no banco (reset/reseed); o cliente descarta o token. Serviços que gravam com FK para `User` tratam violação `P2003` do Prisma como `401 UNAUTHENTICATED`, nunca como 500. (AD-11)
 - R-1.7 Depósito simulado soma ao saldo total (R9): `totalCents += amountCents`, 1 ≤ amountCents ≤ `MAX_DEPOSIT_CENTS` (R$ 1,00 a R$ 10.000.000,00 **por depósito**; sem teto de saldo acumulado). Só `BIDDER` deposita. (PRD R9 · decisão do usuário)
 - R-1.8 Disponível = total − comprometido (R7), sempre calculado no servidor e devolvido pronto (`availableCents`).
 - R-1.9 O depósito trava a própria carteira, atualiza `Wallet`, insere `LedgerEntry(kind=DEPOSIT, amountCents, lotId=null, totalAfter, committedAfter)` na mesma tx. (AD-2/AD-4)
-- R-1.10 Extrato = `LedgerEntry` do usuário em ordem decrescente de criação; 50 por página; mais antigos por cursor. (Contratos)
-- R-1.11 Rotas protegidas exigem token válido (`UNAUTHENTICATED` 401 sem ele); rotas por papel usam `requireRole`. Papel errado em API → `ROLE_NOT_ALLOWED` 403.
+- R-1.10 Extrato = `LedgerEntry` do usuário em ordem decrescente de inserção (`seq DESC`, coluna autoincremento — o desempate por `id` uuid não segue a ordem de inserção); 50 por página; mais antigos por cursor. (Contratos)
+- R-1.11 Rotas protegidas exigem token válido (`UNAUTHENTICATED` 401 sem ele); rotas por papel usam `requireRole`. Papel errado em API → `ROLE_NOT_ALLOWED` 403. Esta fatia **entrega também `optionalAuth`** (middleware que lê o Bearer se existir e válido, e trata token ausente, inválido ou expirado como visitante, **sem 401**), usado pelas rotas públicas `GET` das S02 (`GET /lots/:id`), S03 e S08; elas assumem que ele já existe.
 - R-1.12 Handshake do Socket.IO: se `auth.token` válido, o socket entra na sala `user:{id}`; token ausente ou inválido **não derruba** a conexão (segue anônimo). (AD-11)
-- R-1.13 Rate-limit em `/auth/*`: 30 requisições por minuto por IP → `RATE_LIMITED` 429 (valor é sugestão, ajustável por env; não pode atrapalhar avaliador que loga várias vezes).
+- R-1.13 Rate-limit em `/auth/*`: teto de `AUTH_RATE_LIMIT_MAX` requisições por minuto por IP (padrão **30**, sugestão; não pode atrapalhar avaliador que loga várias vezes) → `RATE_LIMITED` 429 pelo envelope padrão (o limiter da S00 lança `AppError`). Depende de `trust proxy = 1` em produção (S00 R-0.5); sem ele todo mundo compartilha o IP do proxy do Render. Os testes de registro/login da própria S01 rodam com `RATE_LIMIT_DISABLED=1`; só o AC-1.9 reativa o limite. O README (S09) avisa que avaliadores atrás do mesmo IP corporativo dividem o limite.
 - R-1.14 Login com e-mail inexistente e com senha errada respondem igual (`INVALID_CREDENTIALS`), e o tempo de resposta é equivalente (comparar contra hash dummy quando o usuário não existe).
 
 ## 5. Modelo de dados
@@ -73,7 +73,7 @@ model User {
   email        String   @unique
   passwordHash String
   role         Role
-  createdAt    DateTime @default(now()) @db.Timestamp(3)
+  createdAt    DateTime @db.Timestamp(3) // gravado pelo service com clock.now()
   wallet       Wallet?
 }
 
@@ -87,14 +87,15 @@ model Wallet {
 
 model LedgerEntry {
   id             String     @id @default(uuid())
+  seq            Int        @unique @default(autoincrement()) // ordem real de inserção; base do extrato e do cursor
   userId         String
   kind           LedgerKind
   amountCents    BigInt
   lotId          String?    // sem FK: a tabela Lot só existe na S02 e o ledger é histórico imutável
   totalAfter     BigInt
   committedAfter BigInt
-  createdAt      DateTime   @default(now()) @db.Timestamp(3)
-  @@index([userId, createdAt])
+  createdAt      DateTime   @db.Timestamp(3) // gravado pelo service com clock.now() (o seed usa FakeClock)
+  @@index([userId, seq])
 }
 ```
 SQL manual na migração (Prisma não expressa CHECK):
@@ -121,13 +122,14 @@ DTOs em `packages/shared` (zod de entrada + tipos de saída):
 
 Notas:
 - `leadingLots` tem o tipo `{ lotId: string, number: number, title: string, committedCents: number }[]`; esta fatia sempre devolve `[]`; a S03 preenche.
-- `cursor` é opaco (base64url de `createdAt|id` do último item); ordenação `createdAt DESC, id DESC`.
+- `cursor` é opaco (base64url do `seq` do último item); ordenação `seq DESC` (ordem real de inserção; `createdAt` é só o carimbo exibido).
+- Chaves do TanStack Query (contrato do web, valem para todas as fatias): `["me"]` = `{ user, wallet }` de `GET /me`; `["wallet","summary"]` = `WalletDto`, lido pelo `BalanceChip`; `["wallet","ledger"]` = `useInfiniteQuery` do extrato (`GET /wallet`). A resposta do depósito e (S04) o evento `wallet:updated` escrevem em `["wallet","summary"]` com `setQueryData` e invalidam `["wallet","ledger"]`. Nenhum código grava a forma do `GET /wallet` em `["wallet"]` puro.
 - Token ausente, malformado ou expirado → `UNAUTHENTICATED` 401. `Authorization: Bearer <jwt>`.
 - Respostas de saldo não levam `serverTime` (não são estado de lote).
 - `amountCents` não inteiro (ex. 10.5), string, 0, negativo, ou > 1_000_000_000 → `VALIDATION` com a mesma mensagem do campo `amountCents`.
 
 ## 7. Contratos Socket.IO
-Nenhum evento novo. Muda só o handshake: se `socket.handshake.auth.token` for um JWT válido, `socket.join("user:" + sub)`; senão segue anônimo, sem erro. O cliente web passa a enviar `auth: { token }` e **reconecta com o novo token** ao logar/deslogar (`socket.disconnect().connect()`).
+Nenhum evento novo. Muda só o handshake: se `socket.handshake.auth.token` for um JWT válido (verificado com `algorithms:['HS256']`), `socket.join("user:" + sub)`; senão segue anônimo, sem erro. O cliente web cria o socket com `io(url, { autoConnect:false, auth:(cb) => cb({ token: getToken() }) })` (`auth` como **função**, para sempre levar o token atual) e **reconecta com o novo token** ao logar/deslogar: `socket.disconnect(); socket.connect()`. Atribuir `socket.auth = {...}` e só chamar `connect()` sem a função não basta.
 
 ## 8. Mensagens
 Textos marcados (rev.) são "texto a revisar": propostos aqui por falta de texto no PRD/design.
@@ -158,7 +160,7 @@ Textos marcados (rev.) são "texto a revisar": propostos aqui por falta de texto
 ## 9. Telas e estados
 
 ### 9.1 Acesso — `/entrar` (T2) · visitante
-Query `?next=` (caminho interno apenas: começa com `/` e não com `//`; qualquer outro valor é ignorado). Se já logado, redireciona a `homeFor(role)`.
+Query `?next=` (caminho interno apenas; qualquer outro valor é ignorado). `sanitizeNext(next)` aceita **só** valores que casam `^/[A-Za-z0-9/_\-.?=&%]*$`, não começam com `//`, não contêm `\`, caracteres de controle, espaços iniciais nem `://`. Isso fecha `//evil.com`, `https://evil.com` e `/\evil.com` (o navegador trata `\` como `/`). Se já logado, redireciona a `homeFor(role)`.
 
 **Estrutura (desktop ≥ ~1000px: duas colunas; mobile: texto primeiro, depois formulário).**
 - Coluna de texto: título de página `t-display-titulo` caixa-alta (ex. "Quem dá mais, leva." sugerido), `t-body-lead` curto, nota: "Seu nome nunca aparece em público. Em cada lote você vira um Licitante diferente, tipo Licitante C3E8." (rev.)
@@ -186,7 +188,7 @@ Validação do cliente espelha a do servidor (mesmos textos); o servidor é a au
 | Situação | Comportamento |
 |---|---|
 | Visitante abre rota privada (`/carteira`, futuros `/arremates`, `/painel`, `/painel/criar-lote`) | Redireciona a `/entrar?next=<caminho>` |
-| Logado com papel errado | Redireciona a `homeFor(seu papel)` com aviso "Essa tela é de {papel certo}. Você entrou como {papel}." |
+| Logado com papel errado | Redireciona a `homeFor(seu papel)?aviso=papel` com aviso "Essa tela é de {papel certo}. Você entrou como {papel}." O componente `AvisoPapel` (montado no `PageShell`/layout das telas de destino, inclusive `/` e `/painel`) lê `aviso=papel`, mostra o `FeedbackState` neutro dispensável e faz `router.replace` removendo o parâmetro; o texto usa o papel do usuário logado e a tela de origem não vem na URL, então o aviso deriva "papel certo" do papel oposto. |
 | Token expirado/inválido (API devolve `UNAUTHENTICATED` com token enviado) | `apiClient` descarta o token, limpa o cache do TanStack Query e redireciona a `/entrar?next=` |
 | Hidratação (lendo `localStorage` e chamando `GET /me`) | Rotas privadas mostram `FeedbackState` "Carregando…" — sem piscar redirect |
 | Rotas públicas | Nunca redirecionam (`/`, futuras Sala, Comprovante, Auditoria) |
@@ -211,7 +213,7 @@ Título de página `t-display-titulo` "Carteira". Dinheiro de mentira, emoção 
 
 **Equação:** três cartões em linha (quebram no mobile) com glifos "−" e "=" decorativos (`aria-hidden`): **Total** · **Comprometido** · **Disponível**. Cada cartão: rótulo `t-mono-rotulo`, valor Plex Mono grande; Disponível com borda 5px; valores `aria-label` como moeda ("R$ 50.000,00"). Bloco **Comprometido** abaixo: "Travado onde você lidera: {lista de lotes com link}. Volta se alguém cobrir." — com `leadingLots` vazio mostra "Nada travado. Você não lidera nenhum lote agora." (rev.).
 
-**Depositar:** valores rápidos em grade de 3 colunas — "R$ 10 mil", "R$ 50 mil", "R$ 100 mil" (`aria-pressed`; selecionado: fundo `ocre`, texto `sobreOcre`, sombra `4px 4px 0`) — e campo "Outro valor" (Plex Mono 24px, prefixo "R$", sufixo ",00", máscara de dígitos com milhar "."). Digitar em "Outro valor" desmarca o rápido; clicar num rápido limpa o campo. Botão primário "Depositar R$ {valor}" (sem valor válido mostra "Depositar" e **não age** em silêncio — veja o estado "Valor inválido"). Esta é a única ação ocre da tela.
+**Depositar:** valores rápidos em grade de 3 colunas — "R$ 10 mil", "R$ 50 mil", "R$ 100 mil" (`aria-pressed`; selecionado: fundo `ocre`, texto `sobreOcre`, sombra `4px 4px 0`) — e campo "Outro valor" (Plex Mono 24px, prefixo "R$", sufixo ",00", máscara de dígitos com milhar "."; **limite de 9 dígitos** na máscara — mais que isso já excede R$ 10.000.000 e cai na RefusalMessage, e evita `number` fora do intervalo seguro ao colar 20 dígitos; overflow é tratado como valor inválido). Digitar em "Outro valor" desmarca o rápido; clicar num rápido limpa o campo. Botão primário "Depositar R$ {valor}" (sem valor válido mostra "Depositar" e **não age** em silêncio — veja o estado "Valor inválido"). Esta é a única ação ocre da tela.
 
 **Extrato:** `DataTable` (min-width 560px, `aria-label="Extrato da carteira"`), colunas **Quando** (dd/mm HH:mm, Brasília) · **Movimento** · **Lote** (link `/lotes/{lotId}` ou "—") · **Valor** · **Disponível após** (= totalAfter − committedAfter). Rótulos de movimento (Big Shoulders caixa-alta):
 | kind | Rótulo | Valor |
@@ -232,7 +234,7 @@ Título de página `t-display-titulo` "Carteira". Dinheiro de mentira, emoção 
 | Valor inválido (vazio, ≤ 0, não numérico) | RefusalMessage "Informe um valor inteiro entre R$ 1,00 e R$ 10.000.000,00." colada ao botão; campo com `aria-invalid`; valor preservado; saldo não muda |
 | Acima do limite (> R$ 10.000.000,00) | Mesma RefusalMessage e comportamento |
 | Enviando | Botão inerte "Depositando…" (rev.); duplo clique ignorado |
-| Depósito feito | Após a resposta: Total e Disponível "viram" (placa flip, `la-vira`), entra linha nova no topo do extrato (`la-entra` + `la-marca`), campo limpo, live region anuncia "Depósito de R$ X feito. Disponível agora: R$ Y." |
+| Depósito feito | Após a resposta: Total e Disponível mostram os novos valores, entra linha nova no topo do extrato, campo limpo, live region anuncia "Depósito de R$ X feito. Disponível agora: R$ Y." A animação (placa flip `la-vira`, `la-entra` + `la-marca`) é **"se sobrar tempo"**: o critério é o estado final correto, com ou sem animação. A resposta atualiza `["wallet","summary"]` e invalida `["wallet","ledger"]`. |
 | Erro de rede/servidor | RefusalMessage "Não deu para falar com o servidor. Confira a conexão e tente de novo."; valor preservado; **não** reenviar automaticamente |
 | Erro de carga do extrato | FeedbackState erro + "Tentar novamente"; saldos anteriores mantidos marcados como desatualizados |
 | Reduced motion | Valores e linha nova aparecem direto no estado final |
@@ -246,7 +248,7 @@ Continua a página diagnóstica da S00, agora dentro do novo Header. A S02 a sub
 ## 10. Componentes criados
 
 ### 10.1 BalanceChip (chip-saldo)
-Link para `/carteira`. Texto "DISPONÍVEL R$ X,00" Plex Mono 13px, fundo `papel`, borda 3px `linha`, raio 0, padding `8px 12px`, alvo ≥ 44px. Lê `["wallet"]` do TanStack Query (alimentado por `GET /me`/`GET /wallet`); atualiza por `setQueryData` (S04 ligará `wallet:updated`). Rótulo acessível "Saldo disponível R$ X,00, ir para a carteira". Só aparece para `BIDDER`.
+Link para `/carteira`. Texto "DISPONÍVEL R$ X,00" Plex Mono 13px, fundo `papel`, borda 3px `linha`, raio 0, padding `8px 12px`, alvo ≥ 44px. Lê `["wallet","summary"]` do TanStack Query (`WalletDto`, semeado por `GET /me` e atualizado pela resposta do depósito); atualiza por `setQueryData` (S04 ligará `wallet:updated` à mesma chave). Rótulo acessível "Saldo disponível R$ X,00, ir para a carteira". Só aparece para `BIDDER`.
 
 ### 10.2 Abas do Acesso (componente próprio — **não** é FilterTabs)
 `role="tablist"` + dois `role="tab"` com `aria-selected` **e** `aria-controls`; `role="tabpanel"` com `aria-labelledby`; setas ←/→ trocam, `Home`/`End` vão à primeira/última; só a aba ativa na ordem de tabulação. Visual: aba ativa `papel`/`tinta`, inativa `suave`/`tinta2`, `top:3px` para encaixar na borda do cartão (borda 3px `linha`).
@@ -255,7 +257,7 @@ Link para `/carteira`. Texto "DISPONÍVEL R$ X,00" Plex Mono 13px, fundo `papel`
 Dois `radio` visualmente escondidos (não `display:none`) dentro de um `fieldset` com `legend` "Eu sou". Selecionado: fundo `ocre`, texto `sobreOcre`, `filter: drop-shadow(5px 5px 0 var(--c-sombra))`; não selecionado: fundo `papel`. O **foco do radio aparece no bilhete** (foco global: contorno 3px `tinta` + halo `papel`). Cada bilhete tem título `t-cartaz-subtitulo` ("LICITANTE" / "LEILOEIRO") e uma linha `t-body-nota` ("Dá lances e guarda saldo." / "Monta lotes e recebe as vendas." — rev.).
 
 ### 10.4 Header, HeaderMinimal e `AuthProvider`
-`AuthProvider` expõe `{ user, status: "loading"|"anon"|"auth", login, register, logout }`; `RequireAuth({role?})` envolve as páginas privadas. `homeFor(role)` em `shared`/`web`. `PublicHeader` conforme 9.3.
+`AuthProvider` expõe `{ user, status: "loading"|"anon"|"auth", login, register, logout }`; `RequireAuth({role?})` envolve as páginas privadas. `homeFor(role)` em `shared`/`web`. `PublicHeader` conforme 9.3. `AvisoPapel` conforme 9.2. No servidor, `requireAuth`, `requireRole` e `optionalAuth` (R-1.11).
 
 ### 10.5 Campo de valor com máscara (Carteira; reusado em S03/S02)
 Composto prefixo "R$" (Plex Mono 600 18px) + input `inputmode="numeric"` (Plex Mono, 24px aqui) + sufixo fixo ",00". Ao digitar ou colar: só dígitos, separador de milhar "." reaplicado a cada tecla, cursor preservado. Valor exposto ao form em reais inteiros (`parseReais`) → `amountCents = reais × 100`. Rótulo visível; ajuda em `aria-describedby`.
@@ -267,7 +269,7 @@ Composto prefixo "R$" (Plex Mono 600 18px) + input `inputmode="numeric"` (Plex M
 | AUCTIONEER | João Pátio | `leiloeiro@lanceauto.test` | `lance1234` | — |
 | BIDDER | Ana Souza | `ana@lanceauto.test` | `lance1234` | R$ 500.000,00 (um depósito) |
 | BIDDER | Bruno Lima | `bruno@lanceauto.test` | `lance1234` | R$ 300.000,00 (um depósito) |
-E-mails/senhas/saldos são **sugestão**; o README (S09) lista os definitivos. Saldos grandes o bastante para a S03 semear lances. Cada depósito gera `LedgerEntry` DEPOSIT.
+E-mails/senhas/saldos são **sugestão**; o README (S09) lista os definitivos. Saldos grandes o bastante para a S03 semear lances. Cada depósito gera `LedgerEntry` DEPOSIT, com `createdAt` vindo do `Clock` (real no seed padrão; `FakeClock` quando a S09 fabrica histórico).
 
 ## 12. Critérios de aceite
 **Cadastro e login**
@@ -279,7 +281,7 @@ E-mails/senhas/saldos são **sugestão**; o README (S09) lista os definitivos. S
 - AC-1.6 [auto] Dado `name` vazio/só espaços, `email:"x"`, quando registro, então `400 VALIDATION` com `fields.name` e `fields.email` juntos.
 - AC-1.7 [auto] Dado credenciais corretas, quando `POST /auth/login`, então `200` com token cujo `exp − iat == 7 dias` e claims `sub` e `role`.
 - AC-1.8 [auto] Dado senha errada **ou** e-mail inexistente, quando login, então ambos `401 INVALID_CREDENTIALS` com a mesma mensagem.
-- AC-1.9 [auto] Dado 31 chamadas a `/auth/login` em 1 minuto do mesmo IP, então a 31ª recebe `429 RATE_LIMITED`.
+- AC-1.9 [auto] Dado o limiter reativado (sem `RATE_LIMIT_DISABLED`, `AUTH_RATE_LIMIT_MAX=30`) e 31 chamadas a `/auth/login` em 1 minuto do mesmo IP (via `X-Forwarded-For` com `trust proxy`), então a 31ª recebe `429 RATE_LIMITED` com o envelope JSON; IPs diferentes têm contagens separadas. Todos os demais ACs auto desta fatia rodam com `RATE_LIMIT_DISABLED=1`.
 - AC-1.10 [auto] Dado token expirado/forjado/ausente, quando `GET /me`, então `401 UNAUTHENTICATED`.
 - AC-1.11 [auto] Dado a senha gravada, então `passwordHash` ≠ senha e `bcrypt.compare` confere; nenhuma resposta da API contém `passwordHash`.
 
@@ -288,7 +290,7 @@ E-mails/senhas/saldos são **sugestão**; o README (S09) lista os definitivos. S
 - AC-1.13 [auto] Dado `amountCents:1_000_000_000`, então `201` (limite incluso). Dado `1_000_000_001`, `0`, `-100`, `10.5`, `"100"`, ausente, então `400 VALIDATION` com `fields.amountCents == "Informe um valor inteiro entre R$ 1,00 e R$ 10.000.000,00."` e saldo inalterado.
 - AC-1.14 [auto] Dado leiloeiro autenticado, quando deposita, então `403 ROLE_NOT_ALLOWED` e nada gravado.
 - AC-1.15 [auto] Dado sem token, quando deposita, então `401 UNAUTHENTICATED`.
-- AC-1.16 [auto] Dado 20 depósitos de R$ 1.000,00 simultâneos (`Promise.all`) na mesma carteira, então total final R$ 20.000,00, 20 linhas DEPOSIT e `totalAfter` forma a sequência 100000…2000000 sem repetição nem salto (carteira travada).
+- AC-1.16 [auto] Dado 20 depósitos de R$ 1.000,00 simultâneos (`Promise.all`) na mesma carteira, então total final R$ 20.000,00, 20 linhas DEPOSIT e, ordenadas por `seq`, o `totalAfter` forma a sequência 100000…2000000 sem repetição nem salto (carteira travada). A ordenação é por `seq`/`totalAfter`, nunca por `createdAt`.
 - AC-1.17 [auto] Dado `Wallet` com `committed=0, total=0`, quando um `UPDATE` tentaria deixar `total < committed` ou `committed < 0`, então o banco rejeita pelo CHECK.
 - AC-1.18 [auto] Dado 60 lançamentos, quando `GET /wallet`, então 50 entradas mais novas primeiro e `nextCursor` não nulo; com `?cursor=` vêm as 10 restantes e `nextCursor == null`; sem repetir nem pular nenhuma.
 - AC-1.19 [auto] Dado `GET /wallet`, então `leadingLots == []` e `availableCents == totalCents − committedCents`.
@@ -299,9 +301,9 @@ E-mails/senhas/saldos são **sugestão**; o README (S09) lista os definitivos. S
 - AC-1.22 [manual] Dado login com senha errada, quando envio, então vejo "E-mail e senha não batem. Confira o que está anotado; recuperar senha não é uma opção aqui.", as bordas dos dois campos em `ferrugem`, `aria-invalid="true"` neles, e a mensagem permanece se troco de aba e volto.
 - AC-1.23 [manual] Dado cadastro com e-mail repetido, quando envio, então o erro aparece no campo e-mail, o foco vai a ele, e Nome/E-mail continuam preenchidos (senha limpa).
 - AC-1.24 [manual] Dado visitante, quando abro `/carteira`, então vou a `/entrar?next=/carteira`; após logar como licitante, aterrisso em `/carteira`.
-- AC-1.25 [manual] Dado `?next=https://evil.com` ou `?next=//evil.com`, quando logo, então sou levado a `homeFor(role)` (valor ignorado).
-- AC-1.26 [manual] Dado leiloeiro logado, quando abro `/carteira`, então sou levado a `/painel` com o aviso "Essa tela é de licitante. Você entrou como leiloeiro." e o header não mostra chip de saldo.
-- AC-1.27 [manual] Dado licitante logado, quando abro `/painel`, então volto a `/` com aviso equivalente.
+- AC-1.25 [auto] Dado `?next=https://evil.com`, `?next=//evil.com`, `?next=/\evil.com`, `?next=/%5Cevil.com` (decodificado), `?next=javascript:alert(1)` ou `?next= /x` (espaço inicial), quando `sanitizeNext` roda, então devolve `null` (valor ignorado) e o login leva a `homeFor(role)`; `?next=/carteira` e `?next=/lotes/abc?x=1` passam. Teste de lógica pura no web, mais conferência manual de um caso.
+- AC-1.26 [manual] Dado leiloeiro logado, quando abro `/carteira`, então sou levado a `/painel?aviso=papel`, vejo o aviso "Essa tela é de licitante. Você entrou como leiloeiro.", o parâmetro some da URL após a renderização, e o header não mostra chip de saldo.
+- AC-1.27 [manual] Dado licitante logado, quando abro `/painel`, então volto a `/?aviso=papel` com aviso equivalente, dispensável, e a URL fica limpa.
 - AC-1.28 [manual] Dado licitante logado, quando clico em "Sair", então o token some do `localStorage`, vejo o header de visitante em `/`, e `/carteira` exige login de novo.
 - AC-1.29 [manual] Dado "Outro valor" = 10.000.001 e clico em Depositar, então vejo a RefusalMessage com o texto exato e o saldo não muda; com 10.000.000 o depósito é aceito.
 - AC-1.30 [manual] Dado depósito de R$ 50.000,00 concluído, então Total e Disponível mostram R$ 50.000,00, a primeira linha do extrato é "Depósito + R$ 50.000,00" e o chip do header mostra "DISPONÍVEL R$ 50.000,00" sem recarregar a página.
@@ -311,10 +313,16 @@ E-mails/senhas/saldos são **sugestão**; o README (S09) lista os definitivos. S
 - AC-1.34 [manual] Dado os temas Claro e Noite, então todas as telas desta fatia mantêm contraste e bordas conforme os tokens da S00.
 - AC-1.35 [auto] Dado socket com token válido, quando conecta, então está na sala `user:{id}`; com token inválido ou ausente, conecta sem sala de usuário e sem erro.
 - AC-1.36 [manual] Dado o deploy público, quando entro com `ana@lanceauto.test` / `lance1234`, então a Carteira mostra R$ 500.000,00 e o extrato tem um Depósito.
+- AC-1.37 [auto] Dado um JWT válido cujo `sub` não existe mais (usuário apagado/banco recriado), quando `GET /me`, então `401 UNAUTHENTICATED`; e quando esse usuário órfão tenta uma escrita com FK, então `401` (violação `P2003` tratada), nunca `500`.
+- AC-1.38 [auto] Dado um token assinado com `alg: none` ou HS512, quando `GET /me`, então `401 UNAUTHENTICATED` (`algorithms:['HS256']`).
+- AC-1.39 [auto] Dado senha de 72 bytes ASCII, então aceita; dado senha de 73 bytes ou de 37 caracteres multibyte que somam 74 bytes UTF-8, então `400 VALIDATION` com "A senha pode ter até 72 caracteres." (schema compartilhado, `TextEncoder`).
+- AC-1.40 [auto] Dado `optionalAuth` numa rota pública de teste, quando chamada sem token, com token expirado e com token forjado, então responde `200` como visitante; com token válido, o `req.user` vem preenchido.
+- AC-1.41 [auto] Dado login e logout, quando o cliente de socket é recriado com `auth` em função, então a conexão após login entra em `user:{id}` e a seguinte, após logout, não (cobre a reconexão pelo token atual).
 
 ## 13. Casos de borda e concorrência
 - E-mail com espaços/maiúsculas/acentos: só `trim().toLowerCase()`; não remove acentos.
-- Senha com 72 bytes multibyte (UTF-8 excede 72 bytes): rejeitar quando `Buffer.byteLength(password) > 72` com a mensagem de máximo (evita truncamento silencioso do bcrypt).
+- Senha cujo UTF-8 excede 72 bytes (multibyte): rejeitar quando `new TextEncoder().encode(password).length > 72` com a mensagem de máximo (evita truncamento silencioso do bcrypt); a mesma função roda no navegador e no servidor (`Buffer` não existe no cliente).
+- Colar mais de 9 dígitos em "Outro valor": a máscara corta em 9 dígitos; nunca produz `number` fora do intervalo seguro.
 - Depósito exato de R$ 10.000.000,00 passa; +1 centavo falha; vários depósitos acumulam além de R$ 10 mi sem erro (limite é por depósito).
 - Dois depósitos simultâneos na mesma carteira: serializados pelo `FOR UPDATE`; sem perda de atualização.
 - Registro concorrente do mesmo e-mail: a violação de unicidade do Postgres vira `EMAIL_TAKEN`; a tx faz rollback (sem User órfão).
@@ -325,18 +333,21 @@ E-mails/senhas/saldos são **sugestão**; o README (S09) lista os definitivos. S
 - Leiloeiro tem carteira (recebe créditos na S05) mas não deposita nem a vê no header.
 
 ## 14. Testes exigidos
-Vitest, integração contra Postgres real (`DATABASE_URL_TEST`), com limpeza entre testes.
+Vitest, integração contra Postgres real (`DATABASE_URL_TEST`), com `fileParallelism:false`, `globalSetup` rodando `prisma migrate deploy` e limpeza `TRUNCATE … CASCADE` entre testes (S00 R-0.13). `RATE_LIMIT_DISABLED=1` no ambiente de teste; só o AC-1.9 o reativa.
 - `auth.service`: register ok/normalização/EMAIL_TAKEN/validação por campo/rollback; login ok/errado/inexistente (tempo equivalente: asserção frouxa de que ambos chamam `bcrypt.compare`).
 - `wallet.service`: depósito ok, limites 1 / 1_000_000_000 / +1 / 0 / negativo / fracionário, role, concorrência (AC-1.16), CHECKs do banco (AC-1.17), paginação (AC-1.18).
 - `http`: `GET /me`, 401 de token ruim/expirado (JWT gerado com `exp` passado), rate-limit, `RATE_LIMITED`.
 - `socket`: handshake com token válido/inválido (AC-1.35).
 - `shared/zod`: schemas de entrada e mensagens por campo.
-- `web` (lógica pura): máscara de valor (digitar/colar/cursor), `parseReais`/`formatBRL`, sanitização do `next`, `homeFor`.
+- `web` (lógica pura): máscara de valor (digitar/colar/cursor, limite de 9 dígitos), `parseReais`/`formatBRL`, sanitização do `next` (AC-1.25), `homeFor`.
+- `auth` extra: JWT com algoritmo errado e `sub` órfão (AC-1.37/1.38), senha em bytes (AC-1.39), `optionalAuth` (AC-1.40).
 
 ## 15. Retrofits e integrações
 - Muda código da S00: `apiClient` passa a anexar o token e tratar 401; cliente Socket.IO passa a enviar o token e reconectar ao logar/deslogar; `Layout` ganha o `AuthProvider` e o Header; `seed.ts` deixa de ser vazio.
-- Deixa pronto para: S02 (nav do leiloeiro e Painel substituindo o stub; Vitrine em `/`), S03 (preencher `leadingLots`; `HOLD`/`RELEASE`), S04 (ligar `wallet:updated` ao `["wallet"]` e emitir no depósito), S05 (`PublicHeader`), S07 (links da lista "Travado onde você lidera" e item "Meus arremates").
+- Deixa pronto para: S02 (nav do leiloeiro e Painel substituindo o stub; Vitrine em `/`), S03 (preencher `leadingLots`; `HOLD`/`RELEASE`), S04 (ligar `wallet:updated` a `["wallet","summary"]`, invalidar `["wallet","ledger"]` e emitir no depósito), S05 (`PublicHeader`), S07 (links da lista "Travado onde você lidera" e item "Meus arremates").
 - `LedgerEntryDto.lotNumber`: a S02 adiciona o join com `Lot` (hoje `null`).
+- **Textos do extrato:** os rótulos e notas da tabela da seção 9.4 vêm das constantes `LEDGER_TEXT` em `packages/shared` (RELEASE "Saldo liberado · lance superado", REFUND "Estorno · lote cancelado", nota "TOTAL NÃO MUDA"). As S03 e S06 importam essas constantes e **a S06 se alinha a estes textos** (não os redefine); os ACs de extrato das três fatias asseveram a mesma constante.
+- `optionalAuth`, `requireAuth`, `requireRole` e o `AvisoPapel` nascem aqui; as S02, S03 e S08 os usam sem recriar.
 
 ## 16. Conflitos resolvidos e perguntas abertas
 - C-papel-errado: arquitetura (AD-11) manda papel errado ir à home do próprio papel; a triagem sugeria um aviso com link. Resolvido: redireciona (arquitetura vence) **e** mostra aviso dispensável no destino (compatível com as duas).
@@ -347,7 +358,8 @@ Vitest, integração contra Postgres real (`DATABASE_URL_TEST`), com limpeza ent
 - Aberta: o PRD não define se o leiloeiro vê o extrato dele (`GET /wallet` responde, mas nenhuma tela o mostra). Mantido sem tela (EXPERIENCE: "o Painel é a única superfície").
 
 ## 17. Definition of Done
-- [ ] Migração `contas_e_carteira` criada, com os 2 CHECKs, aplicada no Neon pelo deploy da API.
+- [ ] Migração `contas_e_carteira` criada, com os 2 CHECKs e a coluna `seq` autoincremento no `LedgerEntry`, aplicada no Neon pelo deploy da API.
+- [ ] `optionalAuth`, `requireAuth`, `requireRole`, JWT com `algorithms:['HS256']`, `sanitizeNext` e senha em bytes (TextEncoder) com testes; chaves do TanStack Query (`["me"]`, `["wallet","summary"]`, `["wallet","ledger"]`) adotadas.
 - [ ] Rotas de auth e carteira com testes verdes (unit + integração) e CI verde.
 - [ ] Acesso, Header por papel, Sair, guardas de rota e Carteira conforme as seções 9.x nos dois temas.
 - [ ] Seed rodado em produção (3 contas); credenciais anotadas para o README.

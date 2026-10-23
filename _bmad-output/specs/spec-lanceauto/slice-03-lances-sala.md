@@ -44,7 +44,7 @@ Já existe (não recriar):
 Invariantes que valem aqui (cópia curta):
 - **INV-1** servidor é a verdade de tempo/saldo/valor; sem atualização otimista; relógio da tela = `Date.now()+offset`.
 - **INV-2** centavos inteiros (`BigInt` no banco, `number` nas bordas com assert ≤ `MAX_SAFE_INTEGER`); UI em reais inteiros `R$ 31.000,00`, Plex Mono.
-- **INV-3** datas ISO UTC `Z`; `new Date()` proibido fora de `infra/clock.ts`; UI em America/Sao_Paulo.
+- **INV-3** datas ISO UTC `Z`; `new Date()`/`Date.now()` proibidos em `apps/api/src` fora de `infra/clock.ts` (no web, `Date.now()` só dentro de `serverClock`); UI em America/Sao_Paulo.
 - **INV-4** mutação só por REST via service; service devolve `DomainEvent[]`; a rota entrega ao `Publisher` depois do commit.
 - **INV-5** lock: `Lot FOR UPDATE` → carteiras `WHERE userId IN (…) ORDER BY userId FOR UPDATE`; ReadCommitted; nunca carteira antes do lote.
 - **INV-6** `Wallet` é cache; cada mudança insere `LedgerEntry` na mesma tx; disponível = total − comprometido, sempre calculado.
@@ -77,9 +77,9 @@ Sem token válido → `UNAUTHENTICATED` 401 antes da transação. Validação do
 | 7 | papel `AUCTIONEER` | `ROLE_NOT_ALLOWED` |
 | 8 | (só aqui trava carteiras) `amount > available` | `INSUFFICIENT_BALANCE` |
 
-Consequências aceitas desta ordem (documentar no README): líder que dá lance **abaixo** do mínimo recebe `BELOW_MINIMUM`, não `ALREADY_WINNING`; leiloeiro em lote encerrado/cancelado/abaixo do mínimo recebe o código da checagem anterior, e só `ROLE_NOT_ALLOWED` se o lance passaria nas checagens 2–5; duplo envio idêntico do líder cai em `BELOW_MINIMUM` (ver §13 e §16).
+Consequências aceitas desta ordem (documentar no README): líder que dá lance **abaixo** do mínimo recebe `BELOW_MINIMUM` (com `reason: OWN_LEAD`, R-3.7), não `ALREADY_WINNING`; leiloeiro em lote encerrado/cancelado/abaixo do mínimo recebe o código da checagem anterior, e só `ROLE_NOT_ALLOWED` se o lance passaria nas checagens 2–5; reenvio idêntico do líder cai em `BELOW_MINIMUM`/`OWN_LEAD` (ver §13 e §16).
 
-- **R-3.7** `BELOW_MINIMUM.details.reason`: `OUTDATED` se `expectedCurrentCents` (o que o cliente viu; `null` = sem lances) for diferente do `currentBidCents` real (comparação null-safe); senão `MINIMUM`. `details = { minimumCents, currentBidCents (number|null), reason }`. `expectedCurrentCents` é obrigatório no corpo (pode ser `null`).
+- **R-3.7** `BELOW_MINIMUM.details.reason`, avaliado nesta ordem: `OWN_LEAD` se `leaderId == userId` (o autor do lance atual reenvia valor abaixo do mínimo; evita dizer "alguém levantou a mão antes de você" a quem é o próprio líder); `OUTDATED` se `expectedCurrentCents` (o que o cliente viu; `null` = sem lances) for diferente do `currentBidCents` real (comparação null-safe); senão `MINIMUM`. `details = { minimumCents, currentBidCents (number|null), reason }`. `expectedCurrentCents` é obrigatório no corpo (pode ser `null`). O código continua `BELOW_MINIMUM` nos três casos; só o texto muda (§8).
 - **R-3.8** Carteira inexistente (não deveria ocorrer) conta como disponível 0 ⇒ `INSUFFICIENT_BALANCE` com `availableCents: 0`; nunca cria carteira no lance.
 
 ### 4.3 Efeitos do lance aceito (tudo na mesma transação, nesta ordem)
@@ -87,7 +87,7 @@ Consequências aceitas desta ordem (documentar no README): líder que dá lance 
 2. Se havia líder anterior: `committed -= lot.currentBidCents` na carteira dele + `LedgerEntry(RELEASE, amount=lot.currentBidCents, lotId)` com `totalAfter`/`committedAfter`. (PRD R8: liberado na mesma tx do lance que superou)
 3. Licitante novo: `committed += amount` + `LedgerEntry(HOLD, amount, lotId)`.
 4. Insere `Bid`: `seq = lot.entryCount + 1`, `kind=BID`, `bidderId`, `pseudonym` (§4.6), `amountCents`, `at = now`, `prevHash = lot.lastHash` (no lote novo `lastHash = genesis`), `hash = entryHash(...)`.
-5. Atualiza `Lot`: `currentBidCents = amount`, `leaderId = bidder`, `bidCount += 1`, `entryCount = seq`, `lastHash = hash`, `seal = sealHash(lotId, seq, hash)`.
+5. Atualiza `Lot`: `currentBidCents = amount`, `leaderId = bidder`, `bidCount += 1`, `entryCount = seq`, `lastHash = hash`, `seal = sealHash(key, lotId, seq, hash)`. O `bidderCount` do evento `bid:placed` sai da query de §4.7 (licitantes distintos com `kind=BID`, já contando este lance), dentro da mesma transação.
 6. Prorrogação (R-3.9) atualiza `endsAt`.
 7. Commit. Só então a rota entrega os eventos (§7) ao `Publisher`.
 
@@ -97,7 +97,7 @@ Consequências aceitas desta ordem (documentar no README): líder que dá lance 
 
 ### 4.4 Funções puras (`apps/api/src/domain/`, sem Prisma/Express/Date.now)
 - `bid-rules.ts`: `minimumBid(lot): number`; `validateBidPreWallet({lot, userId, role, amountCents, expectedCurrentCents, now}): {ok:true, minimumCents} | {ok:false, code, details?}` (checagens 2–7 da tabela); `validateBalance(availableCents, amountCents): ok | INSUFFICIENT_BALANCE`; `nextEndsAt(endsAt, now): {endsAt, extended}`.
-- `audit-chain.ts` (S02 já tem `genesisHash`): acrescentar `entryHash(key, p)` e `sealHash(key, lotId, entryCount, lastHash)`.
+- `audit-chain.ts` (S02 já tem `genesisHash(key, lot)`): acrescentar `entryHash(key, p)` com `p = { lotId, seq, kind, pseudonym, amountCents, at, prevHash }` (objeto, **chave sempre primeiro**) e `sealHash(key, lotId, entryCount, lastHash)`. Assinatura única: S06 (`CANCEL`) e S08 (`verifyChain`) chamam exatamente assim.
 - `pseudonym.ts`: `pseudonymFor(key, userId, lotId): string`.
 - `rank.ts`: `rankFrom(bestByBidder: Map<id, number>, me): {rank, bidderCount, myBest} | null`.
 Todas recebem `now: Date` e a chave por parâmetro.
@@ -116,7 +116,7 @@ Teste de vetor fixo: chave de 32 bytes `0x00…`, lote `lot-1`, seq 1, `Licitant
 Posição = colocação do **maior lance de cada licitante**: `myRank = 1 + nº de licitantes distintos cujo maior lance > o meu maior lance`; `bidderCount` = nº de licitantes distintos com lance `kind=BID` no lote. Sem lance meu: `myRank = null`, `myBestBidCents = null`. Query: `SELECT "bidderId", MAX("amountCents") FROM "Bid" WHERE "lotId"=$1 AND kind='BID' GROUP BY "bidderId"`. Quem deu 2 lances conta uma vez.
 
 ### 4.8 Limite de requisições
-`POST /lots/:id/bids`: `express-rate-limit` por usuário (fallback IP), **sugestão 30 req/min**, instância criada por fábrica com opções injetáveis; testes usam limite alto (ou `RATE_LIMIT_DISABLED=1`). Estouro ⇒ `RATE_LIMITED` 429 (acrescentar ao `ErrorCode` de `shared`).
+`POST /lots/:id/bids`: `express-rate-limit` por usuário (fallback IP), **sugestão 30 req/min**, criado pela fábrica `makeRateLimiter({ windowMs, max, keyGenerator?, skip?, message? })` da S00 (a chave por usuário usa `req.user.id`; o `handler` lança `AppError(RATE_LIMITED)` para sair no envelope padrão, nunca texto puro). Atrás do Render o limite por IP só funciona com `app.set("trust proxy", 1)` (S00). Testes definem `RATE_LIMIT_DISABLED=1` (o `skip` da fábrica). Estouro ⇒ `RATE_LIMITED` 429. O código **já existe** em `ErrorCode` desde a S00; a mensagem é por rota (a do lance está em §8) e a tabela da S00 traz só o padrão.
 
 ## 5. Modelo de dados
 
@@ -173,7 +173,7 @@ Todos os erros usam o envelope; toda resposta de estado de lote traz `serverTime
 | 201 | `{ bid: {seq, pseudonym, amountCents, at}, lot: LotSummary, wallet: {totalCents, committedCents, availableCents}, serverTime }` |
 | Erros | `UNAUTHENTICATED` 401 · `VALIDATION` 400 `{fields:{amountCents\|expectedCurrentCents: msg}}` · `NOT_FOUND` 404 · `LOT_CANCELLED` 409 · `LOT_NOT_STARTED` 409 `{startsAt}` · `LOT_ENDED` 409 · `BELOW_MINIMUM` 422 `{minimumCents, currentBidCents, reason}` · `ALREADY_WINNING` 409 · `ROLE_NOT_ALLOWED` 403 · `INSUFFICIENT_BALANCE` 422 `{availableCents}` · `RATE_LIMITED` 429 |
 
-`LotSummary` = `{ id, status, currentBidCents, minimumBidCents, bidCount, bidderCount, entryCount, endsAt, originalEndsAt, extended: endsAt > originalEndsAt, myRank, myBestBidCents, myPseudonym }`.
+`LotSummary` = `{ id, status, currentBidCents, minimumBidCents, bidCount, bidderCount, version, entryCount (alias de version), endsAt, originalEndsAt, extended: endsAt > originalEndsAt, myRank, myBestBidCents, myPseudonym }`.
 `extended` do resumo é derivado do lote (prorrogado em qualquer momento), diferente do `extended` do evento (que diz se **este** lance prorrogou).
 
 ### `GET /lots/:id` (já existe na S02; acrescentar)
@@ -182,7 +182,8 @@ Público; token Bearer opcional (token inválido/expirado em `GET` público ⇒ 
 | --- | --- | --- |
 | `currentBidCents` | number\|null | |
 | `minimumBidCents` | number | mínimo aceito agora (`startingBidCents` sem lances; senão atual + incremento). O cliente usa este valor; não recalcula |
-| `bidCount`, `entryCount`, `bidderCount` | number | `bidderCount` = licitantes distintos |
+| `bidCount`, `bidderCount` | number | `bidderCount` = licitantes distintos |
+| `version` | number | = `entryCount` depois da última operação. **Nome que o cliente lê** (reducer, cache, eventos). `entryCount` segue como alias de compatibilidade |
 | `originalEndsAt` | ISO | para o selo "+2 MIN" |
 | `bids[]` | `{seq, kind:"BID", pseudonym, amountCents, at}` | do mais novo para o mais antigo (`seq` desc), só `kind=BID`, sem paginação |
 | `myPseudonym` | string\|null | só `BIDDER` logado |
@@ -198,8 +199,8 @@ Nenhum nesta fatia (o `Publisher` é `NoopPublisher` até a S04). O service **j�
 
 | Evento | Sala | Payload (sempre com `serverTime`) |
 | --- | --- | --- |
-| `bid:placed` | `lot:{id}` | `{lotId, version: entryCount, bid:{seq, pseudonym, amountCents, at}, currentBidCents, bidCount, endsAt, extended}` (`extended` = este lance prorrogou) |
-| `showcase:lot` | `showcase` | `LotCard` do lote atualizado (`toLotCard`) |
+| `bid:placed` | `lot:{id}` | `{lotId, version: entryCount, bid:{seq, pseudonym, amountCents, at}, currentBidCents, bidCount, bidderCount, endsAt, extended}` (`extended` = este lance prorrogou; `bidderCount` calculado no servidor, §4.3) |
+| `showcase:lot` | `showcase` | `LotCard` do lote atualizado (`toLotCard`), com `version` |
 | `wallet:updated` | `user:{bidderId}` | `{totalCents, committedCents, availableCents}` |
 | `wallet:updated` | `user:{prevLeaderId}` (se houve) | idem, com o saldo liberado |
 
@@ -213,15 +214,16 @@ O servidor compõe `error.message`; a tela mostra o texto **do servidor** em `Re
 | --- | --- | --- | --- | --- |
 | `BELOW_MINIMUM` (`MINIMUM`) | 422 | `Seu lance precisa ser de pelo menos R$ {minimumCents},00.` → ex. "Seu lance precisa ser de pelo menos R$ 31.000,00." | design/PRD | Sala; borda do campo ferrugem; usuário corrige |
 | `BELOW_MINIMUM` (`OUTDATED`) | 422 | `Alguém levantou a mão antes de você. O mínimo agora é R$ {minimumCents},00.` (texto a revisar) | EXPERIENCE | Sala; campo mantém o digitado; regra e lance atual atualizam |
+| `BELOW_MINIMUM` (`OWN_LEAD`) | 422 | `Você já está na frente. Para cobrir o próprio lance, o mínimo é R$ {minimumCents},00.` (texto a revisar) | novo (efeito de C1, ver §16) | Sala; borda do campo ferrugem; o líder que reenvia valor abaixo do mínimo nunca lê "alguém levantou a mão" |
 | `INSUFFICIENT_BALANCE` | 422 | `Saldo insuficiente: você tem R$ {availableCents},00 disponíveis.` + link `Depositar na carteira →` (para `/carteira`) | design | Sala; borda do campo ferrugem; `aria-invalid` |
 | `ALREADY_WINNING` | 409 | `Você já está na frente. Cobrir o próprio lance só gasta saldo.` | design | Sala; sem borda de erro |
 | `LOT_ENDED` | 409 | `Martelo batido às {HH:mm}. Este lote não aceita mais lances.` ({HH:mm} = `endsAt` em Brasília) | design | Sala; botão vira "Lote fechado" |
 | `LOT_NOT_STARTED` | 409 | `O lote abre {dia-da-semana}, {dd/mm}, às {H}h{mm se ≠ 00}. Até lá o martelo fica na gaveta.` → ex. "O lote abre sexta-feira, 24/10, às 14h. Até lá o martelo fica na gaveta." (texto a revisar; base no PRD "Este lote abre em 24/10 às 14:00.") | EXPERIENCE | só via API/corrida (a Sala agendada não tem formulário) |
-| `LOT_CANCELLED` | 409 | `O leiloeiro cancelou este lote. Nada foi vendido e todo saldo travado voltou.` (texto a revisar) | EXPERIENCE | corrida/API; Sala vira cancelado |
+| `LOT_CANCELLED` | 409 | `Este lote foi cancelado pelo leiloeiro.` | PRD (vence o EXPERIENCE, ver §16) | corrida/API; Sala vira cancelado. O texto longo "O leiloeiro cancelou este lote. Nada foi vendido e todo saldo travado voltou." é só o **aviso da Sala cancelada** (S06), não o `RefusalMessage` |
 | `ROLE_NOT_ALLOWED` | 403 | `Leiloeiro vende, não compra. Lance é coisa de licitante.` (texto a revisar) | EXPERIENCE | API (a Sala do leiloeiro não mostra formulário) |
 | `UNAUTHENTICATED` | 401 | `Entre para dar lances.` | novo | sessão expirada: S01 já limpa o token e leva a `/entrar?next=` |
 | `VALIDATION` | 400 | `Informe um valor de lance válido.` (campo `amountCents`) (texto a revisar) | novo | só por API; a UI valida antes |
-| `RATE_LIMITED` | 429 | `Calma: lances demais em pouco tempo. Tente de novo em instantes.` (texto a revisar) | novo | Sala |
+| `RATE_LIMITED` | 429 | `Calma: lances demais em pouco tempo. Tente de novo em instantes.` (texto a revisar; mensagem desta rota, o padrão da S00 vale nas demais) | novo | Sala |
 | `NOT_FOUND` | 404 | `Lote não encontrado.` | novo | Sala já trata (S02) |
 
 Mensagens só do cliente (sem requisição, texto a revisar):
@@ -276,7 +278,7 @@ Estados do formulário:
 4. **Atalhos** `+ R$ 500`, `+ R$ 1.000`, `+ R$ 5.000` (`botao-atalho`: borda 2px `linha`, min-height 44px, Plex Mono 14px, tipo `button`): **somam ao valor atual do campo** (não ao lance atual); **campo vazio parte do `minimumBidCents`**. Fixos para todos os lotes, independentes do incremento. Limpam a recusa; marcam `dirty`.
 5. **Enviar:** `<form>`; botão "Dar lance" (`botao-primario`, na Sala: Big Shoulders 900 30px, `min-height: 64px`, sombra 6px) e **Enter** no campo enviam. Campo vazio ⇒ mensagem local `Informe o valor do lance.` sem request.
 6. Corpo enviado: `{ amountCents, expectedCurrentCents: lot.currentBidCents }` — o `currentBidCents` do **último estado que a tela mostra** (`null` sem lances).
-7. **Sem atualização otimista.** Após 201: aplicar a resposta ao cache da Sala (`applyBid`, ver §15), atualizar `wallet` no cache (chip "DISPONÍVEL"), e refazer `GET /lots/:id` para reconciliar histórico de terceiros.
+7. **Sem atualização otimista.** Após 201: aplicar a resposta ao cache da Sala (`applyLotEvent`, ver §15), atualizar `wallet` no cache (`["wallet","summary"]`, chave definida na S01) (chip "DISPONÍVEL"), e refazer `GET /lots/:id` para reconciliar histórico de terceiros.
 8. **Efeitos por erro:** `BELOW_MINIMUM` ⇒ aplicar `details.minimumCents` ao texto de regra e refazer `GET` (se `OUTDATED`, o lance atual mudou); `INSUFFICIENT_BALANCE` ⇒ link para `/carteira`; `LOT_ENDED` ⇒ refaz `GET` e vai para "apurando"; `LOT_CANCELLED`/`LOT_NOT_STARTED` ⇒ refaz `GET`; `ALREADY_WINNING` ⇒ nada; `UNAUTHENTICATED` ⇒ comportamento da S01; falha de rede ⇒ mensagem ambígua (§8), **nunca** reenviar automaticamente.
 9. **Prorrogação visível (derivada do estado):** se `endsAt > originalEndsAt`, `Cronometro` mostra o selo `+2 MIN` (S02) e abaixo dele o parágrafo: `Lance nos 2 minutos finais: o relógio ganhou +2 min. Novo fim às {HH:mm:ss}. Ninguém leva no susto.` (HH:mm:ss em Brasília), que fica até o encerramento. Nesta fatia ele aparece para quem recarrega ou deu o lance; a propagação ao vivo para os demais é S04.
 10. **Rodapé do campo:** `R$ {meuLance},00 travados neste lote` (ganhando) / `Nada travado neste lote` (superado e nunca deu lance).
@@ -309,7 +311,7 @@ Plex Mono 14px, borda 2px `tinta`, padding `3px 8px`. Marca "VOCÊ": fundo `ocre
 Composição da §9. O campo reutiliza `Field` (S00) com variante composta (prefixo/sufixo). Atalhos reutilizam `Button` variante `atalho` (S00). Recusa reutiliza `RefusalMessage` (S00): `2px dashed ferrugem`, texto `ferrugem`, ícone SVG 18×18 (círculo cortado, traço 2px, `aria-hidden`), `padding 8px 10px`, Newsreader 15px, `role="alert"`; cor + ícone + texto.
 
 ### Utilitários testáveis (web)
-`maskReais(raw): string`, `parseReais(masked): number|null`, `ordinal(n): "2º"`, `plural(n, "lance")`, `applyBid(state, summary|event)` (puro).
+`maskReais(raw): string`, `parseReais(masked): number|null`, `ordinal(n): "2º"`, `plural(n, "lance")`, `applyLotEvent(state, event)` (puro; **reducer único**, lê só `version`: a S03 já o cria para a resposta do lance e a S04 acrescenta `lot:closed`/`lot:cancelled`/`showcase:lot`).
 
 ## 11. Seed desta fatia
 
@@ -323,7 +325,7 @@ Convenção de unidades: valores em reais nos enunciados; no teste, centavos. Lo
 - AC-3.1 [auto] Dado lote agendado (`startsAt` = agora + 1h), quando Ana dá lance, então 409 `LOT_NOT_STARTED` com `details.startsAt` e o texto "O lote abre …, às …h. Até lá o martelo fica na gaveta."; nenhuma linha em `Bid`, carteira inalterada, `entryCount = 0`.
 - AC-3.2 [auto] Dado `now == startsAt` exato (FakeClock), quando Ana dá lance válido, então 201 (início inclusivo).
 - AC-3.3 [auto] Dado `now == endsAt` exato, quando Ana dá lance válido, então 409 `LOT_ENDED` ("Martelo batido às HH:mm. Este lote não aceita mais lances."); com `now = endsAt − 1 ms`, 201 (fim exclusivo).
-- AC-3.4 [auto] Dado lote com `cancelledAt` preenchido, quando Ana dá lance, então 409 `LOT_CANCELLED` com o texto "O leiloeiro cancelou este lote. Nada foi vendido e todo saldo travado voltou."
+- AC-3.4 [auto] Dado lote com `cancelledAt` preenchido, quando Ana dá lance, então 409 `LOT_CANCELLED` com o texto "Este lote foi cancelado pelo leiloeiro." (PRD).
 - AC-3.5 [auto] Dado lote encerrado **e** cancelado, então `LOT_CANCELLED` (checagem 2 vem antes da 4).
 - AC-3.6 [auto] Dado id de lote inexistente, então 404 `NOT_FOUND`.
 
@@ -338,7 +340,7 @@ Convenção de unidades: valores em reais nos enunciados; no teste, centavos. Lo
 
 **Liderança (AC3 · R3 · M3)**
 - AC-3.14 [auto] Dado Ana líder com R$ 30.000, quando Ana envia R$ 31.000, então 409 `ALREADY_WINNING` ("Você já está na frente. Cobrir o próprio lance só gasta saldo."); nada muda.
-- AC-3.15 [auto] Dado Ana líder, quando Ana envia R$ 30.500 (abaixo do mínimo), então 422 `BELOW_MINIMUM` (C1: valor antes de liderança), **não** `ALREADY_WINNING`.
+- AC-3.15 [auto] Dado Ana líder, quando Ana envia R$ 30.500 (abaixo do mínimo), então 422 `BELOW_MINIMUM` (C1: valor antes de liderança) com `details.reason: "OWN_LEAD"` e texto "Você já está na frente. Para cobrir o próprio lance, o mínimo é R$ 31.000,00.", **não** `ALREADY_WINNING`.
 - AC-3.16 [auto] Dado Ana líder sem saldo para o valor, quando envia R$ 1.000.000, então 409 `ALREADY_WINNING` (liderança antes de saldo).
 
 **Papel (R4 · M7)**
@@ -375,7 +377,8 @@ Convenção de unidades: valores em reais nos enunciados; no teste, centavos. Lo
 - AC-3.39 [auto] Dado 10 licitantes com saldos diferentes (alguns abaixo do valor que ofertam) e `Promise.all` de 10 lances com valores distintos e crescentes (R$ 25.000, 26.000 … 34.000), então: `seq` contíguos `1..k`, `amountCents` estritamente crescente, `currentBidCents` = último aceito, líder = autor do último aceito; soma de `committed` de todas as carteiras = `currentBidCents`; cada superado com `committed` 0 neste lote; nenhum `committed > total`; ledger `HOLD − RELEASE` líquido de cada usuário = seu `committed`; cadeia recomputada confere ponta a ponta; todas as recusas são `BELOW_MINIMUM` ou `INSUFFICIENT_BALANCE`.
 - AC-3.40 [auto] Dado 20 rodadas do AC-3.39 com ordens aleatórias, então as invariantes valem em todas e nenhum teste trava (timeout 10 s por rodada ⇒ sem deadlock).
 - AC-3.41 [auto] **Deadlock cruzado:** Ana lidera L1, Bruno lidera L2 (ambos com saldo). Em `Promise.all`: Ana cobre Bruno em L2 e Bruno cobre Ana em L1. Então ambas as transações terminam (sem deadlock/timeout), ambos os lances aceitos, saldos coerentes (cada um com 1 lote travado), ledger consistente.
-- AC-3.42 [auto] Duplo envio idêntico do mesmo usuário em paralelo (mesmo valor, `expected` igual): 1 aceito, 1 recusado com `BELOW_MINIMUM` (`OUTDATED`), um único `HOLD`.
+- AC-3.42 [auto] Duplo envio idêntico do mesmo usuário em paralelo (mesmo valor, `expected` igual): 1 aceito, 1 recusado com `BELOW_MINIMUM` e `details.reason: "OWN_LEAD"` (o segundo envio chega com o próprio usuário já líder; texto "Você já está na frente. Para cobrir o próprio lance, o mínimo é R$ …"), um único `HOLD`.
+- AC-3.65 [auto] Dado Ana líder com R$ 30.000, quando Bruno cobre com R$ 31.000 e Ana (com `expected = 3000000`, desatualizado) envia R$ 30.500, então `BELOW_MINIMUM` com `reason: "OUTDATED"` (Ana já não é líder); e quando Bruno (líder) reenvia R$ 31.500 com `expected` correto, então `reason: "OWN_LEAD"`.
 - AC-3.43 [auto] Lance concorrente contra o mesmo lote por usuários diferentes + um `GET` do lote: o `GET` nunca devolve `currentBidCents` sem o `bid` correspondente em `bids[]` (consistência de leitura).
 
 **Posição e privacidade na leitura**
@@ -412,7 +415,7 @@ Convenção de unidades: valores em reais nos enunciados; no teste, centavos. Lo
 | `endsAt − now` = 2:00.001 / 2:00.000 / 1:59.999 / 1 ms | sem mudança / `endsAt` igual, `extended=false` / prorroga / prorroga |
 | lance == mínimo (primeiro e seguintes) | aceito |
 | lance == mínimo − 1 centavo | `BELOW_MINIMUM` |
-| líder abaixo do mínimo | `BELOW_MINIMUM` (C1) |
+| líder abaixo do mínimo | `BELOW_MINIMUM` com `reason: OWN_LEAD` (C1) |
 | líder ≥ mínimo | `ALREADY_WINNING` |
 | líder sem saldo | `ALREADY_WINNING` |
 | leiloeiro: encerrado/cancelado/abaixo do mínimo/ok | `LOT_ENDED`/`LOT_CANCELLED`/`BELOW_MINIMUM`/`ROLE_NOT_ALLOWED` |
@@ -420,7 +423,7 @@ Convenção de unidades: valores em reais nos enunciados; no teste, centavos. Lo
 | superado que volta a liderar no mesmo lote | RELEASE do rival + HOLD novo; seu comprometido = novo lance (não acumula o antigo, que foi liberado antes) |
 | usuário sem carteira | `INSUFFICIENT_BALANCE` com `availableCents 0` |
 | token expirado em `POST` | 401 `UNAUTHENTICATED`; em `GET` público ⇒ visitante |
-| duplo clique (UI) | segundo envio ignorado pela UI; se chegar ao servidor: `BELOW_MINIMUM`/`OUTDATED` (ver §16) |
+| duplo clique (UI) | segundo envio ignorado pela UI; se chegar ao servidor: `BELOW_MINIMUM` com `reason: OWN_LEAD` (ver §16) |
 | 10 lances simultâneos mesmo valor | 1 aceito, 9 `BELOW_MINIMUM` |
 | 10 lances simultâneos crescentes, saldos diferentes | invariantes do AC-3.39 |
 | lances cruzados em dois lotes (A↔B) | sem deadlock |
@@ -434,18 +437,18 @@ Convenção de unidades: valores em reais nos enunciados; no teste, centavos. Lo
 Unitários (`domain/`, sem banco): `minimumBid` (com/sem lances); `validateBidPreWallet` por checagem e na ordem completa (matriz código × combinações, incluindo C1); `validateBalance` (igual/+1); `nextEndsAt` nos 4 limites; `entryHash`/`sealHash`/`pseudonymFor` com vetor fixo e propriedades (hex minúsculo, separadores, nulos→""); `rankFrom`.
 Integração (Postgres real, `DATABASE_URL_TEST`, `FakeClock`): AC-3.1 a AC-3.46 (cada um um `it`); inclui varredura de chaves proibidas no JSON; rollback com falha forçada; publisher falso captura `bid:placed`, `showcase:lot`, `wallet:updated` (2 usuários quando houve líder anterior) depois do commit e nada em caso de erro; trigger bloqueia `UPDATE`/`DELETE`; limpeza entre testes por `TRUNCATE … CASCADE`.
 Concorrência: AC-3.38 a AC-3.43 com `Promise.all`; checador de invariantes reutilizável `assertLotInvariants(lotId)` (seq contíguos, cadeia recomputada, soma de comprometido, ledger líquido, CHECKs).
-Web (Vitest, lógica pura): `maskReais`/`parseReais` (colar, cursor, limite de 13 dígitos), `plural`, `ordinal`, `applyBid`, derivação da faixa/placar a partir do estado (matriz viewer × estado da §9.2: nunca "0º maior"), regra `dirty` do campo (acompanha mínimo só quando não editado), atalho com campo vazio.
+Web (Vitest, lógica pura): `maskReais`/`parseReais` (colar, cursor, limite de 13 dígitos), `plural`, `ordinal`, `applyLotEvent`, derivação da faixa/placar a partir do estado (matriz viewer × estado da §9.2: nunca "0º maior"), regra `dirty` do campo (acompanha mínimo só quando não editado), atalho com campo vazio.
 
 ## 15. Retrofits e integrações
 
 Muda em fatias anteriores:
 - **S02:** `GET /lots/:id` e o tipo `LotState` em `shared` ganham os campos da §6; a Sala passa a renderizar `BidPanel` na segunda coluna (só quando o `status` permitir, §9.2); `Cronometro` recebe `extended` derivado de `endsAt > originalEndsAt`.
 - **S01:** `GET /wallet` passa a preencher `leadingLots`; a Carteira renderiza o bloco da §9.4 e as linhas HOLD/RELEASE; `BalanceChip` é atualizado por `setQueryData` após lance.
-- **S00/shared:** adicionar `RATE_LIMITED` a `ErrorCode`; `LotSummary` e `BidDTO` em `shared`.
+- **S00/shared:** `RATE_LIMITED` já está em `ErrorCode` desde a S00 (não acrescentar de novo); adicionar `LotSummary` e `BidDTO` em `shared`, o campo `version` em `LotState`/`LotSummary`/`LotCard`, e o motivo `OWN_LEAD` ao tipo de `details.reason`.
 - **Header:** sem item novo de nav nesta fatia.
 
 Para fatias futuras:
-- **`applyBid(state, {bid, currentBidCents, bidCount, entryCount, endsAt, serverTime})`** (puro, web): a S04 reutiliza o mesmo reducer para o evento `bid:placed`; descarta se `entryCount <= atual`.
+- **`applyLotEvent(state, {bid, currentBidCents, bidCount, bidderCount, version, endsAt, serverTime})`** (puro, web; **único reducer**, substitui o antigo `applyBid`): a S04 reutiliza o mesmo reducer para o evento `bid:placed` e acrescenta `lot:closed`/`lot:cancelled`; descarta se `version <= atual` (o campo se chama sempre `version`, nunca `entryCount`).
 - **S04:** troca `NoopPublisher` pelo Socket.IO; garante que a prorrogação e o histórico atualizem ao vivo para todos (o texto de prorrogação já existe aqui); bloqueia envio sem socket.
 - **S05:** substitui o estado interino "apurando"/"Lote fechado" pelos estados encerrados completos; concorrência lance × fechamento.
 - **S06:** `CANCEL` entra na cadeia com `seq = entryCount + 1` e o mesmo `lastHash/seal`; `bids[]` continua só `kind=BID`; `LOT_CANCELLED` já é tratado aqui.
@@ -455,14 +458,15 @@ Para fatias futuras:
 ## 16. Conflitos resolvidos e perguntas abertas
 
 Conflitos resolvidos (precedência progresso > PRD > arquitetura > EXPERIENCE > DESIGN):
-- **C1 ordem de validação:** PRD (período → valor → liderança → papel → saldo) vence AD-5 (papel antes; ALREADY_WINNING antes de BELOW_MINIMUM). Adotada §4.2. Efeito colateral aceito: o "duplo clique cai em `ALREADY_WINNING`" da arquitetura deixa de valer — cai em `BELOW_MINIMUM`/`OUTDATED` (a UI previne com o botão inerte).
+- **C1 ordem de validação:** PRD (período → valor → liderança → papel → saldo) vence AD-5 (papel antes; ALREADY_WINNING antes de BELOW_MINIMUM). Adotada §4.2. Efeito colateral: o "duplo clique cai em `ALREADY_WINNING`" da arquitetura deixa de valer — cai em `BELOW_MINIMUM`. Para não dizer ao próprio líder que "alguém levantou a mão antes dele", o motivo `OWN_LEAD` (R-3.7) troca o texto (a UI também previne com o botão inerte).
+- **LOT_CANCELLED (texto):** PRD "Este lote foi cancelado pelo leiloeiro." vence o EXPERIENCE; o texto longo fica só no aviso da Sala cancelada (S06).
 - **Faixa × placar (P40):** `PlacarPosicao` mostra liderança/posição (ganhando/superado); `FaixaStatus` mostra as situações neutras e sem ação (assistindo, ainda não deu lance, leiloeiro, apurando). Não duplicar título nas duas.
 - **Mensagem de recusa:** o texto exibido é o `message` do servidor (P34/P32), com o texto do design nas 4 originais (fechado, ganhando, mínimo, saldo) e as 4 novas marcadas "texto a revisar".
 - **Marca "VOCÊ":** vai em toda linha do usuário no histórico (o EXPERIENCE só cita o topo "cheio"); decisão de implementação sem custo.
 - **Aviso de prorrogação:** o parágrafo é renderizado a partir do estado nesta fatia (era citado como da S04 no brief); a S04 só precisa de atualização ao vivo.
 
 Perguntas abertas:
-1. **Duplo envio e líder com lance baixo (consequência de C1).** Com a ordem do PRD, o líder que reenvia o mesmo valor vê "Alguém levantou a mão antes de você", o que é enganoso porque o autor do lance atual é ele. Sugestão (não aplicada): se isso incomodar, inverter 5↔6 (volta à ordem da arquitetura) ou refinar a mensagem quando `leaderId == userId`. Confirmar.
+1. **Duplo envio e líder com lance baixo (consequência de C1) — APLICADO.** Com a ordem do PRD, o líder que reenviava o mesmo valor veria "Alguém levantou a mão antes de você", enganoso porque o autor do lance atual é ele. Resolvido sem mexer na ordem do PRD: `reason: OWN_LEAD` com texto próprio (R-3.7, §8, AC-3.15/3.42/3.65). Texto novo "a revisar".
 2. **Rate limit do lance:** 30 req/min por usuário e o código novo `RATE_LIMITED` 429 são sugestão minha; as fontes só mandam limitar.
 3. **Textos novos "a revisar":** `LOT_NOT_STARTED` (formato "às 14h"), `OUTDATED`, `LOT_CANCELLED`, `ROLE_NOT_ALLOWED`, `Informe o valor do lance.`, `Sem resposta do pátio…`, `Enviando…`, `Calma: lances demais…`, `Nada travado no momento.`, sub do leiloeiro.
 4. **Limite de 13 dígitos no campo de lance** é técnico (cabe em `MAX_SAFE_INTEGER`); o PRD não define teto de lance. Confirmar que não há outro teto de negócio.

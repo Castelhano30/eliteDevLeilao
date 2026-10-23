@@ -31,7 +31,9 @@ Roteiro de demonstração:
 | Link "Auditar este lote", cartão encerrado apontando para a auditoria | S08 |
 | Varredura final de acessibilidade, 404/erros globais padronizados, `/kit` fora de produção | S09 |
 | Edição de lote agendado | Nunca (decisão do usuário) |
-| Filtro por faixa de preço da Vitrine | Pergunta aberta Q1 |
+| Filtro por faixa de preço da Vitrine | Pergunta aberta Q1 (§16) |
+
+**Se sobrar tempo (nada disso está no PRD; cortar sem culpa na ordem):** prévia "Assim ele aparece na Vitrine" do Criar lote (§9.3); placares em LED do Painel (usar texto simples com os mesmos números); relógio "Qui 22/out · 18:47" da barra "Pátio aberto" (basta "N lotes ao vivo · N agendados"); `Canhoto`/`Perforation` do "Como funciona" (o PRD pede só um bloco curto: 3 cartões simples bastam; o picote fica para a S09); polling de 3 s do estado "Apurando" (a S05 refaz esse comportamento).
 
 ## 3. Ponto de partida
 
@@ -42,7 +44,8 @@ Se `optionalAuth` (lê o token se vier, não exige) não existir em `modules/aut
 **Invariantes que valem aqui**
 - INV-1 Servidor é a fonte de verdade de tempo e valores; relógio da tela = `Date.now()+offset`.
 - INV-2 Dinheiro em centavos (`BigInt` no banco, `number` nas bordas, assert ≤ `MAX_SAFE_INTEGER` nos mappers; campos `…Cents`). UI só reais inteiros `R$ 31.000,00` em IBM Plex Mono.
-- INV-3 Datas ISO UTC com `Z`; `new Date()`/`Date.now()` só em `infra/clock.ts`; UI em America/Sao_Paulo.
+- INV-3 Datas ISO UTC com `Z`; em `apps/api/src`, `new Date()`/`Date.now()` só em `infra/clock.ts` (regra de lint só para a API; o web usa `Date.now()` apenas em `lib/server-clock` e nos formatadores de data; `shared` não usa `Date.now`). Services gravam datas com `clock.now()` explícito (nunca `@default(now())` em dado de negócio). UI em America/Sao_Paulo.
+- T4 `version` = `entryCount`: `LotCard`, `LotState` e os eventos expõem `version`; `entryCount` fica só como alias de leitura. O reducer da S04 lê apenas `version`.
 - INV-11 `lotStatus(lot, now)` é função pura em `packages/shared`; telas nunca recalculam status por conta própria.
 - INV-12 (parte genesis/seal) `genesis`/`seal` calculados na criação do lote.
 - INV-14 Vitrine, Sala (e Auditoria/Comprovante) leem só o banco; só `/catalog/*` e `POST /lots` chamam FIPE/Wikipedia.
@@ -52,20 +55,21 @@ Se `optionalAuth` (lê o token se vier, não exige) não existir em `modules/aut
 
 | # | Regra | Origem |
 |---|---|---|
-| R-2.1 | Só o back-end chama FIPE e Wikipedia; o front nunca. Cache em memória (`Map`) por URL, TTL 24 h; se a chamada falhar e houver entrada vencida, serve a vencida (loga `warn`); sem entrada → `503 EXTERNAL_UNAVAILABLE`. Chamadas simultâneas à mesma chave compartilham uma só requisição (single-flight). | PRD API/Gestão · AD-12 |
-| R-2.2 | Chamada externa: timeout 4 s, 2 tentativas (1 repetição) só em erro de rede, timeout, 429 ou 5xx; 404 e demais 4xx não repetem. Base e token em env (`FIPE_BASE_URL`, `FIPE_TOKEN?`, `WIKI_USER_AGENT`). | PRD · AD-12 |
+| R-2.1 | Só o back-end chama FIPE e Wikipedia; o front nunca. Cache em memória (`Map`) por URL, TTL 24 h medido com o `Clock` (testável com `FakeClock`), teto de 500 chaves (descarta a mais antiga); se a chamada falhar e houver entrada vencida, serve a vencida (loga `warn`); sem entrada → `503 EXTERNAL_UNAVAILABLE`. Só resposta de sucesso e "não achou" (404/sem artigo) entram no cache; falha de rede/timeout/5xx (`UNAVAILABLE`) **nunca** é cacheada. Chamadas simultâneas à mesma chave compartilham uma só requisição (single-flight). | PRD API/Gestão · AD-12 |
+| R-2.2 | Chamada externa: timeout 4 s, 2 tentativas (1 repetição) só em erro de rede, timeout ou 5xx; 404 e demais 4xx não repetem. **429 da FIPE não repete** (repetir queima a cota de 500/dia): serve a entrada vencida se houver, senão 503. Base e token em env (`FIPE_BASE_URL`, `FIPE_TOKEN?`, `WIKI_USER_AGENT`, `WIKIPEDIA_BASE_URL`). | PRD · AD-12 |
 | R-2.3 | `POST /lots` busca o detalhe do carro na FIPE de novo (via cache) pelos ids `brandId/modelId/yearId`; nunca confia em dados do carro vindos do cliente. Grava o snapshot completo em `Item` (inclui `rawData` e a imagem). | PRD fluxo passo 4 |
 | R-2.4 | A imagem é baixada no momento da criação, também quando a URL foi digitada pelo leiloeiro, e guardada em `Item.imageData`. Falha no download → lote criado sem imagem (`imageStatus: "FAILED"`); a Sala/Vitrine usam a ilustração padrão. "Sem foto" → sem `imageUrl` → `imageStatus: "NONE"`. | PRD X3 · AD-12 |
-| R-2.5 | Download seguro: só `http`/`https` nas portas 80/443; antes de conectar, resolve o DNS e recusa endereço não público (ver §5.3); revalida em cada redirecionamento (máx. 3); timeout 4 s; para a leitura ao passar de 2 MB; `Content-Type` precisa ser `image/jpeg`, `image/png`, `image/webp` ou `image/gif` (SVG recusado); sempre envia `User-Agent: WIKI_USER_AGENT`. | AD-12 (SVG fora por endurecimento) |
+| R-2.5 | Download seguro: só `http`/`https` nas portas 80/443; **se o host da URL for IP literal** (v4, v6 entre colchetes, decimal/hex como `2130706433`), valida-o contra §5.3 **antes** de conectar (o `lookup` do Node não é chamado para IP literal); para nome de host, resolve o DNS e recusa endereço não público (ver §5.3), validando também no `lookup` do agente; revalida em cada redirecionamento (máx. 3); ignora variáveis de proxy do ambiente; timeout 4 s; para a leitura ao passar de **4 MB** (preferir miniatura, ver §6.1); `Content-Type` precisa ser `image/jpeg`, `image/png`, `image/webp` ou `image/gif` (SVG recusado); sempre envia `User-Agent: WIKI_USER_AGENT`. O módulo `image-store` recebe por injeção `{ resolver, allowedPorts, allowPrivate }`; produção usa o padrão restritivo e os testes de sucesso usam `allowPrivate: true` com servidor HTTP local (os testes de recusa usam o padrão de produção). | AD-12 (SVG fora por endurecimento) |
 | R-2.6 | Nenhuma chamada HTTP externa e nenhum download acontecem dentro de transação do banco. A transação de `POST /lots` só insere `Item` e `Lot`. | AD-2 (boa prática) |
-| R-2.7 | O leiloeiro cria lote com: carro (3 ids), título, lance inicial ≥ R$ 1,00, incremento mínimo ≥ R$ 1,00, início, fim, imagem opcional. `endsAt − startsAt ≥ 5 min`; `startsAt ≥ agora − 60 s`. Início dentro da tolerância e já passado → o lote nasce ao vivo. `originalEndsAt = endsAt`. | AD (POST /lots) · PRD |
-| R-2.8 | O lote nasce sem lances: `currentBidCents = null`, `leaderId = null`, `bidCount = 0`, `entryCount = 0`, `lastHash = genesis`, `seal = HMAC(seal, entryCount 0, genesis)`. | AD-8 |
+| R-2.7 | O leiloeiro cria lote com: carro (3 ids), título, lance inicial ≥ R$ 1,00, incremento mínimo ≥ R$ 1,00, início, fim, imagem opcional. `endsAt − startsAt ≥ 5 min`; `startsAt ≥ agora − 60 s`. Início dentro da tolerância e já passado → o lote nasce ao vivo. `originalEndsAt = endsAt`. Essas regras de data (`startsAt ≥ agora − 60 s`, duração ≥ 5 min) vivem no **zod/rota de `POST /lots`**; o service `createLot` aceita `{ allowPast: true }`, usado **só pelo seed** (lotes encerrados/cancelados/ao vivo com início no passado). | AD (POST /lots) · PRD |
+| R-2.8 | O lote nasce sem lances: `currentBidCents = null`, `leaderId = null`, `bidCount = 0`, `entryCount = 0`, `lastHash = genesisHash(key, lot)`, `seal = sealHash(key, lotId, 0, genesis)`. O genesis usa `startsAt.toISOString()` do `Date` **já parseado** (entrada sem milissegundos, como `…:00Z`, é aceita e normalizada para `.000Z`), igual ao que a S08 recalcula a partir do banco. | AD-8 |
 | R-2.9 | Edição de lote agendado não existe: não há rota nem tela de edição. | Decisão do usuário |
 | R-2.10 | Status é calculado: `lotStatus` (ver §6.0). Nenhum processo "abre" lotes. | PRD STAT · AD-7 |
 | R-2.11 | Lote cancelado nunca aparece em `GET /lots` (Vitrine), mas `GET /lots/:id` responde para cancelado e agendado. Só `GET /my/lots` lista cancelados (para o dono). | PRD R14 · AD |
 | R-2.12 | Vitrine, Sala e Painel não dependem das APIs externas; só Criar lote mostra erro de FIPE. | PRD X2/X5 |
 | R-2.13 | Busca ignora caixa e acento e procura em título, marca, modelo e ano; vários termos = todos precisam aparecer. Marcas do filtro vêm dos lotes existentes. | EXP P23 |
 | R-2.14 | Preço e saldo são simulados; a UI diz isso no rodapé da Vitrine. | EXP Vitrine |
+| R-2.15 | Toda query de lista e de estado (`GET /lots`, `GET /my/lots`, `GET /lots/:id`, seed) usa `select` **sem** `Item.imageData`. `imageUrl` não nulo ⇔ `Item.imageMime IS NOT NULL`. Só `GET /items/:id/image` lê o blob. | Revisão (peso da lista) |
 
 ## 5. Modelo de dados
 
@@ -89,7 +93,7 @@ model Item {
   imageCredit         String?
   imageCreditUrl      String?
   rawData             Json     // resposta bruta do detalhe da FIPE
-  fetchedAt           DateTime
+  fetchedAt           DateTime // instante em que a entrada do catálogo foi realmente buscada (não "agora" se veio de cache vencido)
   lots                Lot[]
 }
 
@@ -116,7 +120,7 @@ model Lot {
   seal              String
   cancelledAt       DateTime?
   settledAt         DateTime?
-  createdAt         DateTime  @default(now())
+  createdAt         DateTime  // gravado pelo service com clock.now()
   @@index([endsAt])
   @@index([auctioneerId])
 }
@@ -128,19 +132,19 @@ CHECKs na migração (endurecimento, não mudam regra): `"startingBidCents" >= 1
 
 ### 5.2 Funções puras (em `domain/` e `packages/shared`)
 
-- `cleanBrand(name)`: se o nome da FIPE contém `" - "`, fica a parte depois do último `" - "` ("VW - VolksWagen" → "VolksWagen", "GM - Chevrolet" → "Chevrolet"); `trim`.
+- `cleanBrand(name)`: se o nome da FIPE contém `" - "`, fica a parte depois do último `" - "` ("VW - VolksWagen" → "VolksWagen", "GM - Chevrolet" → "Chevrolet"); `trim`; depois aplica a **grafia canônica** por um mapa pequeno comparado sem caixa (`volkswagen → "Volkswagen"`; demais marcas ficam como vieram). Vale também para o `fipe-fixture.json`, para que seed e FIPE real não gerem duas marcas ("Volkswagen" × "VolksWagen"). O filtro `brand` da Vitrine compara por `normalizeSearch` dos dois lados.
 - `normalizeSearch(s)`: `NFD`, remove marcas combinantes (`\p{M}`), minúsculas, colapsa espaços.
 - `searchText = normalizeSearch(title + " " + brand + " " + model + " " + year)`.
-- `parseBRL("R$ 45.000,00") → 4500000` (remove tudo menos dígitos e vírgula; vírgula vira separador de centavos).
+- `parseBRL("R$ 45.000,00") → 4500000` (remove tudo menos dígitos e vírgula; vírgula vira separador de centavos; **sem vírgula, o número é em reais inteiros e multiplica por 100**: `"R$ 45.000" → 4500000`).
 - `parseReferenceMonth("outubro de 2026") → "2026-10"`; se não reconhecer, grava o texto cru; `formatReferenceMonth("2026-10") → "OUT/2026"`.
 - `formatLotNumber(n) → "018"` (3 dígitos, mais se precisar).
-- `wikiTitleCandidates(brand, model)`: marca limpa + primeiro token do modelo que não contenha dígito e não seja motor/versão (ex.: "Gol 1.0 MPI" → "Gol"; "Corolla XEi 2.0" → "Corolla"). Candidatos em ordem: `"{marca} {token}"`, `"{token}"`. Título na URL: espaços viram `_`, `encodeURIComponent`.
+- `wikiTitleCandidates(brand, model)`: marca limpa (já canônica) + primeiro token do modelo que **não** seja só número/cilindrada (`^\d+([.,]\d+)?$` ou `^\d\.\d`) e não esteja numa lista curta de motor/versão (`Flex, MPI, 16V, 8V, TDI, TSI, Turbo, Aut., Mec.` etc.). Tokens com dígito que são nome de modelo (HB20, C3, 208, i30, T-Cross, X1) **valem**. Ex.: "Gol 1.0 MPI" → "Gol"; "Corolla XEi 2.0" → "Corolla"; "HB20 Comfort 1.0" → "HB20". Candidatos em ordem: `"{marca} {token}"`, `"{token}"`; o candidato só-modelo (`"{token}"`) só é aceito se o `extract` do resumo mencionar `automóvel|veículo|carro|hatch|sedã|picape|utilitário` (evita "Gol" companhia aérea, "Uno" jogo de cartas). Título na URL: espaços viram `_`, `encodeURIComponent`.
 - Em `packages/shared`: `lotStatus` (abaixo), `brasiliaLocalToUtcIso("2026-10-25T10:00") → "2026-10-25T13:00:00.000Z"` e `utcIsoToBrasiliaLocal` (offset fixo −03:00; o Brasil não tem horário de verão desde 2019), `formatBrasilia(iso, "list"|"seconds")`.
-- `genesisHash(key, lot)` e `sealHash(key, lotId, entryCount, lastHash)` em `domain/audit-chain.ts` (formatos de INV-12; `at`/`startsAt` em ISO UTC com ms).
+- `genesisHash(key, lot)` e `sealHash(key, lotId, entryCount, lastHash)` em `domain/audit-chain.ts` (formatos de INV-12; `at`/`startsAt` em ISO UTC com ms, via `toISOString()`). **Convenção T5 para toda a cadeia: a chave é sempre o primeiro argumento** (`entryHash(key, {lotId,seq,kind,pseudonym,amountCents,at,prevHash})` é da S03).
 
 ### 5.3 Endereços recusados no download (R-2.5)
 
-IPv4: `0.0.0.0/8`, `10/8`, `100.64/10`, `127/8`, `169.254/16` (inclui metadata de nuvem), `172.16/12`, `192.0.0.0/24`, `192.168/16`, `198.18/15`, `224/4`, `240/4`. IPv6: `::`, `::1`, `fc00::/7`, `fe80::/10`, `ff00::/8`, e `::ffff:a.b.c.d` com IPv4 acima. Implemente com `lookup` customizado no agente HTTP (valida o IP efetivamente usado na conexão, para não cair em troca de DNS entre checagem e uso).
+IPv4: `0.0.0.0/8`, `10/8`, `100.64/10`, `127/8`, `169.254/16` (inclui metadata de nuvem), `172.16/12`, `192.0.0.0/24`, `192.168/16`, `198.18/15`, `224/4`, `240/4`. IPv6: `::`, `::1`, `fc00::/7`, `fe80::/10`, `ff00::/8`, IPv4 mapeado em **ambas as formas** (`::ffff:a.b.c.d` e `::ffff:7f00:1`, convertendo para IPv4 antes de checar), `64:ff9b::/96` (NAT64) e `2002::/16` (6to4). Parse do IP com `net.isIP`/biblioteca, nunca por regex de string; formas alternativas de IPv4 (decimal `2130706433`, hex, octal) são normalizadas antes de checar. Implemente em duas camadas: (1) **antes de conectar**, se `new URL(u).hostname` for IP literal, valida-o aqui; (2) para nome de host, `lookup` customizado no agente HTTP (valida o IP efetivamente usado na conexão, para não cair em troca de DNS entre checagem e uso).
 
 ### 5.4 `lotStatus` (shared, puro)
 
@@ -166,14 +170,16 @@ Erros no envelope `{error:{code,message,details?}}`. `ROLE_NOT_ALLOWED` fora de 
 LotCard = {
   id, number, title, brand, model, year, fuel, status: LotStatus,
   currentBidCents: number|null, startingBidCents, minIncrementCents, referencePriceCents,
-  bidCount, startsAt, endsAt, originalEndsAt, cancelledAt: string|null,
-  imageUrl: string|null            // caminho relativo "/items/{itemId}/image"; null se não há imagem
+  bidCount, version,               // version = entryCount (T4); sobe a cada linha da cadeia
+  startsAt, endsAt, originalEndsAt, cancelledAt: string|null,
+  imageUrl: string|null            // caminho relativo "/items/{itemId}/image"; null ⇔ Item.imageMime é nulo (sem ler o blob)
 }
 LotState = {
   serverTime,
   lot: { id, number, title, status, startingBidCents, minIncrementCents, currentBidCents: number|null,
          minimumNextCents,         // currentBidCents? current+minIncrement : startingBid
-         bidCount, entryCount, startsAt, endsAt, originalEndsAt, cancelledAt|null, settledAt|null },
+         bidCount, version, entryCount /*alias de version, só leitura*/,
+         startsAt, endsAt, originalEndsAt, cancelledAt|null, settledAt|null },
   car: { brand, model, year, fuel, referencePriceCents, referenceMonth /*"YYYY-MM"*/,
          imageUrl|null, imageCredit|null, imageCreditUrl|null },
   bids: []                          // vazio até a S03
@@ -187,16 +193,16 @@ Rate-limit de 120 req/min por usuário no prefixo `/catalog`.
 
 | Rota | Resposta 200 | Erros |
 |---|---|---|
-| `GET /catalog/brands` | `{ items: [{id, name}] }` (marcas, nome limpo na apresentação; ordenado por nome pt-BR) | 503 `EXTERNAL_UNAVAILABLE {source:"FIPE"}` |
+| `GET /catalog/brands` | `{ items: [{id, name}] }` (marcas, nome limpo na apresentação; ordenado pelo **nome limpo** em pt-BR, não pelo nome cru da FIPE) | 503 `EXTERNAL_UNAVAILABLE {source:"FIPE"}` |
 | `GET /catalog/brands/:brandId/models` | `{ items: [{id, name}] }` | 503 FIPE; 404 `NOT_FOUND` |
 | `GET /catalog/brands/:brandId/models/:modelId/years` | `{ items: [{id, name}] }`, ex. `{id:"2015-1", name:"2015 Gasolina"}`; remove "Zero Km" (`32000-*`, sem ano) | 503 FIPE; 404 |
-| `GET /catalog/preview?brand=&model=&year=` | `{ car:{brand,model,year,fuel,referencePriceCents,referenceMonth,codeFipe}, suggestedImage?:{url,credit,creditUrl}, imageStatus:"FOUND"\|"NOT_FOUND"\|"UNAVAILABLE" }` | 503 FIPE (a FIPE é obrigatória); 404 se o id não existe |
+| `GET /catalog/preview?brandId=&modelId=&yearId=` (mesmos nomes do corpo de `POST /lots`) | `{ car:{brand,model,year,fuel,referencePriceCents,referenceMonth,codeFipe}, suggestedImage?:{url,credit,creditUrl}, imageStatus:"FOUND"\|"NOT_FOUND"\|"UNAVAILABLE" }` | 503 FIPE (a FIPE é obrigatória); 404 se o id não existe |
 
-Notas: a arquitetura listava `/models/:m/years` sem a marca; a FIPE exige marca e modelo, por isso a rota ficou com os dois ids. Falha da Wikipedia **não** é erro: `imageStatus:"UNAVAILABLE"` (rede) ou `"NOT_FOUND"` (sem artigo/foto), sem `suggestedImage`, e o `car` segue válido.
+Notas: a arquitetura listava `/models/:m/years` sem a marca; a FIPE exige marca e modelo, por isso a rota ficou com os dois ids. Falha da Wikipedia **não** é erro: `imageStatus:"UNAVAILABLE"` (rede) ou `"NOT_FOUND"` (sem artigo/foto), sem `suggestedImage`, e o `car` segue válido. **Orçamento do preview:** a busca da imagem tem teto total de 5 s e **1 tentativa por candidato**; falha de rede/timeout em qualquer candidato encerra com `UNAVAILABLE` na hora (não tenta o seguinte). Assim o preview não passa de ~8 s (FIPE) + 5 s (Wikipedia), e a caixa "REFERÊNCIA FIPE" não espera a imagem além disso.
 
 **Adaptador FIPE** (`infra/fipe.ts`): base `FIPE_BASE_URL` (padrão `https://fipe.parallelum.com.br/api/v2`), veículo `cars`, cabeçalho `X-Subscription-Token` se `FIPE_TOKEN` existir. Endpoints: `/cars/brands`, `/cars/brands/{b}/models`, `/cars/brands/{b}/models/{m}/years`, `/cars/brands/{b}/models/{m}/years/{y}`. Os formatos de resposta (`code`/`name`, e no detalhe `brand, model, modelYear, fuel, codeFipe, price, referenceMonth`) **[ASSUMPTION a conferir no dia 1 contra a API real]**; o adaptador normaliza para o formato interno acima e é o único lugar que conhece o formato da FIPE.
 
-**Adaptador Wikipedia** (`infra/wikipedia.ts`): `GET https://pt.wikipedia.org/api/rest_v1/page/summary/{título}` com `User-Agent: WIKI_USER_AGENT` e `Accept: application/json`; tenta os candidatos de `wikiTitleCandidates` na ordem; ignora resposta com `type: "disambiguation"` ou sem imagem; URL sugerida = `originalimage.source` se `originalimage.width ≤ 2400`, senão `thumbnail.source`; `credit` = `Foto: Wikipedia, artigo "{title}" (licença Creative Commons, veja a página do artigo)`; `creditUrl` = `content_urls.desktop.page`. Cache e single-flight iguais aos da FIPE; "não achou" também é cacheado por 24 h.
+**Adaptador Wikipedia** (`infra/wikipedia.ts`): `GET https://pt.wikipedia.org/api/rest_v1/page/summary/{título}` com `User-Agent: WIKI_USER_AGENT` e `Accept: application/json`; tenta os candidatos de `wikiTitleCandidates` na ordem; ignora resposta com `type: "disambiguation"` ou sem imagem; URL sugerida = **miniatura redimensionada** (reescreve `thumbnail.source` para ~1280 px de largura, formato `/thumb/…/1280px-…`) para ficar bem abaixo do limite de download; se não for possível reescrever, `thumbnail.source`; `originalimage.source` só se `originalimage.width ≤ 1600`. O limite de download é 4 MB e, se a imagem exceder, o `preview` já deve sinalizar (`imageStatus` continua `FOUND`, mas o app usa a miniatura). `credit` = `Foto: Wikipedia, artigo "{title}" (licença Creative Commons, veja a página do artigo)`; `creditUrl` = `content_urls.desktop.page` (limitação: o resumo não traz autor nem licença do arquivo; documentar no README). Cache e single-flight iguais aos da FIPE; "não achou" é cacheado por 24 h, `UNAVAILABLE` nunca (R-2.1). **A conferir no dia 1 com chamada real:** campos `originalimage.width`, `thumbnail.source`, `type`, `extract`, e o formato de `/thumb/`.
 
 ### 6.2 Lotes
 
@@ -208,7 +214,7 @@ Notas: a arquitetura listava `/models/:m/years` sem a marca; a FIPE exige marca 
 | `GET /my/lots` | AUCTIONEER | `200 { lots: LotCard[], totalReceivedCents: 0, serverTime }` (inclui cancelados; só os do chamador) | 401, 403 |
 | `GET /items/:id/image` | público | bytes com `Content-Type` salvo; `Cache-Control: public, max-age=31536000, immutable`; `ETag`; `Cross-Origin-Resource-Policy: cross-origin`; `X-Content-Type-Options: nosniff` | 404 `NOT_FOUND` se não há imagem |
 
-**Ordem do `POST /lots`:** (1) `requireAuth` + `requireRole(AUCTIONEER)`; (2) zod do corpo; (3) regras de data com `clock.now()` (erros aqui vêm antes de qualquer chamada externa); (4) detalhe da FIPE (via cache); (5) se `imageUrl`, download seguro (falha não derruba); (6) transação: gera `lotId` (uuid), calcula `genesis`/`seal`, insere `Item` e `Lot`; (7) 201. `Item.fetchedAt = clock.now()`; `source="FIPE"`; `externalId="{codeFipe}-{yearId}"`; `referencePriceCents=parseBRL(price)`; `year` = ano do `yearId`; `brand=cleanBrand(...)`. `imageCredit`/`imageCreditUrl` gravados como vieram do corpo (≤ 200 e ≤ 500 caracteres); sem imagem armazenada, ficam `null`.
+**Ordem do `POST /lots`:** (1) `requireAuth` + `requireRole(AUCTIONEER)`; (2) zod do corpo; (3) regras de data com `clock.now()` (erros aqui vêm antes de qualquer chamada externa); (4) detalhe da FIPE (via cache); (5) se `imageUrl`, download seguro (falha não derruba); (6) transação: gera `lotId` (uuid), calcula `genesis`/`seal` (com `startsAt.toISOString()` do Date parseado), insere `Item` e `Lot` com `createdAt = clock.now()`; (7) 201. `Item.fetchedAt` = instante em que a entrada do catálogo foi buscada (guardado junto da entrada de cache; não `clock.now()` se veio de cache); `source="FIPE"`; `externalId="{codeFipe}-{yearId}"`; `referencePriceCents=parseBRL(price)`; `year` = ano do `yearId`; `brand=cleanBrand(...)`. `imageCredit`/`imageCreditUrl` gravados como vieram do corpo (≤ 200 e ≤ 500 caracteres); sem imagem armazenada, ficam `null`. **Atribuição:** se `imageUrl` do corpo diverge da URL sugerida pela Wikipedia para aquele carro (o leiloeiro trocou a imagem) e o crédito veio igual ao da Wikipedia, o servidor **limpa** `imageCredit`/`imageCreditUrl` (evita atribuição falsa); o front também limpa o campo ao editar a URL.
 
 **Validação (`details.fields`, mensagens exatas):**
 
@@ -222,16 +228,17 @@ Notas: a arquitetura listava `/models/:m/years` sem a marca; a FIPE exige marca 
 | `endsAt` | ISO UTC com `Z`; ≥ `startsAt` + 5 min | "Informe o fim." / "O fim precisa ser pelo menos 5 minutos depois do início." |
 | `imageUrl` | opcional; URL `http`/`https` válida, ≤ 2048 | "Use um endereço http ou https válido." |
 | `imageCredit` | opcional, ≤ 200 | "O crédito aceita até 200 caracteres." |
+| `imageCreditUrl` | opcional, ≤ 500; só `http`/`https` (nunca `javascript:`/`data:`) | "Use um endereço http ou https válido." |
 
-Valores monetários fora de inteiro (`1.5`, texto) → mensagem do campo correspondente. Os limites de 120 caracteres do título e de 2048/200/500 das imagens são defensivos (o PRD não fixa).
+O web só renderiza `<a href={imageCreditUrl}>` se `new URL(u).protocol` for `http:` ou `https:`; caso contrário mostra o crédito como texto. Valores monetários fora de inteiro (`1.5`, texto) → mensagem do campo correspondente. Os limites de 120 caracteres do título e de 2048/200/500 das imagens são defensivos (o PRD não fixa).
 
-**`GET /lots`:** `status` ∈ `LIVE` (= LIVE + CLOSING), `SCHEDULED`, `ENDED` (= SOLD + UNSOLD); ausente = todos; outro valor → `VALIDATION {fields:{status}}`. `q` é truncado em 100 caracteres, normalizado e dividido em termos (`searchText contains` de cada um). `brand` compara com `Item.brand` exato; marca sem lote → lista vazia, não erro. Sempre exclui `cancelledAt != null`. Condições SQL equivalentes a `lotStatus` com `now = clock.now()`: LIVE `startsAt <= now < endsAt`; CLOSING `endsAt <= now AND settledAt IS NULL`; ENDED `settledAt IS NOT NULL`; SCHEDULED `now < startsAt`. Ordem de saída: ao vivo (`endsAt ↑`), agendados (`startsAt ↑`), encerrados (`endsAt ↓`); teto defensivo de 200 linhas (sem paginação). `brands` = marcas distintas dos lotes não cancelados (independe de `status` e `q`), ordem alfabética pt-BR. `counts` = totais por grupo, também sem aplicar `status`/`q`/`brand` (alimenta a barra "Pátio aberto"): `live` = LIVE + CLOSING, `scheduled`, `ended`. Os `LotCard` são montados passando cada linha por `lotStatus`.
+**`GET /lots`:** `status` ∈ `LIVE` (= LIVE + CLOSING), `SCHEDULED`, `ENDED` (= SOLD + UNSOLD); ausente = todos; outro valor → `VALIDATION {fields:{status}}`. `q` é truncado em 100 caracteres, normalizado e dividido em termos (`searchText contains` de cada um); os curingas `%`, `_` e `\` são removidos dos termos antes da consulta (**a conferir no dia 1** se o `contains` do Prisma já escapa; sem confirmação, remova). `brand` compara com `Item.brand` por `normalizeSearch` (sem caixa/acento); marca sem lote → lista vazia, não erro. Sempre exclui `cancelledAt != null`. Condições SQL equivalentes a `lotStatus` com `now = clock.now()`: LIVE `startsAt <= now < endsAt`; CLOSING `endsAt <= now AND settledAt IS NULL`; ENDED `settledAt IS NOT NULL`; SCHEDULED `now < startsAt`. Ordem de saída: ao vivo (`endsAt ↑`), agendados (`startsAt ↑`), encerrados (`endsAt ↓`); teto defensivo de 200 linhas (sem paginação). `brands` = marcas distintas dos lotes não cancelados (independe de `status` e `q`), ordem alfabética pt-BR. `counts` = totais por grupo, também sem aplicar `status`/`q`/`brand` (alimenta a barra "Pátio aberto"): `live` = LIVE + CLOSING, `scheduled`, `ended`. Os `LotCard` são montados passando cada linha por `lotStatus`.
 
 **`GET /my/lots`:** ordem ao vivo, agendados, encerrados, cancelados (`cancelledAt ↓`) no fim. `totalReceivedCents` é sempre `0` até a S05 (soma dos `SALE_CREDIT` do usuário).
 
 ## 7. Contratos Socket.IO
 
-Nenhum nesta fatia. Telas se atualizam por `GET` (ao montar, ao voltar o foco da janela e, na Sala/Vitrine/Painel, uma vez quando um cronômetro chega a 00:00).
+Nenhum nesta fatia. (Na S04, `showcase:lot` carrega o `LotCard` com `version`; o cliente descarta evento com `version` menor que a do cartão.) Telas se atualizam por `GET` (ao montar, ao voltar o foco da janela e, na Sala/Vitrine/Painel, uma vez quando um cronômetro chega a 00:00).
 
 ## 8. Mensagens
 
@@ -404,9 +411,9 @@ Cartão `papel`, borda 3px, sombra 6/6, raio 0, padding 24px. Numeral gigante (`
 
 ## 11. Seed desta fatia
 
-`prisma/fipe-fixture.json` (arquivo local, **sem rede**, S8): array de itens no formato do detalhe normalizado da FIPE (`brandId, modelId, yearId, brandName, modelName, year, fuel, codeFipe, priceCents, referenceMonth`, `image: "seed-images/arquivo.jpg"|null`, `imageCredit`, `imageCreditUrl`). Sugestão de carga inicial (preços ilustrativos, não são consulta real; a imagem pode ser `null` e o app usa a ilustração): Fiat Uno Mille Way 1.0 2010 Flex · R$ 19.800; Honda Civic LXS 1.8 2012 Flex · R$ 54.700; Toyota Corolla XEi 2.0 2015 Flex · R$ 76.300; Toyota Hilux SRV 2.8 4x4 2017 Diesel · R$ 176.500; Volkswagen Gol GTI 2.0 1996 Gasolina; mais 2 itens à escolha para os lotes encerrados/cancelados das S05/S06. Imagens, se houver, ficam em `prisma/seed-images/` com crédito e licença registrados no fixture (Q4).
+`prisma/fipe-fixture.json` (arquivo local, **sem rede**, S8): array de itens no formato do detalhe normalizado da FIPE (`brandId, modelId, yearId, brandName, modelName, year, fuel, codeFipe, priceCents, referenceMonth`, `image: "seed-images/arquivo.jpg"|null`, `imageCredit`, `imageCreditUrl`). Sugestão de carga inicial (preços ilustrativos, não são consulta real; a imagem pode ser `null` e o app usa a ilustração): Fiat Uno Mille Way 1.0 2010 Flex · R$ 19.800; Honda Civic LXS 1.8 2012 Flex · R$ 54.700; Toyota Corolla XEi 2.0 2015 Flex · R$ 76.300; Toyota Hilux SRV 2.8 4x4 2017 Diesel · R$ 176.500; Volkswagen Gol GTI 2.0 1996 Gasolina; mais 2 itens à escolha para os lotes encerrados/cancelados das S05/S06. Imagens, se houver, ficam em `prisma/seed-images/` com crédito e licença registrados no fixture (Q4 da §16). Marcas do fixture passam por `cleanBrand` (grafia canônica "Volkswagen").
 
-`seed.ts` (estende o de S01) cria lotes **pelo mesmo serviço** `createLot` (porta `CatalogPort` implementada pelo fixture; imagem lida do arquivo local, sem download), para o genesis/seal nascerem válidos (S9):
+`seed.ts` (estende o de S01) cria lotes **pelo mesmo serviço** `createLot` com `{ allowPast: true }` (porta `CatalogPort` implementada pelo fixture; imagem lida do arquivo local, sem download), para o genesis/seal nascerem válidos (S9). **Os lotes deste seed são PROVISÓRIOS:** servem para demonstrar e testar a S02; a S09 reescreve o `seed.ts` final com a ordem de criação 001→005 (001 arrematado … 005 ao vivo). Não dependa do número 001 aqui.
 - **Ao vivo (S2, parte 1):** Uno Mille Way 2010; `startsAt = agora − 1 h`, `endsAt = agora + 30 dias`; lance inicial R$ 15.000,00; incremento R$ 500,00; sem lances (a S03 acrescenta os lances).
 - **Agendado (S3):** Corolla XEi 2015; `startsAt = agora + 2 dias`, `endsAt = agora + 3 dias`; lance inicial R$ 60.000,00; incremento R$ 1.000,00.
 Datas relativas ao momento da execução (S7: o comando que recria o lote de demonstração é `npm run seed:demo`, criado aqui apenas para o lote ao vivo e estendido nas fatias seguintes). O leiloeiro dono é o do seed de S01. `npm run seed` continua recusando-se se já houver usuários.
@@ -420,20 +427,26 @@ Datas relativas ao momento da execução (S7: o comando que recria o lote de dem
 - AC-2.4 [auto] Dado uma resposta 404 da FIPE, quando o adaptador a recebe, então não repete a chamada e responde 404 `NOT_FOUND`.
 - AC-2.5 [auto] Dadas 5 chamadas simultâneas à mesma URL com cache vazio, quando executadas, então o adaptador faz 1 requisição externa (single-flight).
 - AC-2.6 [auto] Dado `GET /catalog/preview` com a Wikipedia fora do ar, quando chamado, então 200 com `car` válido, `imageStatus:"UNAVAILABLE"` e sem `suggestedImage`; com artigo inexistente → `"NOT_FOUND"`.
-- AC-2.7 [auto] Dado "Gol 1.0 MPI" da "VW - VolksWagen", quando se calculam os candidatos, então `["VolksWagen Gol","Gol"]`; dado "Corolla XEi 2.0" da "Toyota", então `["Toyota Corolla","Corolla"]`.
-- AC-2.8 [auto] Dado `price:"R$ 45.000,00"`, quando `parseBRL`, então `4500000`; `"R$ 1.234.567,89"` → `123456789`.
+- AC-2.7 [auto] Dado "Gol 1.0 MPI" da "VW - VolksWagen", quando se calculam os candidatos, então `["Volkswagen Gol","Gol"]` (marca com grafia canônica); dado "Corolla XEi 2.0" da "Toyota", então `["Toyota Corolla","Corolla"]`; dado "HB20 Comfort 1.0" da "Hyundai", então `["Hyundai HB20","HB20"]`; dado "T-Cross 200 TSI" da "VW - VolksWagen", então `["Volkswagen T-Cross","T-Cross"]`. O candidato só-modelo só é aceito se o `extract` falar de veículo (teste com `extract` de "companhia aérea" ⇒ rejeita).
+- AC-2.7b [auto] Dado o fixture com "Volkswagen" e a FIPE com "VW - VolksWagen", quando `GET /lots` lista `brands`, então aparece **uma** marca "Volkswagen"; `brand=volkswagen` encontra os dois.
+- AC-2.8 [auto] Dado `price:"R$ 45.000,00"`, quando `parseBRL`, então `4500000`; `"R$ 1.234.567,89"` → `123456789`; `"R$ 45.000"` (sem vírgula) → `4500000`.
+- AC-2.8b [auto] Dado o cache com TTL pelo `FakeClock`: entrada com 24 h + 1 ms e a FIPE falhando serve a vencida; `UNAVAILABLE` (rede) **não** fica cacheado (a chamada seguinte tenta de novo); 429 da FIPE não repete e serve a vencida (ou 503 sem cache); o cache não passa de 500 chaves.
 
 **Criação do lote**
 - AC-2.9 [auto] Dado leiloeiro logado e dados válidos, quando `POST /lots`, então 201 com `LotState`: `status` `SCHEDULED` (início futuro), `bidCount 0`, `bids []`, `originalEndsAt = endsAt`, `number` sequencial, e `Item` com snapshot completo (`rawData` não nulo, `referencePriceCents` em centavos).
-- AC-2.10 [auto] Dado o lote criado, quando se lê `Lot.lastHash` e `Lot.seal`, então `lastHash = genesisHash(...)`, `entryCount = 0` e `seal = sealHash(lotId, 0, genesis)`.
-- AC-2.11 [auto] Dado `startsAt` 30 s no passado, quando `POST /lots`, então 201 e `status = LIVE`; dado 61 s no passado → 400 `VALIDATION` `fields.startsAt = "O início não pode estar no passado."`.
+- AC-2.10 [auto] Dado o lote criado, quando se lê `Lot.lastHash` e `Lot.seal`, então `lastHash = genesisHash(key, lot)`, `entryCount = 0` e `seal = sealHash(key, lotId, 0, genesis)` (string `v1|seal|{lotId}|0|{genesis}`).
+- AC-2.10b [auto] Dado `startsAt` enviado como `2026-10-25T13:00:00Z` (sem ms), quando o lote é criado, então `Lot.startsAt.toISOString()` é `…13:00:00.000Z` e o `genesis` gravado bate com o recálculo feito a partir do banco (o que a S08 faz); a diferença de formato não gera `PREV_LINK`.
+- AC-2.11 [auto] Dado `startsAt` 30 s no passado, quando `POST /lots`, então 201 e `status = LIVE`; dado 61 s no passado → 400 `VALIDATION` `fields.startsAt = "O início não pode estar no passado."`. Já o service `createLot(..., { allowPast: true })` (seed) aceita início 1 h no passado e gera cadeia válida.
 - AC-2.12 [auto] Dado `endsAt = startsAt + 5 min` exatos, então 201; `+4 min 59 s` → 400 com `fields.endsAt = "O fim precisa ser pelo menos 5 minutos depois do início."`.
 - AC-2.13 [auto] Dado `startingBidCents = 99` ou `minIncrementCents = 99` ou `1.5` ou texto, então 400 com a mensagem do campo; `100` aceito.
 - AC-2.14 [auto] Dado título vazio ou só espaços → "Dê um título ao lote."; 121 caracteres → "O título aceita até 120 caracteres."
 - AC-2.15 [auto] Dado licitante ou visitante em `POST /lots`, então 403 `ROLE_NOT_ALLOWED` / 401; nada é gravado.
 - AC-2.16 [auto] Dado a FIPE fora e `brandId/modelId/yearId` sem cache, quando `POST /lots`, então 503 `EXTERNAL_UNAVAILABLE`, nenhum `Item`/`Lot` criado, e o erro de data (se houver) teria vindo **antes**, sem chamada externa.
-- AC-2.17 [auto] Dado `imageUrl` de uma imagem PNG de 100 KB em host público, quando `POST /lots`, então `imageStatus:"STORED"`, `Item.imageData` preenchido, e `GET /items/:id/image` devolve os bytes com `Content-Type: image/png`, `Cache-Control` imutável e `Cross-Origin-Resource-Policy: cross-origin`.
-- AC-2.18 [auto] Dado `imageUrl` que aponta para `http://127.0.0.1/…`, `http://169.254.169.254/…`, host que resolve para IP privado, ou redireciona para um deles, quando `POST /lots`, então o lote é criado com `imageStatus:"FAILED"` e **nenhuma conexão** é feita ao endereço privado.
+- AC-2.17 [auto] Dado `imageUrl` de uma imagem PNG de 100 KB em servidor HTTP local de teste (`image-store` com `allowPrivate: true` e a porta do teste em `allowedPorts`), quando `POST /lots`, então `imageStatus:"STORED"`, `Item.imageData` preenchido, e `GET /items/:id/image` devolve os bytes com `Content-Type: image/png`, `Cache-Control` imutável e `Cross-Origin-Resource-Policy: cross-origin`.
+- AC-2.18 [auto] Dado `imageUrl` que aponta para `http://127.0.0.1/…`, `http://169.254.169.254/…`, host que resolve para IP privado, ou redireciona para um deles, quando `POST /lots`, então o lote é criado com `imageStatus:"FAILED"` e **nenhuma conexão** é feita ao endereço privado. Inclui IP literal sem DNS (`http://127.0.0.1/`, `http://[::1]/`, `http://2130706433/`, `http://[::ffff:7f00:1]/`), com o `image-store` na configuração de produção.
+- AC-2.18b [auto] Dado `imageCreditUrl` = `javascript:alert(1)` ou `data:text/html,…`, então 400 `fields.imageCreditUrl = "Use um endereço http ou https válido."`; `https://…` aceito. No web, `imageCreditUrl` com protocolo não http(s) vira texto, sem `<a>`.
+- AC-2.18c [auto] Dado `GET /lots`, `GET /my/lots` e `GET /lots/:id` de lotes com imagem, então as queries não leem `Item.imageData` (teste inspeciona o `select`/a consulta) e `imageUrl` é não nulo exatamente quando `imageMime` é não nulo.
+- AC-2.18d [auto] Dado `q=%`, `q=_` ou `q=\`, então 200 sem erro e sem tratar o termo como curinga (não casa todos os lotes).
 - AC-2.19 [auto] Dado `imageUrl` de 2,5 MB, de `text/html` ou de `image/svg+xml`, então lote criado, `imageStatus:"FAILED"`, `imageData` nulo; dado `ftp://…` ou texto solto → 400 `fields.imageUrl = "Use um endereço http ou https válido."`.
 - AC-2.20 [auto] Dado `imageUrl` omitida, então `imageStatus:"NONE"` e `LotCard.imageUrl = null`.
 - AC-2.21 [auto] Dados 2 `POST /lots` simultâneos do mesmo leiloeiro, então 2 lotes com `number` distintos e crescentes.
@@ -457,7 +470,7 @@ Datas relativas ao momento da execução (S7: o comando que recria o lote de dem
 - AC-2.35 [manual] Dado API em hibernação/queda no SSR, quando `/` abre, então a página mostra erro com "Tentar novamente" e se recupera quando a API volta, sem recarregar à mão.
 
 **Criar lote e Painel (manual)**
-- AC-2.36 [manual] Dado leiloeiro logado, quando escolhe Toyota → Corolla → 2015, então aparecem "REFERÊNCIA FIPE · OUT/2026" (mês do snapshot) com preço, foto sugerida com crédito, título pré-preenchido "Corolla XEi 2.0 2015"; trocar a marca zera modelo e ano.
+- AC-2.36 [manual] Dado leiloeiro logado, quando escolhe Toyota → Corolla → 2015, então aparecem "REFERÊNCIA FIPE · {mês do snapshot}" com preço, foto sugerida com crédito, título pré-preenchido "{Modelo} {Ano}" com o modelo como a FIPE devolve; trocar a marca zera modelo e ano.
 - AC-2.37 [manual] Dado FIPE fora do ar, quando abre Criar lote, então vê "FIPE FORA DO AR", o banner, selects desabilitados, "Agendar lote" desabilitado com a nota; digita título e regras, clica "Tentar de novo", a FIPE volta e **nada digitado se perdeu**.
 - AC-2.38 [manual] Dado "Sem foto" marcado, quando agenda, então a URL fica desabilitada, o lote nasce sem imagem e Vitrine/Sala mostram a ilustração com "Pintado à mão pelo pátio: o leiloeiro não mandou foto".
 - AC-2.39 [manual] Dado Wikipedia sem foto, quando escolhe o ano, então aparece "Não encontramos uma foto. Cole uma URL ou use a ilustração do pátio." e o botão continua habilitado.
@@ -467,7 +480,7 @@ Datas relativas ao momento da execução (S7: o comando que recria o lote de dem
 - AC-2.43 [manual] Dado licitante em `/painel/criar-lote`, então é levado ao aviso de papel errado (guarda de S01), sem ver o formulário.
 
 **Sala somente leitura (manual)**
-- AC-2.44 [manual] Dado o lote agendado, quando visitante abre a Sala, então vê a ficha, "Este lote abre em 24/10 às 14:00 (Brasília)." (data real do seed), cronômetro "ABRE EM" contando, sem formulário; ao chegar a zero a tela passa a "Ao vivo" sem recarregar à mão.
+- AC-2.44 [manual] Dado o lote agendado, quando visitante abre a Sala, então vê a ficha, "Este lote abre em DD/MM às HH:mm (Brasília)." (data relativa do seed, igual à exibida na Vitrine), cronômetro "ABRE EM" contando, sem formulário; ao chegar a zero a tela passa a "Ao vivo" sem recarregar à mão.
 - AC-2.45 [manual] Dado o lote ao vivo sem lances, quando abre a Sala, então vê selo "Ao vivo", placa "LANCE INICIAL R$ 15.000,00", "00 LANCES", "Nenhum lance ainda. O mínimo é o lance inicial." e nenhum formulário.
 - AC-2.46 [manual] Dado um lote com `endsAt` daqui a 90 s, então o cronômetro está em "ÚLTIMOS 2 MIN" (`ledAlerta`, borda ferrugem, pulso); com `endsAt` > `originalEndsAt`, aparece "PRORROGADO" e o selo "+2 MIN".
 - AC-2.47 [manual] Dado um lote cancelado aberto por URL, então carimbo "Cancelado", texto de cancelamento, "Voltar à vitrine" e nenhum cronômetro/lance.
@@ -494,12 +507,12 @@ Datas relativas ao momento da execução (S7: o comando que recria o lote de dem
 
 ## 14. Testes exigidos
 
-Vitest em `shared`/`api`; integração contra Postgres real (`DATABASE_URL_TEST`); servidores HTTP falsos para FIPE/Wikipedia/imagem.
+Vitest em `shared`/`api`; integração contra Postgres real (`DATABASE_URL_TEST`, `fileParallelism: false` — ver SPEC.md); servidores HTTP falsos para FIPE/Wikipedia/imagem (o de imagem exige `image-store` com `allowPrivate: true`; os testes de recusa SSRF usam a configuração de produção).
 1. `lotStatus` (tabela do AC-2.22) e bordas de milissegundo.
 2. `cleanBrand`, `normalizeSearch`, `wikiTitleCandidates`, `parseBRL`, `parseReferenceMonth`, `brasiliaLocalToUtcIso` (inclui virada de dia e de mês).
 3. `genesisHash`/`sealHash`: vetores fixos com chave de teste (hex minúsculo, `at` com ms).
 4. Adaptador com cache: hit, vencido+falha serve cache, vencido+sucesso troca, vazio+falha 503, single-flight, 404 sem repetição, 429/5xx repete uma vez, timeout.
-5. `image-store`: IP privado direto, DNS que resolve a privado, redirecionamento para privado, >2 MB, MIME errado/SVG, porta fora de 80/443, sucesso.
+5. `image-store`: IP privado direto (v4, v6, decimal/hex, mapeado hex, NAT64, 6to4), DNS que resolve a privado, redirecionamento para privado, >4 MB, MIME errado/SVG, porta fora de 80/443, sucesso (`allowPrivate: true`).
 6. Integração `POST /lots`: AC-2.9 a AC-2.21, incluindo ordem (data antes da FIPE).
 7. Integração `GET /lots` (AC-2.23 a AC-2.28) e `GET /my/lots` (AC-2.29), com a FIPE desligada.
 8. Web (Vitest, lógica pura): `useServerClock` (offset, hidratação), formatador do `Cronometro` (mm:ss, hh:mm:ss, `Nd`), máscara de valor, conversão Brasília↔UTC, `lotCardHref`.
@@ -507,7 +520,7 @@ Vitest em `shared`/`api`; integração contra Postgres real (`DATABASE_URL_TEST`
 ## 15. Retrofits e integrações
 
 - **S00:** `apiClient` passa a chamar `syncServerTime` em toda resposta com `serverTime`; `LotTag` aceita texto ("NOVO"); `Stamp` ganha variante "Cancelado" (cor `tinta2`) se ainda não existir; trocar a página diagnóstica pela Vitrine.
-- **S01:** `User` ganha `lotsAuctioned`/`lotsLeading`; `Header` ganha "Vitrine" (todos) e "Meus lotes · Criar lote · Vitrine" (leiloeiro); `/painel` deixa de ser stub; `homeFor` permanece (BIDDER → `/`, AUCTIONEER → `/painel`); a guarda de papel errado cobre `/painel/criar-lote`; `optionalAuth` se faltar.
+- **S01:** `User` ganha `lotsAuctioned`/`lotsLeading`; `Header` ganha "Vitrine" (todos) e "Meus lotes · Criar lote · Vitrine" (leiloeiro); `/painel` deixa de ser stub; `homeFor` permanece (BIDDER → `/`, AUCTIONEER → `/painel`); a guarda de papel errado cobre `/painel/criar-lote`; **retrofit explícito:** criar `optionalAuth` em `modules/auth/middleware` (lê o `Bearer` se vier; token inválido/expirado vira visitante, sem 401) — a S03 e a S08 o assumem pronto.
 - **S03:** insere o painel de lance na coluna direita da Sala, popula `bids[]`, `myPseudonym/myRank/myBestBidCents`, reutiliza `PlacaLance` e `Cronometro`, e preenche `Lot.currentBidCents/leaderId/bidCount/entryCount/lastHash/seal`.
 - **S04:** chama `syncServerTime` nos eventos, mostra o aviso de prorrogação, atualiza Vitrine/Painel por `showcase:lot`; remove o `GET` por foco como único meio de atualização.
 - **S05:** preenche `totalReceivedCents` e "N ARREMATES", renderiza os cartões/estado encerrados completos e a Sala encerrada.
@@ -533,7 +546,9 @@ Vitest em `shared`/`api`; integração contra Postgres real (`DATABASE_URL_TEST`
 - Q4 **Fotos do seed**: usar `null` (ilustração) ou incluir 1–2 imagens com licença livre e crédito? Sugestão: `null` no primeiro dia e imagens de domínio público/CC depois, com crédito.
 - Q5 **Formatos reais da FIPE v2** (campos, token, 500 req/dia) e do `summary` da Wikipedia precisam ser conferidos no dia 1 com chamada real; o adaptador isola a diferença.
 - Q6 **Textos marcados "texto a revisar"** (canhotos, estados vazios, erros genéricos) valem como sugestão.
-- Q7 Mínimo de 5 min de duração e `startsAt ≥ agora − 60 s` vêm da arquitetura (PRD não fixa); o SPEC já pede confirmação.
+- Q7 Mínimo de 5 min de duração e `startsAt ≥ agora − 60 s` vêm da arquitetura (PRD não fixa); o SPEC.md já pede confirmação (**Q2 do SPEC.md**). Atenção: os números Q desta seção são locais da S02; o SPEC.md usa outra numeração (ex.: fotos do seed = Q4 daqui, Q7 do SPEC.md).
+
+**Verificações obrigatórias no dia 1 (antes de fechar a S02):** (a) chamar a FIPE v2 real e conferir `code`/`name`, `modelYear`, `referenceMonth`, `price`, cabeçalho de token e resposta de 429; (b) chamar `page/summary` da Wikipedia e conferir `originalimage.width`, `thumbnail.source`, `type`, `extract` e o formato `/thumb/`; (c) conferir a grafia real da marca ("VolksWagen") e o mapa canônico; (d) conferir se o `contains` do Prisma escapa `%`/`_`; (e) confirmar a regra de nome para 5–6 modelos comuns (Gol, Uno, HB20, Onix, T-Cross, Civic). Resultado vai para o `progresso.md` e, se mudar contrato, para esta fatia.
 
 ## 17. Definition of Done
 
@@ -543,6 +558,7 @@ Vitest em `shared`/`api`; integração contra Postgres real (`DATABASE_URL_TEST`
 - [ ] Vitrine, Sala (leitura), Criar lote e Painel base funcionando nos dois temas, 390 px e 1440 px, com AC-2.30 a AC-2.50 percorridos.
 - [ ] Teste de resiliência: FIPE e Wikipedia apontando para host morto → Vitrine/Sala/Painel normais; Criar lote com o estado de erro.
 - [ ] `seed`/`seed:demo` criam o lote ao vivo (30 dias) e o agendado a partir do fixture, sem rede.
-- [ ] `.env.example` e README atualizados (`FIPE_BASE_URL`, `FIPE_TOKEN?`, `WIKI_USER_AGENT`, nota sobre limite diário da FIPE e cache em memória).
+- [ ] `.env.example` e README atualizados (`FIPE_BASE_URL`, `FIPE_TOKEN?`, `WIKI_USER_AGENT`, `WIKIPEDIA_BASE_URL`, nota sobre limite diário da FIPE e cache em memória que zera ao reiniciar).
+- [ ] Verificações do dia 1 da §16 feitas e registradas.
 - [ ] Smoke no link público: visitante vê a Vitrine; leiloeiro cria um lote com a FIPE real e ele aparece em Agendados.
 - [ ] Diário `progresso.md` registra a fatia e o commit; commits atômicos em português.

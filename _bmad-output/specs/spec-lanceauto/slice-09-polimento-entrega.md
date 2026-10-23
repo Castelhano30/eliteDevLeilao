@@ -20,7 +20,7 @@ Roteiro de demonstração (quem avalia, só com o README e o link):
 3. Entrar como leiloeiro, criar um lote (FIPE), ver no Painel, cancelar.
 4. Abrir o comprovante e a auditoria do lote arrematado sem login.
 5. Alternar claro/noite; abrir no celular (390px) e em zoom 200%.
-6. Derrubar a FIPE (local, variável de ambiente): Vitrine, Sala, Auditoria e Comprovante seguem funcionando.
+6. Derrubar a FIPE e a Wikipedia (local, variáveis `FIPE_BASE_URL` e `WIKIPEDIA_BASE_URL` inválidas, API reiniciada para zerar o cache em memória): Vitrine, Sala, Auditoria e Comprovante seguem funcionando.
 7. `docker compose up` numa máquina limpa e repetir o passo 2.
 
 ## 2. Fora desta fatia
@@ -39,7 +39,7 @@ Tudo das S00–S08 está no ar. Esta fatia usa: `prisma/seed.ts` e `fipe-fixture
 Invariantes que valem aqui:
 
 - INV-1 Servidor é a fonte de verdade; sem atualização otimista.
-- INV-3 Datas UTC; UI em America/Sao_Paulo; `new Date()` proibido fora de `infra/clock.ts` (inclui o seed: usa `Clock`).
+- INV-3 Datas UTC; UI em America/Sao_Paulo; `new Date()` proibido em `apps/api/src` fora de `infra/clock.ts` (inclui o seed: usa `Clock`); escopo exato na decisão T6 do SPEC.md.
 - INV-9 Prorrogação: `endsAt − now <= 2 min` ⇒ `endsAt = now + 2 min`.
 - INV-10 Fechamento idempotente; varredura no boot.
 - INV-12 Cadeia HMAC v1 depende de `AUDIT_HMAC_KEY` (trocar a chave invalida todos os lotes).
@@ -50,10 +50,11 @@ Invariantes que valem aqui:
 
 | Id | Regra | Origem |
 | --- | --- | --- |
-| R-9.1 | O seed cria dados **só pelos services** da aplicação (cadastro, depósito, criar lote, lance, fechamento, cancelamento) com `FakeClock` para fabricar passado; nunca `INSERT` direto. Assim a cadeia HMAC nasce válida. | PRD Seed (3 cuidados); AD-10 |
+| R-9.1 | O seed cria dados **só pelos services** da aplicação (cadastro, depósito, criar lote, lance, fechamento, cancelamento) com `FakeClock` para fabricar passado; nunca `INSERT` direto. Assim a cadeia HMAC nasce válida. Como o passado é fabricado com `FakeClock`, o service `createLot` aceita a opção `{ allowPast: true }` (a regra `startsAt ≥ agora − 60 s` e `fim − início ≥ 5 min` vive no zod/rota de `POST /lots`, não no service); **só o seed usa essa opção**, e a rota pública nunca a expõe. | PRD Seed (3 cuidados); AD-10 |
 | R-9.2 | Itens do seed vêm de `prisma/fipe-fixture.json` e as imagens de arquivos locais do repositório (ou ausentes → ilustração padrão). O seed **não faz requisição de rede**. | PRD Seed; AD-12 |
 | R-9.3 | Datas do seed são relativas ao momento da execução. O lote ao vivo dura 30 dias a partir de agora. | PRD Seed |
-| R-9.4 | `npm run seed` é seguro de rodar no deploy: se já existem usuários, não faz nada e **sai com código 0** e a mensagem "seed ignorado: já existem usuários". Nunca apaga dados. | AD (seed recusa) |
+| R-9.4 | `npm run seed` é seguro de rodar no deploy: se já existem usuários, não faz nada e **sai com código 0** e a mensagem "seed ignorado: já existem usuários". Nunca apaga dados. Duas execuções simultâneas (dois processos, ou web e API acordando juntas) não se atropelam: o seed adquire `pg_advisory_lock` (chave fixa) antes de checar se há usuários e libera ao fim; o segundo processo espera, vê os usuários e sai com código 0. | AD (seed recusa) |
+| R-9.12 | **Dono do seed final.** Esta fatia **reescreve** `prisma/seed.ts` (as S01 a S06 deixaram seeds provisórios, só para suas demonstrações): ordem de criação fixa 001→005 (§11), numeração sequencial 001 = arrematado … 005 = ao vivo. Os lotes provisórios criados nas fatias anteriores (por exemplo o ao vivo "Uno" da S02, criado com início há 1 h) são **descartados**, não preservados: o seed final é o único que existe em produção. | Revisão: S02 e S09 numeravam o primeiro lote de formas diferentes |
 | R-9.5 | `npm run seed:demo` **cria um novo** lote ao vivo de demonstração (30 dias, lances de Ana e Bruno via service) sem tocar nos demais e, se o saldo disponível de Ana ou Bruno estiver abaixo do valor-base de §11, deposita a diferença pelo service (entra no extrato como depósito). | PRD Seed ("comando que recria o lote") |
 | R-9.6 | Produção: `/kit` responde 404 (`notFound()`); página diagnóstica da S00 não existe mais; nenhum `console.log` de depuração; nenhum stub "em construção". | S00 |
 | R-9.7 | Dois temas completos em todas as telas e estados; tema inicial = sistema; escolha manual persiste em `localStorage` e é aplicada antes da primeira pintura (sem flash). | O5; P22; C6 |
@@ -172,7 +173,9 @@ Nenhum componente novo, exceto `app/not-found.tsx` e `app/error.tsx` globais (us
 
 ## 11. Seed final
 
-Comando: `npm run seed -w apps/api` (raiz: `npm run seed`). Lê `prisma/fipe-fixture.json`. Executado no deploy (release) e no `docker compose up` (primeiro start).
+Comando: `npm run seed -w apps/api` (raiz: `npm run seed`). Lê `prisma/fipe-fixture.json`. Executado no deploy e no `docker compose up` (primeiro start). **Onde roda no Render é uma verificação do dia 1:** se o plano gratuito tiver release/pre-deploy command, use-o; se não, o comando de start da API fica `npx prisma migrate deploy && npm run seed && node dist/server.js`. Isso é seguro porque o seed é idempotente e protegido por advisory lock (R-9.4) e roda a cada acordada da API.
+
+Este arquivo substitui qualquer seed anterior (R-9.12). Os lotes 001 a 003 são criados no passado com `FakeClock` + `createLot({ allowPast: true })`; 004 e 005 usam o relógio real e a validação normal.
 
 **Usuários (sugestão de credenciais; a senha única é pública de propósito, é dado de teste):**
 
@@ -211,7 +214,7 @@ Valores sugeridos: lance inicial e incremento coerentes com a referência FIPE d
 - AC-9.5 [auto] Dado o seed já rodado, quando `npm run seed` de novo, então nada muda, a saída traz "seed ignorado: já existem usuários" e o código de saída é 0. (R-9.4)
 - AC-9.6 [auto] Dado o seed rodado, quando `npm run seed:demo`, então surge o lote 006 ao vivo com `endsAt ≈ agora + 30 dias`, com lances, auditoria `OK`, e os lotes 001–005 permanecem iguais; rodar duas vezes cria 006 e 007. (S7)
 - AC-9.7 [auto] Dado Ana com disponível R$ 20.000,00, quando `seed:demo`, então um depósito de R$ 80.000,00 aparece no extrato dela antes dos lances (R-9.5).
-- AC-9.8 [auto] Dado o seed rodando duas vezes ao mesmo tempo (dois processos), então um deles não cria dados duplicados (e-mails únicos impedem; o segundo sai com mensagem clara). (borda)
+- AC-9.8 [auto] Dado o seed disparado duas vezes ao mesmo tempo (`Promise.all` de dois processos filhos ou de duas chamadas à função `runSeed` com conexões distintas) em banco vazio, então o segundo espera o `pg_advisory_lock`, encontra os usuários e sai com código 0 e "seed ignorado: já existem usuários"; no fim há exatamente 3 usuários e 5 lotes (sem duplicata, sem `EMAIL_TAKEN` vazando como erro). (R-9.4, borda)
 - AC-9.9 [manual] Dado o deploy, então a Vitrine do link público mostra 1 lote ao vivo (005), 1 agendado (004) e 1 encerrado arrematado + 1 sem lances (001, 002) e não mostra o 003.
 
 **Resiliência da API externa (AC13 / R-9.9)**
@@ -219,7 +222,7 @@ Valores sugeridos: lance inicial e incremento coerentes com a referência FIPE d
 - AC-9.10 [auto] Dado `FIPE_BASE_URL` apontando para porta fechada e Wikipedia indisponível, quando chamo `GET /lots`, `GET /lots/:id`, `GET /lots/:id/audit`, `GET /receipts/:token`, `GET /items/:id/image`, então todas respondem 200 com dados do banco. (X2)
 - AC-9.11 [auto] Dado a FIPE fora, quando `GET /catalog/brands` sem cache, então 503 `EXTERNAL_UNAVAILABLE` `{source:'FIPE'}` após no máximo 2 tentativas com timeout 4 s cada; com cache vencido, serve o cache. (X4, X5)
 - AC-9.12 [auto] Dado a Wikipedia fora e a FIPE ok, quando `POST /lots` sem `imageUrl`, então o lote é criado, sem imagem (`imageData` nulo) e a Sala mostra a ilustração padrão. (X3)
-- AC-9.13 [manual] Dado a FIPE fora (local, Docker Compose com variável inválida), quando percorro Vitrine, Sala, Auditoria, Comprovante, Carteira, Meus arremates e Painel, então tudo funciona; só a tela Criar lote mostra "A tabela FIPE não respondeu." com formulário preservado e "Agendar lote" desabilitado. (E12)
+- AC-9.13 [manual] Dado a FIPE **e a Wikipedia** fora (local ou Docker Compose, com `FIPE_BASE_URL` e `WIKIPEDIA_BASE_URL` inválidas e a API **reiniciada** para zerar o cache em memória da S02), quando percorro Vitrine, Sala, Auditoria, Comprovante, Carteira, Meus arremates e Painel, então tudo funciona; só a tela Criar lote mostra "A tabela FIPE não respondeu." com formulário preservado e "Agendar lote" desabilitado. (E12)
 - AC-9.14 [manual] Dado o mesmo cenário, quando clico "Tentar de novo" depois de restaurar a variável e reiniciar a API, então os selects voltam a funcionar sem recarregar a página.
 
 **Estados globais, 404 e temas**
@@ -239,20 +242,20 @@ Valores sugeridos: lance inicial e incremento coerentes com a referência FIPE d
 
 **Verificação ponta a ponta dos critérios do PRD**
 
-- AC-9.24 [manual] Dado §15 (procedimento AC1–AC15), então os 15 itens passam no **link público**, anotados com data e resultado no `progresso.md`.
+- AC-9.24 [manual] Dado §15 (procedimento AC1–AC15), então **AC11** passa em ambiente local ou Docker Compose (nunca no banco de produção) e **os outros 14** passam no **link público**, anotados com data, ambiente e resultado no `progresso.md`. AC13 também é local/Compose (precisa derrubar as APIs externas); no link público basta conferir que Vitrine, Sala, Auditoria e Comprovante carregam sem chamar FIPE/Wikipedia.
 - AC-9.25 [manual] Dado uma pessoa que não conhece o projeto e uma máquina com Docker, quando segue só o README, então `docker compose up` sobe db, api e web, o seed roda e ela consegue entrar como Ana e dar um lance. (AC15 / D5)
 - AC-9.26 [manual] Dado o README, então cada item D1–D8 de §14 está presente (checklist marcada). (D1–D8)
 
 ## 13. Casos de borda e concorrência
 
 - **Troca de `AUDIT_HMAC_KEY` ou `JWT_SECRET` em produção:** trocar a chave HMAC invalida todas as cadeias já gravadas (aparecem como adulteradas) e o `seed:demo` não conserta lotes antigos; trocar `JWT_SECRET` desloga todos. Definir as duas **uma vez, antes do primeiro seed**, e documentar no README (D8).
-- **Seed em deploy repetido:** o release roda `npm run seed` a cada deploy; R-9.4 garante que é inofensivo.
+- **Seed em deploy repetido:** o release (ou o start da API, ver §11) roda `npm run seed` a cada deploy/acordada; R-9.4 (checagem de usuários + advisory lock) garante que é inofensivo.
 - **Seed durante tráfego:** só roda no release ou manualmente; o lote 005 tem 30 dias.
 - **Relógio:** o seed usa `FakeClock` para o passado; ao terminar, nenhum service fica com o relógio falso (o `Clock` é injetado só no escopo do seed).
 - **Fuso:** Render roda em UTC; as datas do seed e da UI não dependem do fuso do processo (UI converte para America/Sao_Paulo).
 - **Deploy da web antes da API (ou o contrário):** `WEB_ORIGIN` na API deve ser **exatamente** a origem da web (CORS e Socket.IO); `NEXT_PUBLIC_API_URL` na web aponta para a API. Origem errada = web "no ar" sem dados.
 - **WebSocket bloqueado na rede do avaliador:** o Socket.IO cai para long-polling; a Sala segue funcionando pelo snapshot HTTP ao reconectar (INV-1).
-- **Lance concorrente na verificação manual do AC5:** use o teste automatizado (§14) e, manualmente, dois navegadores clicando "Dar lance" ao mesmo tempo: um recebe "Alguém levantou a mão antes de você. O mínimo agora é R$ X,00." e os saldos fecham.
+- **Lance concorrente na verificação do AC5:** só o teste automatizado (§14) vale como evidência; clique simultâneo manual não é determinístico.
 - **Docker em máquina limpa:** o primeiro `up` demora (build); a API só aceita tráfego depois de `prisma migrate deploy`; o seed roda uma vez.
 
 ## 14. Testes exigidos
@@ -272,19 +275,19 @@ Executar no **link público**. Contas: leiloeiro `leiloeiro@lanceauto.test`, Ana
 
 | AC | Passo a passo | Resultado esperado |
 | --- | --- | --- |
-| AC1 | (a) Ana abre a Sala do lote **004** (agendado) e tenta dar lance por API (`curl` com o token dela) ou, se o formulário aparecer, pelo campo. (b) Leiloeiro cria um lote que começa em 1 min; antes de abrir, Ana tenta lance. (c) Aguardar o fim de um lote de 5 min e tentar de novo | (a/b) `LOT_NOT_STARTED` "O lote abre {dia}, {dd/mm}, às {HH}h. Até lá o martelo fica na gaveta."; (c) `LOT_ENDED` "Martelo batido às {hh:mm}. Este lote não aceita mais lances."; após o fim também o lote cancelado dá `LOT_CANCELLED` |
+| AC1 | (a) Ana abre a Sala do lote **004** (agendado) e tenta dar lance por API (`curl` com o token dela) ou, se o formulário aparecer, pelo campo. (b) Leiloeiro cria um lote que começa em 1 min; antes de abrir, Ana tenta lance. (c) Aguardar o fim de um lote de 5 min e tentar de novo. (d) Leiloeiro cancela um lote ao vivo qualquer; Ana tenta dar lance nele (`curl`, pois a Sala já mostra "Cancelado" sem formulário) | (a/b) `LOT_NOT_STARTED` "O lote abre {dia}, {dd/mm}, às {HH}h. Até lá o martelo fica na gaveta."; (c) `LOT_ENDED` "Martelo batido às {hh:mm}. Este lote não aceita mais lances."; (d) `LOT_CANCELLED` (texto da S06 §8) |
 | AC2 | No lote **005** (inicial/atual conhecidos), Ana dá lance abaixo de atual+incremento. Em um lote novo sem lances, lance abaixo do inicial | `BELOW_MINIMUM` "Seu lance precisa ser de pelo menos R$ {mínimo},00." com borda do campo em `ferrugem`; o valor digitado permanece |
 | AC3 | Bruno (líder do 005) tenta cobrir o próprio lance com valor ≥ mínimo | `ALREADY_WINNING` "Você já está na frente. Cobrir o próprio lance só gasta saldo." |
-| AC4 | Ana (disponível conhecido) dá lance acima do disponível; depois Bruno cobre o lance da líder Ana e a carteira dela é conferida | `INSUFFICIENT_BALANCE` "Saldo insuficiente: você tem R$ X,00 disponíveis." + link "Depositar na carteira →". Ao ser superada, o chip de saldo da Ana sobe na hora (sem recarregar) e o extrato mostra a liberação |
-| AC5 | Teste automatizado de concorrência (`npm test -w apps/api -- bids.concurrency`). Manual: Ana e Bruno, no mesmo lote, clicam "Dar lance" com o mesmo valor ao mesmo tempo | Um único líder; o outro recebe `BELOW_MINIMUM` "Alguém levantou a mão antes de você…"; `total−committed` de cada um coerente com o extrato |
+| AC4 | (a) Ana (disponível conhecido) dá lance acima do disponível. (b) Ana dá um lance válido no 005 e **assume a liderança** (Bruno era o líder); depois Bruno cobre o lance de Ana e a carteira de Ana é conferida | `INSUFFICIENT_BALANCE` "Saldo insuficiente: você tem R$ X,00 disponíveis." + link "Depositar na carteira →". Ao ser superada, o chip de saldo da Ana sobe na hora (sem recarregar) e o extrato mostra a liberação |
+| AC5 | **Só pelo teste automatizado** (`npm test -w apps/api -- bids.concurrency`): o clique simultâneo manual não é reproduzível de forma determinística e não conta como evidência. Anotar no `progresso.md` o resultado do teste | Um único líder; o outro recebe `BELOW_MINIMUM` `OUTDATED`; `total−committed` de cada um coerente com o extrato |
 | AC6 | Leiloeiro cria lote de **5 min** (mínimo), aberto. Aos ~1 min 30 s do fim, Ana dá um lance; observar os três navegadores | O relógio de **todos** salta para `hora do lance + 2 min`; selo "+2 MIN" e o parágrafo "Lance nos 2 minutos finais: o relógio ganhou +2 min. Novo fim às hh:mm:ss. Ninguém leva no susto." |
 | AC7 | Ana e Bruno na Sala do 005; Ana dá lance | O lance, a placa, o contador e o histórico de Bruno atualizam **sem recarregar**; um terceiro navegador (visitante) também |
 | AC8 | No lote de 5 min do AC6, deixar fechar com lances | Em até ~5–10 s: "Martelo batido…", carimbo Arrematado; o valor sai do total da vencedora, entra no total do leiloeiro (Painel: Total recebido sobe); um comprovante existe (um só, mesmo recarregando a página várias vezes) |
 | AC9 | Leiloeiro cria lote de 5 min e ninguém dá lance; esperar fechar | Carimbo "Sem lances"; "Ninguém quis. Lote fechado sem vencedor."; sem comprovante; nenhum saldo mexe |
 | AC10 | (a) Leiloeiro cancela lote sem lances: some da Vitrine. (b) Cancela lote **com** lances (Bruno líder): diálogo informa lances e estorno | (a) some da Vitrine em todos os navegadores; (b) Bruno recebe o estorno (chip sobe, extrato "Saldo liberado · lote cancelado"), a Sala mostra Cancelado, a auditoria mostra a linha CANCEL |
-| AC11 | Seguir o SQL do README (desativar trigger, alterar um valor, reativar) num banco **local** ou de teste; abrir a auditoria | "Adulterado" apontando a linha; depois remover as últimas linhas de outro lote: "selo do lote não confere". (Não executar contra o banco de produção do avaliador.) |
+| AC11 | **Somente em ambiente local ou Docker Compose.** Seguir o SQL do README (`docker compose exec db psql …`: desativar `bid_no_update_delete`, alterar um valor, reativar); abrir a auditoria | "Adulterado" apontando a linha; depois remover as últimas linhas de outro lote: "selo do lote não confere". (Não executar contra o banco de produção do avaliador.) |
 | AC12 | Abrir comprovante e auditoria sem login e inspecionar a aba Network/JSON | Apenas pseudônimos "Licitante XXXX"; nenhum nome, e-mail ou id de usuário |
-| AC13 | Cenário de AC-9.13 | Tudo funciona; só Criar lote reclama |
+| AC13 | **Local ou Compose.** Cenário de AC-9.13 (FIPE e Wikipedia derrubadas por variável, API reiniciada) | Tudo funciona; só Criar lote reclama |
 | AC14 | Após o seed, listar usuários e lotes | 1 leiloeiro, 2 licitantes, lote ao vivo com lances (005) |
 | AC15 | Pessoa de fora segue só o README em máquina limpa e abre o link público | Roda local e o link público funciona |
 
@@ -306,7 +309,7 @@ O README fica na raiz, em pt-BR, com este índice. Cada item abaixo é obrigató
 | --- | --- | --- |
 | D1 | Visão geral | O que é o LanceAuto; link do deploy (web) e da API; **usuários de teste** (tabela de §11 com e-mail e senha); roteiro de 5 passos para testar |
 | D2 | Stack e decisões | Next.js+React+TS, Express, Socket.IO, PostgreSQL+Prisma, monorepo npm workspaces; decisões: prorrogação = lance + 2 min, posição = maior lance de cada licitante, cancelamento com lances faz estorno, sem edição de lote agendado, depósito máx R$ 10 mi, imagem Wikipedia editável, dinheiro em centavos, datas em UTC, pseudônimo por lote, JWT em `localStorage`, monólito modular com um processo; hosts (Vercel, Render, Neon) |
-| D3 | Pré-requisitos e variáveis | Node LTS, npm, Docker (opcional), PostgreSQL 16+; tabela de variáveis (`DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `AUDIT_HMAC_KEY`, `WEB_ORIGIN`, `FIPE_BASE_URL`, `FIPE_TOKEN?`, `WIKI_USER_AGENT`, `PORT`, `NEXT_PUBLIC_API_URL`) com para que serve e como gerar segredos (ex.: `openssl rand -hex 32`); `.env.example` completo |
+| D3 | Pré-requisitos e variáveis | Node LTS, npm, Docker (opcional), PostgreSQL 16+; tabela de variáveis (`DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `AUDIT_HMAC_KEY`, `WEB_ORIGIN`, `FIPE_BASE_URL`, `FIPE_TOKEN?`, `WIKI_USER_AGENT`, `WIKIPEDIA_BASE_URL`, `PORT`, `NEXT_PUBLIC_API_URL`, `AUTH_RATE_LIMIT_MAX`, `RATE_LIMIT_DISABLED`, `DATABASE_URL_TEST`) com para que serve e como gerar segredos (ex.: `openssl rand -hex 32`); `.env.example` completo |
 | D4 | Banco | Criar o banco, `npx prisma migrate deploy`, `npm run seed`, `npm run seed:demo`; o que o seed cria; aviso de não trocar `AUDIT_HMAC_KEY` depois |
 | D5 | Como rodar | Local: `npm install`, `npm run dev` (api e web); Docker: `docker compose up`; portas; como abrir; como parar/limpar volumes |
 | D6 | Testes | `npm test`; testes de integração exigem `DATABASE_URL_TEST`; o que cada suite cobre (regras de lance, 2 lances simultâneos, saldo, liquidação, cancelamento com estorno, adulteração direto no banco, resiliência) |
@@ -329,6 +332,8 @@ D8 — lista mínima:
 12. **Lote agendado não pode ser editado**, só cancelado.
 13. **Segredos:** trocar `AUDIT_HMAC_KEY` invalida os históricos; trocar `JWT_SECRET` desloga todos.
 14. **Rede restrita:** se WebSocket for bloqueado, o Socket.IO usa long-polling.
+15. **Limites de requisição:** login/cadastro (30/min por IP), lances (30/min por usuário) e auditoria (60/min por IP). Atrás do proxy do Render o IP vem de `X-Forwarded-For` (`trust proxy` = 1); numa rede corporativa com IP compartilhado, o avaliador pode, raramente, receber "muitas requisições" e deve esperar um minuto.
+16. **Limites da auditoria:** o dono de um lance (`bidderId`) e a contabilidade (saldos, extrato) ficam fora do hash; ver o texto de D7.
 
 ### Deploy final (checklist)
 
@@ -336,7 +341,7 @@ D8 — lista mínima:
 | --- | --- |
 | 1 | Hosts e versões confirmados e lockfile commitado (a arquitetura marcou Vercel/Render/Neon e versões como `[ASSUMPTION]`) |
 | 2 | Neon: `DATABASE_URL` com pooling e `DIRECT_URL` para migração |
-| 3 | Render (API): variáveis completas; `WEB_ORIGIN` = origem exata da Vercel; comando de start = `prisma migrate deploy` + `node dist/server.js`; **release/pós-deploy** roda `npm run seed` (R-9.4) |
+| 3 | Render (API): variáveis completas; `WEB_ORIGIN` = origem exata da Vercel; comando de start = `prisma migrate deploy` + `node dist/server.js`; o `npm run seed` roda em release/pre-deploy command **se o plano gratuito tiver** (verificar no dia 1); caso contrário o start vira `npx prisma migrate deploy && npm run seed && node dist/server.js` (seed idempotente com advisory lock, R-9.4); `trust proxy` = 1 ativo (T1) |
 | 4 | Vercel (web): `NEXT_PUBLIC_API_URL` = URL pública da API |
 | 5 | `JWT_SECRET` e `AUDIT_HMAC_KEY` fortes definidos **antes** do primeiro seed e anotados em local seguro |
 | 6 | Migrações aplicadas; seed executado; `GET /health` → `{ok:true, db:true}` |
@@ -363,11 +368,14 @@ Perguntas abertas (sugestão marcada; decisão é do usuário):
 4. **Ping externo** (UptimeRobot etc.) para evitar hibernação. O PRD/arquitetura dizem "opcional". Sugestão: citar no README, não configurar.
 5. **Repositório público.** O repositório está privado (progresso.md). A entrega exige público; confirmar a data de virada e que nenhum segredo está no histórico.
 6. **Valor-base de recomposição de saldo do `seed:demo`** (R$ 100.000 sugerido).
+7. **Cartão Encerrado da Vitrine → auditoria direta ou Sala?** A S08 (AC-8.34) manda o cartão Encerrado direto para a auditoria; o PRD descreve Vitrine → Sala. Ver a pergunta 5 da S08 §16. **Pergunta para o usuário**; o roteiro de demonstração desta fatia vale nos dois casos (a Sala encerrada tem o link "Auditar este lote").
+
+Nota de propriedade (rastreabilidade): `O4`/`TST` têm dono nominal nesta fatia, mas os testes são escritos nas S01 a S08; aqui só se **verifica** que todos rodam no CI e se registra a cobertura. O mesmo vale para `T3` (dono S06, Sala já completa na S05) e `DEP` (dono S00): a S09 só confere o resultado final.
 
 ## 17. Definition of Done
 
 - [ ] Todas as fatias S00–S08 entregues e com DoD marcado.
-- [ ] Seed final (001–005) por services, sem rede, auditoria `OK` em todos; `seed:demo` funcionando; seed seguro em redeploy.
+- [ ] Seed final (001–005) reescrito por esta fatia (R-9.12), por services, sem rede, com `allowPast` só no seed e `pg_advisory_lock`; auditoria `OK` em todos; `seed:demo` funcionando; seed seguro em redeploy (onde roda no Render confirmado no dia 1).
 - [ ] Checklists §9.1 (a11y), §9.2 (responsivo), §9.3 (temas), §9.4 (estados globais) passados e registrados; axe sem violações críticas/sérias nos fluxos centrais.
 - [ ] 404/erro globais; `/kit` 404 em produção; sem stubs, TODOs ou `console.log`.
 - [ ] Resiliência com FIPE/Wikipedia fora comprovada (AC-9.10 a AC-9.14).

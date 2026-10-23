@@ -38,9 +38,9 @@ Roteiro:
 Já existe: tabelas `Lot`, `Bid`, `Receipt`, `Wallet`, `LedgerEntry`; `lotStatus` e `LotCard` em `packages/shared`; `GET /lots/:id` com `myPseudonym/myRank/myBestBidCents`; `GET /wallet` com `leadingLots` (S03, sem cancelados desde a S06); `Receipt.token`; `Publisher` real com `showcase:lot` e `wallet:updated` (S04); `Header` por papel e guardas de rota (S01); componentes `FilterTabs`, `Stamp`, `Perforation`, `Button`, `FeedbackState`, `LotTag`, `CarPhoto`; `CopyLinkButton` do Comprovante (S05; se estiver inline lá, extraia para componente compartilhado agora); `useSocket`/`showcase:join` e o `apiClient`.
 
 Invariantes que valem aqui:
-- INV-1 Servidor é fonte de verdade: os estados vêm prontos do servidor e a tela não os deriva; mudanças chegam por refetch.
+- INV-1 Servidor é fonte de verdade: os estados vêm prontos do servidor e a tela não os deriva; mudanças chegam por refetch. Única exceção: o **rótulo** "Apurando" (R-7.3) é derivado no cliente com `lotStatus(lot, serverClock.now())`, porque nenhum evento sinaliza a passagem `LIVE → CLOSING`; o estado de negócio (`state`) continua vindo do servidor.
 - INV-2 Dinheiro em centavos; UI `R$ 33.500,00` em Plex Mono.
-- INV-11 Estado do licitante por lote: `LEADING | OUTBID | WON | LOST | CANCELLED`; vocabulário de UX Ganhando, Superado, Arrematado, Perdido, Cancelado.
+- R-7.0 (antes "INV-11" desta fatia; o INV-11 da SPEC é `lotStatus`) Estado do licitante por lote: `LEADING | OUTBID | WON | LOST | CANCELLED`; vocabulário de UX Ganhando, Superado, Arrematado, Perdido, Cancelado.
 - INV-13 Nenhum `userId`, nome ou e-mail em DTO; o pseudônimo é do lote ("Licitante XXXX · você").
 - INV-15 Só `BIDDER` acessa; autorização no back.
 - INV-16 Envelope de erro.
@@ -52,7 +52,7 @@ Invariantes que valem aqui:
 |---|---|---|
 | R-7.1 | A lista contém só lotes em que o usuário tem ao menos um `Bid` com `kind=BID`. Sem lance, o lote não entra (ver o lote não basta). | PRD Telas |
 | R-7.2 | Estado por lote (função pura sobre colunas do banco, sem usar o relógio): se `cancelledAt` ≠ nulo → `CANCELLED`; senão, se `leaderId = eu`: `settledAt` ≠ nulo → `WON`, senão `LEADING`; senão (não sou líder): `settledAt` ≠ nulo → `LOST`, senão `OUTBID`. | AD-7, P27 |
-| R-7.3 | `LOST` = participei, o lote encerrou e outro venceu. `CANCELLED` nunca é `LOST`. Lote passou do fim mas ainda não liquidado (apurando): o estado continua `LEADING`/`OUTBID`; a frase mostra "Martelo batido. Apurando o resultado…". | P27, AD-6 |
+| R-7.3 | `LOST` = participei, o lote encerrou e outro venceu. `CANCELLED` nunca é `LOST`. Lote passou do fim mas ainda não liquidado (apurando, `lotStatus(...) === 'CLOSING'`): o `state` continua `LEADING`/`OUTBID`, **mas a UI não mostra mais "ganhando/superado" nem o botão ocre "Cobrir lance"** (o lance já está bloqueado): selo neutro "APURANDO" (sem `Nº de N`), frase "Martelo batido. Apurando o resultado…" e só a ação "Ir para a sala". | P27, AD-6 |
 | R-7.4 | "Em disputa" = `LEADING` + `OUTBID`. "Arrematados" = `WON`. "Perdidos" = `LOST`. "Todos" = tudo, incluindo `CANCELLED`, que não pertence a nenhuma outra aba. | EXP Meus arremates, P10 |
 | R-7.5 | `myBestBidCents` = maior lance do usuário naquele lote. Posição (`myRank`) = `1 +` número de licitantes distintos cujo maior lance é maior que o meu; `bidderCount` = licitantes distintos com lance no lote. Posição só é enviada nos estados `LEADING`/`OUTBID`. | AD-9, decisão do usuário |
 | R-7.6 | `receiptToken` só no estado `WON` (o `Receipt` do lote, cujo `winnerId` sou eu). Nenhuma outra pessoa recebe esse token por esta rota. | PRD Comprovante |
@@ -64,7 +64,9 @@ Invariantes que valem aqui:
 
 ## 5. Modelo de dados
 
-Sem tabelas novas e sem migração. Índice opcional se o `EXPLAIN` mostrar varredura: `CREATE INDEX "Bid_bidderId_idx" ON "Bid"("bidderId") WHERE "kind"='BID'` (migração própria apenas se criado).
+Sem tabelas novas. **Criar sempre** o índice (decisão tomada, é barato; o `@@index([lotId, bidderId])` da S03 começa por `lotId` e não serve à consulta 1): `@@index([bidderId])` em `Bid` no schema Prisma (ou `CREATE INDEX "Bid_bidderId_idx" ON "Bid"("bidderId") WHERE "kind"='BID'` em SQL), com migração própria `add_bid_bidder_index` aplicada no deploy.
+
+**Atenção aos tipos:** os ids (`Lot.id`, `Bid.lotId` etc.) são `String @id @default(uuid())` **sem** `@db.Uuid`, ou seja, colunas **TEXT**. Nunca usar `::uuid` nas consultas (`operator does not exist: text = uuid`); use `::text[]`.
 
 Consulta sugerida (Prisma `$queryRaw` + `findMany`):
 
@@ -78,10 +80,12 @@ GROUP BY b."lotId";
 -- 2) melhor lance de cada licitante nesses lotes (para posição e nº de licitantes)
 SELECT b."lotId", b."bidderId", MAX(b."amountCents") AS "best"
 FROM "Bid" b
-WHERE b."kind" = 'BID' AND b."lotId" = ANY($2::uuid[])
+WHERE b."kind" = 'BID' AND b."lotId" = ANY($2::text[])
 GROUP BY b."lotId", b."bidderId";
 ```
-Depois: `prisma.lot.findMany({ where: { id: { in: lotIds } }, include: { item: true, receipt: true } })`. Calcule em TS: `bidderCount = nº de linhas do lote em (2)`; `myRank = 1 + nº de linhas do lote com best > myBest`; pseudônimo do vencedor via `Receipt.pseudonym` (lote liquidado) e o meu via `Bid.pseudonym` de qualquer linha minha no lote. Mantenha a função de estado pura em `packages/shared`:
+Se a consulta 1 voltar vazia, **pular a consulta 2** (e o `findMany`) e devolver `items: []`.
+
+Depois: `prisma.lot.findMany({ where: { id: { in: lotIds } }, include: { item: true, receipt: true } })`. Calcule em TS, **reusando `rankFrom` de `apps/api/src/domain/rank.ts` (S03)** para todo lote da consulta 2 (não reimplemente a regra): `bidderCount = nº de linhas do lote em (2)`; `myRank = 1 + nº de linhas do lote com best > myBest`; pseudônimo do vencedor via `Receipt.pseudonym` (lote liquidado) e o meu via `Bid.pseudonym` de qualquer linha minha no lote. Mantenha a função de estado pura em `packages/shared`:
 
 ```ts
 export type BidderLotState = 'LEADING' | 'OUTBID' | 'WON' | 'LOST' | 'CANCELLED';
@@ -117,7 +121,7 @@ Adições em relação ao contrato original `[{lot, state, myBestBidCents, recei
 ## 7. Contratos Socket.IO
 
 Nenhum evento novo. A tela entra em `showcase` (`showcase:join`) e escuta:
-- `showcase:lot` (qualquer lote): se `card.id` está na lista atual, ou o evento é de um lote novo, invalida a consulta `['me','bids']` e refaz o `GET /me/bids` (debounce de 300 ms).
+- `showcase:lot` (qualquer lote): **só se `card.id` está na lista atual** invalida a consulta `['me','bids']` e refaz o `GET /me/bids` (debounce de 300 ms). Evento de lote que não está na lista é ignorado (a lista só contém lotes onde o usuário deu lance; um lance dele em outra aba chega por `wallet:updated`). Descartar evento com `version < card.version` já visto (regra S04).
 - `wallet:updated`: invalida a consulta (cobre lance dado em outra aba, estorno, liquidação).
 - Reconexão (`connect` depois de queda): refaz o `GET`.
 O cliente não deriva estado de payloads de evento; a lista só muda com a resposta do servidor (INV-1).
@@ -134,7 +138,7 @@ O cliente não deriva estado de payloads de evento; a lista só muda com a respo
 | Erro com dados anteriores | "Lista possivelmente desatualizada." (a revisar) + "Tentar novamente" | faixa acima da lista |
 | `LEADING` | "Você está ganhando · 1º de {N}" (placar) + "Seu lance de R$ X,00 está na frente. Esse valor está travado neste lote." (a revisar) | ingresso |
 | `OUTBID` | "Você foi superado · Seu lance (R$ X,00) é o {r}º maior de {N}" | ingresso |
-| Apurando (passou do fim, `LEADING`/`OUTBID`) | "Martelo batido. Apurando o resultado…" | no lugar da frase, ingresso |
+| Apurando (passou do fim, `LEADING`/`OUTBID`) | Selo neutro "APURANDO" + "Martelo batido. Apurando o resultado…" (sem "ganhando/superado", sem `Nº de N`) | no lugar do selo e da frase, ingresso |
 | `WON` | "Você arrematou por R$ X,00." | ingresso |
 | `LOST` | "Licitante {XXXX} levou por R$ X,00. Seu maior lance foi R$ Y,00." | ingresso |
 | `CANCELLED` | "O leiloeiro cancelou este lote. Nada foi vendido." + se `refundedCents`: " O saldo que estava travado voltou para você." | ingresso |
@@ -173,13 +177,14 @@ Ingresso (`cartao-canhoto` em Meus arremates), da esquerda para a direita (empil
 - **Stub (112px):** rótulo "LOTE" (Plex Mono 11px, tracking .14em) + número em Big Shoulders 900 52px; separado do resto por borda tracejada de 3px (`tracejado`).
 - **Bloco central:** `LotTag` do número é o stub (sem repetir); título do carro (Big Shoulders 800 32px, caixa-alta, é um `<a>` para `/lotes/{id}`; nome acessível = título), meta mono 13px (`ano · combustível`), selo de status, frase de §8, linha do pseudônimo próprio (mono 13px, `chip-licitante`: borda 2px, padding 3px 8px; "VOCÊ" com fundo `ocre`, peso 600).
 - **Bloco de valores (borda esquerda tracejada 2px):** "SEU MAIOR LANCE" `R$ X,00`; e, conforme o estado, "LANCE ATUAL" (`LEADING`/`OUTBID`) ou "VALOR FINAL" (`WON`/`LOST`) ou "ÚLTIMO LANCE" (`CANCELLED`), todos em Plex Mono 600 22px.
-- **Rodapé de ações** (abaixo do picote de 24px): botões por estado.
+- **Rodapé de ações** (abaixo do divisor): botões por estado. **Versão simples primeiro** (linha tracejada 2px entre o corpo e as ações); o picote com semicírculos (`Perforation`) é acabamento "se sobrar tempo" / S09.
 
 Selo de status e ações por estado:
 | Estado | Selo (texto + forma) | Ações |
 |---|---|---|
 | `LEADING` | `placar-posicao` verde "VOCÊ ESTÁ GANHANDO · 1º de {N}" | "Ir para a sala" (secundário) |
 | `OUTBID` | `placar-posicao` `ferrugem` "VOCÊ FOI SUPERADO · {r}º de {N}" | "Cobrir lance" (**primário ocre**) → `/lotes/{id}` |
+| `LEADING`/`OUTBID` em apuração (`lotStatus` = `CLOSING`) | Selo neutro `tinta`/`fundo` "APURANDO" (sem posição) | só "Ir para a sala" (secundário); **sem** "Cobrir lance" |
 | `WON` | Carimbo **Arrematado** (`tinta`, +3°) | "Ver comprovante" (secundário, → `/c/{receiptToken}`) + "Copiar link" (secundário) |
 | `LOST` | Carimbo pequeno **Perdido** (`tinta2`, borda tracejada 4px, sem outline, −2°) | nenhuma até a S08; S08 acrescenta "Conferir na auditoria" |
 | `CANCELLED` | Carimbo **Cancelado** (`tinta2`, borda 4px sólida + outline, −4°) | nenhuma até a S08; S08 acrescenta "Conferir na auditoria" |
@@ -202,7 +207,7 @@ Cada lote de `GET /wallet` → `leadingLots` vira um link: `Lote {NNN} · {títu
 
 | Componente | Uso | Notas |
 |---|---|---|
-| `BidTicket` | Um ingresso de Meus arremates | `cartao-canhoto` + `Perforation`; props: `MyBidItem`. Papel: fundo `papel`, borda 3px `linha`, sombra `6px 6px 0 sombra`, canto 0, padding 24px. Stub 112px; picote 24px de altura com linha `2px dashed tracejado` (`left/right:20px; top:11px`) e dois semicírculos 24×24 de fundo `fundo` nas laterais |
+| `BidTicket` | Um ingresso de Meus arremates | `cartao-canhoto`; props: `MyBidItem`. Papel: fundo `papel`, borda 3px `linha`, sombra `6px 6px 0 sombra`, canto 0, padding 24px. Stub 112px; divisor simples com linha `2px dashed tracejado`. **Opcional / se sobrar tempo (S09):** `Perforation` de 24px de altura (`left/right:20px; top:11px`) com dois semicírculos 24×24 de fundo `fundo` nas laterais |
 | `StatusSeal` | Selo de status do ingresso | Envolve `Stamp`/`placar-posicao` por estado; texto sempre presente (não depende de cor); `Perdido` é uma variante local do carimbo "Sem lances" (tinta2, tracejado) |
 | `BidTicketList` | Lista, abas, vazios, live region | Usa `FilterTabs` da S00 |
 | `useMyBids` | Hook de dados | `GET /me/bids`, invalidação por `showcase:lot`/`wallet:updated`/reconexão |
@@ -230,7 +235,7 @@ Se S03/S05 gerarem outra distribuição (ex.: vencedor oposto), ajuste a ordem d
 - **AC-7.5 [auto]** Dado lote liquidado em que sou o líder; Então `WON`, `receiptToken` = token do `Receipt`, `winnerPseudonym` = meu pseudônimo, `myRank=null`.
 - **AC-7.6 [auto]** Dado lote liquidado em que outro venceu; Então `LOST`, `receiptToken=null`, `winnerPseudonym` = pseudônimo do vencedor naquele lote, `myRank=null`.
 - **AC-7.7 [auto]** Dado lote cancelado em que eu era o líder; Então `CANCELLED`, `refundedCents = currentBidCents`. Dado cancelado em que eu tinha sido superado; Então `CANCELLED`, `refundedCents=null`. Em ambos, nunca `LOST`.
-- **AC-7.8 [auto]** Dado lote com `endsAt` passado e `settledAt` nulo; Então o estado continua `LEADING`/`OUTBID` e `lot.status = "CLOSING"` (a tela mostra "apurando").
+- **AC-7.8 [auto]** Dado lote com `endsAt` passado e `settledAt` nulo; Então o estado continua `LEADING`/`OUTBID` e `lot.status = "CLOSING"`. [manual] A tela mostra o selo neutro "APURANDO" e a frase "Martelo batido. Apurando o resultado…", **sem** "Cobrir lance" e sem posição; o rótulo muda sozinho quando o relógio passa de `endsAt` (derivado com `lotStatus` e `serverClock`), sem esperar evento.
 - **AC-7.9 [auto]** Dado leiloeiro autenticado; Quando `GET /me/bids`; Então `403 ROLE_NOT_ALLOWED`. Dado sem token; Então `401 UNAUTHENTICATED`.
 - **AC-7.10 [auto]** Dado qualquer resposta; Então nenhum campo `userId`, `name`, `email` em lugar algum do JSON (varredura recursiva de chaves).
 - **AC-7.11 [auto]** Dado outro licitante que venceu um lote em que não dei lance; Então esse lote não está na minha lista e o `receiptToken` dele nunca aparece nela.
@@ -256,6 +261,7 @@ Se S03/S05 gerarem outra distribuição (ex.: vencedor oposto), ajuste a ordem d
 | Lote cancelado enquanto olho | Ingresso passa a `CANCELLED`; saldo atualizado pelo `wallet:updated` |
 | Usuário com 0 carteira / sem lances | Lista vazia, sem erro |
 | Mesmo valor de melhor lance entre dois licitantes | Impossível (lances estritamente crescentes por lote); `myRank` sem empate |
+| Evento de lote que não está na lista | Ignorado (sem refetch); lance novo do próprio usuário chega por `wallet:updated` |
 | Lote com 1 só licitante | "1º de 1" |
 | Token do comprovante vazio em `WON` | Defeito; a UI não mostra "Ver comprovante" e registra erro (não deve ocorrer: liquidação cria `Receipt` na mesma tx) |
 | Reconexão com lista em tela | Refetch; sem duplicar ingresso |
@@ -277,6 +283,7 @@ Web (Vitest, lógica pura): mapeamento estado → selo/ações/frase, plural, no
 
 | Onde | Mudança |
 |---|---|
+| Banco | Migração `add_bid_bidder_index` (`@@index([bidderId])` em `Bid`) |
 | S01 Header | Adiciona o item "Meus arremates" (BIDDER) para `/arremates` |
 | S01/S03 Carteira | Itens de "Travado onde você lidera" viram links `/arremates#lote-NNN` |
 | S05 Comprovante | `CopyLinkButton` extraído como componente compartilhado, se estava inline |
@@ -294,7 +301,7 @@ Conflitos resolvidos:
 6. **"Perdido" sem variante de carimbo no DESIGN**: reaproveita o estilo "Sem lances" (tinta2, tracejado) com texto próprio; derivado, sem mock.
 
 Perguntas abertas:
-1. Ordenação da lista (R-7.9) é decisão desta spec, sem fonte; confirmar se prefere a ordem cronológica simples.
+1. Ordenação da lista (R-7.9) é decisão desta spec, sem fonte; confirmar se prefere a ordem cronológica simples. (Alinhado com a Q10 do SPEC.md: superados primeiro, depois ganhando, ambos por `endsAt` crescente; depois `WON`/`LOST`/`CANCELLED` por `endsAt` decrescente.)
 2. Textos marcados "(a revisar)" foram escritos aqui por falta de texto nas fontes (frases de `LEADING`, `WON`, `LOST`, `CANCELLED`, aba vazia, faixa de desatualizado).
 3. O PRD pede o status "perdido" mas o estado só aparece depois da liquidação; se preferir mostrar "Perdido" já no fim do relógio (antes de liquidar), pede mudança de regra R-7.3 (sugestão: manter "apurando").
 
@@ -305,6 +312,6 @@ Perguntas abertas:
 - [ ] Atualização em tempo real verificada com dois navegadores e após queda do socket.
 - [ ] Header com "Meus arremates"; Carteira com links.
 - [ ] Teste de seed confirma os cinco estados nas duas contas; seed roda do zero.
-- [ ] Nenhuma migração (ou índice opcional aplicado no deploy, se criado).
+- [ ] Migração `add_bid_bidder_index` aplicada no deploy.
 - [ ] Smoke no link público: logar como Licitante 1 do seed e ver os estados.
 - [ ] README: nota curta sobre "Meus arremates" e a definição de Perdido.

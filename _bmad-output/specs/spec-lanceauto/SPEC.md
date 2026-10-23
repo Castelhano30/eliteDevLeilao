@@ -31,6 +31,26 @@ sources:
 3. Dúvida que a fatia não resolve: não invente. Registre na seção "Perguntas abertas" da fatia e siga com a sugestão marcada.
 4. Feito = "Definition of Done" da fatia cumprida, migração aplicada no deploy, smoke no link público.
 
+## Decisões transversais da revisão (valem sobre qualquer fatia)
+
+Saíram de uma revisão independente das dez fatias. Quando uma fatia disser outra coisa, vale esta lista.
+
+| # | Decisão |
+|---|---|
+| T1 | **Rate limit.** `app.set('trust proxy', 1)` em produção. `makeRateLimiter({windowMs, max, keyGenerator?, skip?})`; o handler lança `AppError(RATE_LIMITED)` (envelope, nunca texto puro). Envs `AUTH_RATE_LIMIT_MAX` (padrão 30) e `RATE_LIMIT_DISABLED=1`, ambos no `.env.example`; testes usam o desligador e só o AC de limite o reativa. `RATE_LIMITED` já nasce em `ErrorCode` na S00. Auditoria: 60/min por IP, decidido. |
+| T2 | **Testes de integração.** Vitest da API com `fileParallelism: false`; setup global roda `prisma migrate deploy` em `DATABASE_URL_TEST` (CI idem). O helper de adulteração faz `DISABLE TRIGGER`, `UPDATE` e `ENABLE TRIGGER` numa só transação. |
+| T3 | **Monorepo e deploy.** `packages/shared` compila para `dist` (`exports` apontando para ele); build na ordem shared → api → web. Render: build e start explícitos, com `prisma generate` e `migrate deploy`. Vercel: Root Directory `apps/web`, install na raiz. Compose: `NEXT_PUBLIC_API_URL` como build-arg (aponta para `localhost`), `healthcheck` no banco e `depends_on: service_healthy`. `DIRECT_URL` sempre definido; no Neon, `DATABASE_URL` pooled com `?pgbouncer=true`. |
+| T4 | **`version` = `entryCount`.** `LotState`, `LotSummary`, `LotCard` e todos os eventos expõem `version`; um só reducer (`applyLotEvent`, S04) substitui o `applyBid` da S03. `showcase:lot` leva `version` e o upsert descarta versão menor. |
+| T5 | **Assinaturas da cadeia, chave sempre primeiro:** `genesisHash(key, lot)`, `entryHash(key, {lotId, seq, kind, pseudonym, amountCents, at, prevHash})`, `sealHash(key, lotId, entryCount, lastHash)`. O genesis usa `startsAt.toISOString()` do `Date` já parseado. |
+| T6 | **Relógio.** Services gravam `createdAt`/`at` com `clock.now()` explícito. A proibição de `Date.now()`/`new Date()` vale só em `apps/api/src` (exceto `infra/clock.ts` e testes); no web, só em `lib/server-clock.ts` e nos formatadores; `shared` não usa. |
+| T7 | **Cache do TanStack.** `["me"]` (usuário + carteira), `["wallet","summary"]` (lido pelo chip de saldo), `["wallet","ledger"]` (infinito). Depósito e `wallet:updated` escrevem em `summary` e invalidam `ledger`. |
+| T8 | **Textos canônicos** em constantes de `packages/shared`: RELEASE "Saldo liberado · lance superado", REFUND "Estorno · lote cancelado", nota "TOTAL NÃO MUDA". `LOT_CANCELLED` usa o texto do PRD ("Este lote foi cancelado pelo leiloeiro."); o texto longo fica só no aviso da Sala. |
+| T9 | **Token do comprovante** só vai ao vencedor. A auditoria pública mostra `receiptCode`, nunca o token. |
+| T10 | **Líder que reenvia.** `BELOW_MINIMUM` com `leaderId == userId` leva `reason = 'OWN_LEAD'` e mensagem própria ("Você já está na frente. Para cobrir o próprio lance, o mínimo é R$ X,00."), no lugar do texto enganoso "Alguém levantou a mão". O código continua `BELOW_MINIMUM` e a ordem de validação do PRD não muda. |
+| T11 | **Seed.** `createLot` aceita `{allowPast: true}` só para o seed; as regras `início >= agora − 60 s` e duração mínima de 5 min vivem no zod de `POST /lots`. O seed da S02 é provisório; a S09 reescreve o final (001 arrematado … 005 ao vivo), com `pg_advisory_lock`. |
+| T12 | **Prioridade se o prazo apertar.** Nunca cortar: S00 a S05 e S08, deploy no ar desde o dia 1. Cortar primeiro, nesta ordem: itens marcados "se sobrar tempo" nas fatias (picote, códigos de barras, variações decorativas, flips, `visibilitychange`), depois o polimento visual da S09, depois S07. |
+| T13 | **Verificar no dia 1** (premissas não checadas): formato real das respostas da FIPE v2 e da Wikipedia (incluindo a grafia "VolksWagen"), versões de Next/Prisma/libs, `suppressHydrationWarning` do tema, `migrate deploy` sem migrações, release command do Render. |
+
 ## Why
 
 **Mandato com prazo:** o teste técnico Elite Dev da Verzel (7 dias corridos, deploy obrigatório) pede uma casa de leilões online de carros. Leiloeiros montam lotes a partir de carros de uma API pública; licitantes com saldo simulado disputam cada lote com lances ao vivo; o vencedor recebe um comprovante compartilhável; qualquer pessoa, sem login, audita o histórico e vê se foi adulterado. A avaliação pesa: regras de lance e saldo corretas (inclusive simultâneas), sala ao vivo sem recarregar, resiliência à queda da API externa, histórico à prova de adulteração com a técnica explicada, deploy com dados prontos e README detalhado.
@@ -92,7 +112,7 @@ sources:
 |---|---|
 | INV-1 | O servidor é a fonte de verdade de tempo, saldo e valores. Sem atualização otimista; relógio da tela = `Date.now() + offset` (offset de cada resposta/evento). |
 | INV-2 | Dinheiro em centavos inteiros (`BigInt` no banco, `number` nas bordas, campos `…Cents`). UI só em reais inteiros `R$ 31.000,00`. `MAX_DEPOSIT_CENTS = 1_000_000_000` por depósito. |
-| INV-3 | Datas ISO UTC `Z` (ms). `new Date()`/`Date.now()` proibidos fora de `infra/clock.ts`. UI em America/Sao_Paulo. |
+| INV-3 | Datas ISO UTC `Z` (ms). `new Date()`/`Date.now()` proibidos em `apps/api/src` fora de `infra/clock.ts` (escopo exato em T6). UI em America/Sao_Paulo. |
 | INV-4 | Toda mutação por REST via service; Socket.IO só transmite; eventos saem **depois** do commit. |
 | INV-5 | Lock: lote (`FOR UPDATE`) → carteiras por `userId` ascendente; ReadCommitted; depósito trava só a própria carteira. |
 | INV-6 | Carteira é cache; `LedgerEntry` append-only na mesma transação; `committed >= 0` e `total >= committed`; disponível = total − comprometido, calculado. |
@@ -139,7 +159,7 @@ Ordem pensada para ter algo demonstrável cedo. Ajustes em relação à ordem su
 
 | Fatia | Entrega demonstrável | Depende de | Dia |
 |---|---|---|---|
-| [S00 Fundação](slice-00-fundacao.md) | Monorepo, tokens/tema em código, 14 primitivos, CI, Compose, deploy mínimo no ar (web chama /health, socket conecta) | — | 1 |
+| [S00 Fundação](slice-00-fundacao.md) | Monorepo, tokens/tema em código, 15 primitivos, CI, Compose, deploy mínimo no ar (web chama /health, socket conecta) | — | 1 |
 | [S01 Contas, acesso e carteira](slice-01-contas-acesso-carteira.md) | Cadastro/login por papel, cabeçalho por papel, depósito, extrato | S00 | 1–2 |
 | [S02 Catálogo, lotes e vitrine](slice-02-catalogo-lotes-vitrine.md) | FIPE+Wikipedia com cache, criar lote, Vitrine, Painel base, Sala somente leitura | S01 | 2 |
 | [S03 Lances e Sala](slice-03-lances-sala.md) | Transação de lance completa, recusas, Sala com painel de lance, seed com lances | S02 | 3 |
@@ -181,6 +201,9 @@ Cada requisito do PRD (131 IDs: regras R1–R15, escopo E1–E13, opcionais, tel
 | C8 | Cancelamento no histórico: PRD exige registro; triagem sugeria não cobrir na cadeia | Arquitetura vence: linha `CANCEL` na própria cadeia; a S06 grava a linha também em lote sem lances. |
 | C9 | Ocre × ferrugem no botão de confirmar cancelamento (EXPERIENCE × DESIGN/P9) | Ocre no confirmar; ferrugem só no aviso. |
 | C10 | `lot:closed` não incrementa `entryCount`, então a regra "ignorar version <= atual" o descartaria | `lot:closed` aplica com `>=` e é idempotente (S04). |
+| C11 | Texto de `LOT_CANCELLED`: PRD "Este lote foi cancelado pelo leiloeiro." × EXPERIENCE (texto longo) | PRD vence na recusa; o texto longo fica no aviso da Sala (T8). |
+| C12 | Token do comprovante: S08 o expunha na auditoria pública × S05 e PRD (só o vencedor) | S05 e PRD vencem (T9). |
+| C13 | Textos do extrato (RELEASE/REFUND) diferentes entre S01, S03 e S06 | Constantes únicas em `packages/shared` (T8). |
 
 Contratos aditivos às definições da arquitetura (campos novos em `LotCard`/`LotState`/`GET /me/bids`/`GET /wallet`, `lot:leave`, `RATE_LIMITED`, `hammerAt`, `myReceiptToken` etc.) estão nas fatias que os criam; valem sobre a arquitetura.
 
@@ -208,7 +231,7 @@ Um avaliador abre o link público, entra com os usuários de teste, dá lances e
 
 Todas têm sugestão nas fatias e **não bloqueiam** o build; decidir antes ou durante a S0 indicada.
 
-- **Q1 (S03)** Manter a ordem do PRD (BELOW_MINIMUM antes de ALREADY_WINNING) ou voltar à da arquitetura? Hoje vale o PRD.
+- **Q1 (S03)** Manter a ordem do PRD (BELOW_MINIMUM antes de ALREADY_WINNING) ou voltar à da arquitetura? Hoje vale o PRD, com a mensagem própria `OWN_LEAD` (T10) para o líder que reenvia.
 - **Q2 (S02)** Duração mínima do lote de 5 min e `início >= agora − 60 s` vêm da arquitetura, não do PRD. Manter?
 - **Q3 (S06)** Lote cancelado **sem** lances também grava a linha CANCEL na cadeia (sugestão: sim)?
 - **Q4 (S01/S09)** Usuários de teste: `leiloeiro@lanceauto.test`, `ana@lanceauto.test`, `bruno@lanceauto.test`, senha `lance1234`, saldos R$ 500.000 (Ana) e R$ 300.000 (Bruno). Confirmar.
@@ -217,4 +240,7 @@ Todas têm sugestão nas fatias e **não bloqueiam** o build; decidir antes ou d
 - **Q7 (S02)** Fotos do seed: começar com ilustração padrão e trocar por imagens livres com crédito depois?
 - **Q8 (S09)** Mostrar "Acordando o pátio…" quando o Render demora a acordar? `seed:demo --relampago` com lote de 10 min para demonstrar prorrogação e fechamento?
 - **Q9 (S09)** O repositório precisa ficar público antes da entrega (hoje é privado).
-- **Q10 (S07)** Ordenação de Meus arremates (sugestão: superados, depois ganhando por fim mais próximo, depois os demais por fim decrescente) ou simples cronológica?
+- **Q10 (S07)** Ordenação de Meus arremates (sugestão: superados, depois ganhando por fim mais próximo, depois os demais por fim decrescente) ou simples cronológica? O desempate dos superados está no R-7.9 da S07.
+- **Q11 (S08)** O cartão Encerrado da Vitrine leva direto à auditoria (como no protótipo) ou à Sala, como diz o PRD? A S08 segue o protótipo.
+
+Numeração: Q1 a Q11 são deste arquivo; as fatias têm listas próprias (por exemplo, "pergunta 1 da §16 da S03"). Quando uma fatia citar um Q, leia o número deste arquivo.

@@ -38,7 +38,7 @@ Já existe: User/Wallet/LedgerEntry com `LedgerKind` completo e CHECKs (S01); It
 Invariantes que valem aqui:
 - INV-1 Servidor é fonte de verdade de tempo, saldo e valores.
 - INV-2 Dinheiro em centavos inteiros (`BigInt` no banco, `number` nas bordas, assert ≤ MAX_SAFE_INTEGER nos mappers). UI mostra só reais inteiros `R$ 31.000,00` em IBM Plex Mono.
-- INV-3 Datas ISO UTC com `Z` (ms). `new Date()` proibido fora de `infra/clock.ts`. UI mostra America/Sao_Paulo.
+- INV-3 Datas ISO UTC com `Z` (ms). `new Date()`/`Date.now()` proibidos em `apps/api/src` fora de `infra/clock.ts` (no web, `Date.now()` só dentro de `serverClock` e nos formatadores de data). UI mostra America/Sao_Paulo.
 - INV-4 Service devolve `DomainEvent[]`; a rota (ou a rotina) entrega ao `Publisher` DEPOIS do commit.
 - INV-5 Lock: (1) lote `FOR UPDATE`; (2) carteiras `WHERE "userId" IN (…) ORDER BY "userId" FOR UPDATE`. Nunca carteira antes do lote.
 - INV-6 `Wallet` é cache; cada mudança insere `LedgerEntry` na mesma tx; CHECKs `committed >= 0`, `total >= committed`. SALE_DEBIT: total−, committed−; SALE_CREDIT: total+.
@@ -63,9 +63,9 @@ Invariantes que valem aqui:
 | R-5.7 | Só o leiloeiro dono do lote recebe o crédito. O saldo do leiloeiro é `Wallet.total`; ele não tem tela de carteira (a única superfície é "Total recebido" no Painel). | PRD R11 · EXPERIENCE (fechado) |
 | R-5.8 | "Total recebido" do leiloeiro = soma dos `SALE_CREDIT` dele (centavos). Lote cancelado ou sem lances não entra. | Assunção registrada |
 | R-5.9 | `GET` de qualquer rota nunca liquida. Entre `endsAt` e `settledAt` o status é `CLOSING` e a UI mostra "apurando". | AD-6 · AD-7 |
-| R-5.10 | Falha ao liquidar um lote (ex.: violação de CHECK) desfaz só aquela transação, é logada em nível erro e a rotina segue para o próximo lote; o lote é tentado de novo no próximo ciclo. | Decisão de implementação (sem requisito) |
+| R-5.10 | Falha ao liquidar um lote (ex.: violação de CHECK) desfaz só aquela transação, é logada em nível erro e a rotina segue para o próximo lote; o lote é tentado de novo no próximo ciclo. Falha na própria listagem de candidatos também é logada e o ciclo termina sem rejeitar (§6). | Decisão de implementação (sem requisito) |
 | R-5.11 | Defesa em profundidade na transação de lance (S03): se `settledAt IS NOT NULL`, o lance é recusado com `LOT_ENDED`, mesmo que o relógio acuse `now < endsAt`. | PRD R1/R13 |
-| R-5.12 | Comprovante é público por token: quem tem o link vê; quem não tem não adivinha. Resposta nunca contém dados pessoais. | PRD P4 · AD-9 |
+| R-5.12 | Comprovante é público por token: quem tem o link vê; quem não tem não adivinha. Resposta nunca contém dados pessoais. O token só sai para o vencedor logado (`myReceiptToken`) e fica na URL do comprovante: **nenhuma outra resposta ou evento público o carrega** (nem `lot:closed`, nem `GET /lots` e, na S08, nem a auditoria, que usa só `receiptCode`). | PRD P4 · AD-9 |
 
 ## 5. Modelo de dados
 
@@ -125,7 +125,9 @@ Nunca incluir: `winnerId`, `userId`, nome, e-mail, `rawData` da FIPE, token (o c
 
 `GET /my/lots` — cada linha ganha `resultado: null | { outcome: "SOLD"|"UNSOLD", finalBidCents: number|null, winnerPseudonym: string|null, referencePriceCents: number, settledAt: string }` (se a S02 já definiu campo equivalente, manter o nome existente e completar). `totalReceivedCents` = soma de `SALE_CREDIT` do usuário.
 
-Rotina de fechamento (sem rota HTTP): `infra/settlement-job.ts` expõe `start()`, `stop()`, `sweep(): Promise<SettleResult[]>` e o service `settleLot(lotId): Promise<'SOLD'|'UNSOLD'|'SKIPPED'>` (este último exportado para testes e seed).
+Rotina de fechamento (sem rota HTTP): `infra/settlement-job.ts` expõe `start()`, `stop()` e `sweep(publisher): Promise<SettleOutcome[]>`; o service `settleLot(lotId): Promise<SettleOutcome>` é exportado para testes e seed. Tipo (em `apps/api`, não em `shared`): `SettleOutcome = { lotId: string, result: 'SOLD'|'UNSOLD'|'SKIPPED', events: DomainEvent[] }`. O service NÃO publica nada (INV-4): quem chama entrega `events` ao `Publisher` depois do commit daquele lote. `sweep(publisher)` faz isso lote a lote, logo após cada commit; o seed e os testes chamam `settleLot` e decidem se publicam.
+- `sweep` **nunca rejeita**: toda a função (inclusive a listagem de candidatos, que pode falhar com cold start do Neon ou conexão caída) fica em `try/catch` com log em nível erro, e o handler do `setInterval` ainda usa `.catch(log)`. Uma promise rejeitada não tratada derrubaria o processo da API (Node ≥ 15), que é justamente quem fecha os lotes.
+- `stop()` faz `clearInterval`, chama `unref()` no timer (para o Vitest/CI encerrarem) e devolve uma promise que espera o `sweep` em curso terminar (usada no shutdown gracioso).
 
 ## 7. Contratos Socket.IO
 
@@ -134,7 +136,7 @@ Emitidos por esta fatia, depois do commit de cada lote (payloads exatos da S04):
 | Evento | Sala | Payload |
 | --- | --- | --- |
 | `lot:closed` | `lot:{id}` | `{ lotId, version: entryCount, outcome: "SOLD"\|"UNSOLD", finalBidCents?, winnerPseudonym?, finalHash?, serverTime }` (campos opcionais só em `SOLD`) |
-| `showcase:lot` | `showcase` | `LotCard` com `status = SOLD\|UNSOLD` + `serverTime` |
+| `showcase:lot` | `showcase` | `LotCard` com `status = SOLD\|UNSOLD` + `version` (= `entryCount`, que o fechamento não incrementa; o cliente aplica com `>=` neste evento terminal) + `serverTime` |
 | `wallet:updated` | `user:{vencedor}` e `user:{leiloeiro}` | `{ totalCents, committedCents, availableCents, serverTime }` (só em `SOLD`) |
 
 O evento público NÃO leva o token do comprovante. O vencedor o obtém no `GET /lots/:id` que o cliente faz ao receber `lot:closed` (campo `myReceiptToken`).
@@ -176,7 +178,7 @@ Detalhes:
 
 ### 9.2 Comprovante (`/c/[token]`)
 
-Público, renderizado no servidor (Next, sem token de usuário), `<meta name="robots" content="noindex">`. Cabeçalho mínimo mesmo para quem está logado: `Logo` + legenda mono "PÁGINA PÚBLICA · NÃO PRECISA DE LOGIN". Contêiner máximo 1200px, gutter `clamp(16px,4vw,56px)`.
+Público, renderizado no servidor (Next, sem token de usuário), `<meta name="robots" content="noindex">`. O `fetch` do SSR à API tem **timeout de 8 s** (a API no Render pode estar dormindo e a função serverless da Vercel não deve pendurar nem dar 500): se estourar ou falhar por rede, a página renderiza o esqueleto e um componente de cliente refaz o `fetch` mostrando o erro de rede com "Tentar novamente". Só se responde 404 quando a API devolve 404. Cabeçalho mínimo mesmo para quem está logado: `Logo` + legenda mono "PÁGINA PÚBLICA · NÃO PRECISA DE LOGIN". Contêiner máximo 1200px, gutter `clamp(16px,4vw,56px)`.
 
 Estrutura (h1 em `display-titulo`, caixa-alta: "Comprovante de arremate"):
 1. **Recibo** em cinco faixas sobrepostas (cabeçalho, picote, corpo, picote, rodapé), girado −1° com `drop-shadow(8px 8px 0 sombra)`.
@@ -190,8 +192,8 @@ Estrutura (h1 em `display-titulo`, caixa-alta: "Comprovante de arremate"):
 | Estado | Tratamento |
 | --- | --- |
 | Padrão | como acima, claro e noite |
-| Token inexistente / malformado | resposta HTTP 404 (`notFound()`); `FeedbackState` com título "Comprovante não encontrado", texto "Esse papel não existe, ou já foi para a gaveta.", botão secundário "Voltar à vitrine". Não ecoa o token. |
-| Erro de rede | `FeedbackState` erro: "Não deu para carregar o comprovante." + "Tentar novamente" |
+| Token inexistente / malformado | resposta HTTP 404 (`notFound()`, só quando a API devolveu 404); `FeedbackState` com título "Comprovante não encontrado", texto "Esse papel não existe, ou já foi para a gaveta.", botão secundário "Voltar à vitrine". Não ecoa o token. |
+| Erro de rede / timeout do SSR (8 s) | esqueleto + `FeedbackState` erro no cliente: "Não deu para carregar o comprovante." + "Tentar novamente" (refaz o `fetch` no navegador; nunca vira 404) |
 | Copiar link: sucesso | botão vira "Link copiado" por 2,2 s; anúncio em região viva `aria-live="polite"` |
 | Copiar link: falha da área de transferência | o botão mostra "Não deu para copiar. Selecione o link e copie à mão."; aparece um campo somente leitura com o URL já selecionado (`select()`) |
 
@@ -201,8 +203,8 @@ Acessibilidade: `main` com `h1`; `dl`; o código de barras é `aria-hidden`; rot
 
 ### 9.3 Painel (`/painel`)
 
-- Resumo: "TOTAL RECEBIDO" (`totalReceivedCents`, IBM Plex Mono, nota na cor fixa `rotuloNotaPainel` #B3AA99 sobre `painel`) e "ARREMATES" (nº de lotes `SOLD`). Placares AO VIVO / AGENDADOS / ENCERRADOS (LED `led`; AO VIVO em `ledAlerta` quando >0): "ENCERRADOS" conta `SOLD` + `UNSOLD` + `CLOSING`.
-- Cartões "Encerrados" (variante encerrado do `LotCard` da S02): `Stamp` "Arrematado" ou "Sem lances" + resultado: `SOLD` → "{Licitante XXXX} levou" (pseudônimo daquele lote) e "R$ {valor},00"; `UNSOLD` → "Fechado sem lances". Comparação com a FIPE na linha mono: `FIPE R$ {ref},00 · {+8,2%|−3,0%}` (variação = (final − ref) / ref, uma casa, vírgula decimal; sem referência ou `UNSOLD`, omitir). `CLOSING` → rótulo "Apurando o resultado…" no lugar do carimbo.
+- Resumo: "TOTAL RECEBIDO" (`totalReceivedCents`, IBM Plex Mono, nota na cor fixa `rotuloNotaPainel` #B3AA99 sobre `painel`) e "ARREMATES" (nº de lotes `SOLD`). Placares AO VIVO / AGENDADOS / ENCERRADOS (LED `led`; AO VIVO em `ledAlerta` quando >0): "AO VIVO" conta `LIVE` + `CLOSING` (apurando ainda é ao vivo, igual à Vitrine) e "ENCERRADOS" conta só `SOLD` + `UNSOLD`.
+- Cartões "Encerrados" (variante encerrado do `LotCard` da S02): `Stamp` "Arrematado" ou "Sem lances" + resultado: `SOLD` → "{Licitante XXXX} levou" (pseudônimo daquele lote) e "R$ {valor},00"; `UNSOLD` → "Fechado sem lances". Comparação com a FIPE (**se sobrar tempo**; cortável sem ferir o PRD) na linha mono: `FIPE R$ {ref},00 · {+8,2%|−3,0%}` (variação = (final − ref) / ref, uma casa, vírgula decimal; sem referência ou `UNSOLD`, omitir). `CLOSING` não é Encerrado: o cartão fica na lista de ao vivo com o rótulo "Apurando o resultado…" no lugar do carimbo, como na Vitrine, e migra para Encerrados quando chegar `showcase:lot` `SOLD/UNSOLD` (o Painel refaz `GET /my/lots`).
 - Atualiza por `showcase:lot` (S04) e refaz `GET /my/lots` quando um lote próprio passa a `SOLD/UNSOLD`.
 - "Cancelar" e seção "Cancelados" são da S06.
 
@@ -223,7 +225,7 @@ Acessibilidade: `main` com `h1`; `dl`; o código de barras é `aria-hidden`; rot
 ### Recibo (`Recibo`)
 Fundo `papel`; borda `2px dashed tracejado`; padding `14px 16px`; IBM Plex Mono 17px, lh 1.7; linhas rótulo/valor em `dl`. No Comprovante, montagem em 5 faixas sobrepostas com `Perforation` (picote 24px de altura, linha `2px dashed tracejado` com `left/right:20px; top:11px`, dois semicírculos 24×24 nas laterais com fundo `fundo`), rotação −1°, `filter: drop-shadow(8px 8px 0 var(--sombra))`. Rótulos em IBM Plex Mono 12px caixa-alta, tracking .12em. No tema noite: `papel`/`tracejado`/`sombra` noite.
 
-### CodigoDeBarras (decorativo)
+### CodigoDeBarras (decorativo; **se sobrar tempo**, pode sair sem ferir o PRD)
 SVG `aria-hidden`; barras de larguras 1–4px derivadas deterministicamente dos bytes do `finalHash` (mesma entrada, mesmo desenho); cor `tinta`; altura 48px; largura 100% até 360px. Não carrega informação.
 
 ### ResultadoDoLote (Sala + Painel)
@@ -256,9 +258,9 @@ Convenção de dados de teste: `Ana` (A) deposita R$ 50.000,00; `Bruno` (B); lei
 - **AC-5.1 [auto] (AC8, R11)** Dado Ana líder com R$ 32.000,00 (total 50.000, comprometido 32.000) e `endsAt` ≤ agora, quando a rotina roda, então total de Ana = R$ 18.000,00, comprometido = R$ 0,00, disponível = R$ 18.000,00; total do leiloeiro aumentou R$ 32.000,00; existe exatamente 1 `Receipt` do lote com `amountCents = 3.200.000`; `settledAt` preenchido.
 - **AC-5.2 [auto] (exemplo do PRD)** Dado Ana depositou R$ 50.000, liderou A com R$ 30.000, Bruno cobriu com R$ 31.000 e Ana voltou com R$ 32.000, quando o lote A fecha, então Ana termina com total/comprometido/disponível = R$ 18.000 / R$ 0 / R$ 18.000 e Bruno com total e disponível inalterados (R$ 0 comprometido).
 - **AC-5.3 [auto] (AC8)** Dado o lote A fechado, quando a rotina roda de novo 3 vezes, então continua 1 `Receipt`, 1 `SALE_DEBIT` e 1 `SALE_CREDIT` do lote, saldos idênticos e nenhum `lot:closed` repetido.
-- **AC-5.4 [auto] (R13)** Dado um lote vencido e não liquidado, quando `Promise.all` dispara 10 chamadas `settleLot(lotId)` e 3 `sweep()`, então: 1 `Receipt`, 1 `SALE_DEBIT`, 1 `SALE_CREDIT`, `settledAt` uma única vez, resultado de uma chamada `SOLD` e das demais `SKIPPED`, sem deadlock nem erro de unicidade vazando.
+- **AC-5.4 [auto] (R13)** Dado um lote vencido e não liquidado, quando `Promise.all` dispara 10 chamadas `settleLot(lotId)` e 3 `sweep()`, então: 1 `Receipt`, 1 `SALE_DEBIT`, 1 `SALE_CREDIT`, `settledAt` uma única vez, no máximo uma chamada com `result: 'SOLD'` (as demais `SKIPPED`; com `SKIP LOCKED` pode ocorrer de nenhuma ver o lote destravado no mesmo instante, então o teste termina com um `sweep()` sequencial que garante a liquidação e assevera que os totais acima valem), sem deadlock nem erro de unicidade vazando. Não asserir quantas chamadas vieram `SKIPPED`.
 - **AC-5.5 [auto] (AC9, R12)** Dado lote vencido sem lances, quando a rotina roda, então `settledAt` preenchido, nenhum `Receipt`, nenhum `LedgerEntry` com esse `lotId`, `lotStatus` = `UNSOLD`, `lot:closed` com `outcome: "UNSOLD"` e sem `finalBidCents`.
-- **AC-5.6 [auto] (fronteira)** Dado `FakeClock` exatamente em `endsAt` e Ana líder, quando `Promise.all` dispara um lance de Bruno (R$ 33.000,00) e `sweep()`, então o lance volta `LOT_ENDED`, nada é comprometido para Bruno, o lote é liquidado para Ana pelo valor anterior, e o ledger soma certo.
+- **AC-5.6 [auto] (fronteira)** Dado `FakeClock` exatamente em `endsAt` e Ana líder, quando `Promise.all` dispara um lance de Bruno (R$ 33.000,00) e `sweep()`, então o lance volta `LOT_ENDED`, nada é comprometido para Bruno (nenhum `HOLD`), e o ledger soma certo. Como o `sweep` pode pular o lote se o lance ainda segurar o lock (`SKIP LOCKED`), a asserção de liquidação roda **depois de aguardar o lance** e de executar um segundo `sweep()` sequencial: o lote é liquidado para Ana pelo valor anterior. O determinístico do teste é a recusa `LOT_ENDED` e a ausência de `HOLD` para Bruno.
 - **AC-5.7 [auto]** Dado `FakeClock` em `endsAt − 1 ms` e Ana líder, quando Bruno dá lance (aceito) e depois roda `sweep()` com o relógio ainda em `endsAt − 1 ms`, então o lance prorrogou (`endsAt = now + 2 min`) e o `sweep` NÃO liquida (lote não elegível); avançando o relógio para o novo fim, o `sweep` liquida para Bruno.
 - **AC-5.8 [auto]** Dado lote com `settledAt` preenchido e relógio recuado (`now < endsAt`), quando alguém dá lance, então `LOT_ENDED` (R-5.11).
 - **AC-5.9 [auto]** Dado lote cancelado, vencido e não liquidado, quando a rotina roda, então nada acontece (sem `Receipt`, sem ledger).
@@ -296,6 +298,8 @@ Convenção de dados de teste: `Ana` (A) deposita R$ 50.000,00; `Bruno` (B); lei
 - **Servidor hibernado (Render free):** o timer para; ao acordar a varredura do boot liquida; `settledAt` posterior a `endsAt`; o martelo exibido continua sendo `endsAt`. Documentar no README.
 - **Duas instâncias da API:** `SKIP LOCKED` evita liquidar em dobro (Socket.IO multi-instância segue fora de escopo).
 - **Ciclo da rotina maior que 5 s:** `sweep` não reentra (flag em execução); o próximo tick é pulado.
+- **Erro na listagem de candidatos (Neon acordando, conexão caída):** logado; o `sweep` termina sem rejeitar e o próximo tick tenta de novo; a API não cai.
+- **Shutdown:** `stop()` limpa o timer, faz `unref()` e espera o `sweep` em curso; nenhum lote fica meio liquidado (cada um é uma transação).
 - **Visitante abre a Sala em `CLOSING`:** vê "Apurando o resultado…"; nenhum `GET` liquida.
 - **Comprovante de lote cuja imagem não existe:** ilustração padrão.
 - **Pseudônimo igual para dois licitantes no mesmo lote (colisão de 4 hex):** aceita; `iWon` vem do servidor (`myReceiptToken`), nunca da comparação de pseudônimos.
@@ -329,7 +333,7 @@ Web (lógica pura): variação sobre a FIPE (arredondamento, sinal, vírgula), `
 | S01 Carteira / extrato | Rótulo e linha de apoio de `SALE_DEBIT`. |
 | S03 transação de lance | Recusar com `LOT_ENDED` se `settledAt != null`; `leadingLots` filtra `settledAt IS NULL AND cancelledAt IS NULL`. |
 | S03 Sala | Esconde formulário em estados de encerramento (usa `ResultadoDoLote`). |
-| S04 | Passa a receber `lot:closed`; Sala refaz `GET` ao recebê-lo e a cada 3 s em `CLOSING`. |
+| S04 | Passa a receber `lot:closed`; Sala refaz `GET` ao recebê-lo e a cada 3 s em `CLOSING`. O reducer único é `applyLotEvent` (S04); `showcase:lot` carrega `version`. |
 | Servidor | Composição liga `settlement-job.start()` após `listen` e roda `sweep()` no boot; desliga no shutdown. |
 | S07 | `GET /me/bids` usa `Receipt.token` para `receiptToken` e `LotState.result` para WON/LOST. |
 | S08 | Acrescenta "Verificar na auditoria"/"Auditar lote" no Comprovante, "Auditar este lote" na Sala; `verifyChain` compara `Receipt.finalHash` com `lastHash`; `lotCardHref` de encerrado passa para a Auditoria. |

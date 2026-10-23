@@ -139,3 +139,15 @@ Gerada dos frontmatters das fatias (`cobre` = fatia que TERMINA o requisito; `ta
 | UX-THEME | Dois temas | S00 | S02, S03, S08, S09 |
 | UX-VOICE | Voz do pátio | S09 | S03 |
 | UX-RECON | Carregando/erro/conexão | S09 | S00, S01, S03, S04, S06, S07, S08 |
+
+## Notas de propriedade (revisão)
+
+Conferência por script dos frontmatters: 131 IDs, nenhum sem dono, nenhuma divergência com a tabela acima. Nenhuma linha mudou de dono na revisão. Quatro donos são **nominais** (quem verifica o resultado final, não quem escreve o código):
+
+| ID | Dono nominal | Quem de fato escreve | O que o dono faz |
+| --- | --- | --- | --- |
+| O4, TST | S09 | S01 a S08 (cada fatia escreve os seus testes) | Verifica que tudo roda no CI e registra a cobertura no `progresso.md` |
+| T3 (Sala) | S06 | S02 a S05 | A Sala fica completa só com o estado Cancelado |
+| DEP | S00 | S00 | S09 confere o deploy final (parcial) |
+
+Requisitos de segurança e infraestrutura criados na revisão, sem ID no PRD: rate limit da auditoria (S08, R-8.17, AC-8.40), token do comprovante fora da auditoria pública (S08, AC-8.36), consistência fora da cadeia (S08, R-8.16, AC-8.37 a AC-8.39), seed final reescrito pela S09 (R-9.12).
