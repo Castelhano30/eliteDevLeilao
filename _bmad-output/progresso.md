@@ -62,9 +62,13 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 
 21. **Conferência manual (relato do Felipe, 23/10/2026).** Felipe rodou as partes manuais: AC-0.8 na URL pública, log do `migrate deploy` no Render (verificação c) e checklist AC-0.9 a 0.13 no `/kit`. S00 fechada; próxima fatia: S01.
 
+22. **Migração do deploy para o Railway (23/10/2026).** Render + Vercel + Neon saíram; API, web e Postgres ficaram no mesmo projeto do Railway. Motivo: o plano gratuito do Render hiberna e leva cerca de 50 s para acordar, o que atrapalha o Socket.IO e quem abre o link frio. Render, Vercel e Neon foram apagados. Verificado no ar: web https://lanceautoweb-production.up.railway.app e API https://lanceautoapi-production.up.railway.app (`/health` com `ok:true, db:true`; CORS e socket conferidos pelo navegador). Configuração (sem valores): três serviços no mesmo ambiente; cada um lê `apps/api/railway.json` e `apps/web/railway.json` pelo "Config file path", com Build/Start Command do painel vazios; porta 8080 nos dois domínios; o start da API roda `prisma migrate deploy` antes do servidor; `DATABASE_URL` e `DIRECT_URL` iguais, sem pooler, pela rede privada; variáveis só no painel.
+23. **Imprevistos da migração.** (a) O Railpack ignorou o Custom Build Command do painel e rodou o build padrão sem compilar o shared; resolvido com um `railway.json` por serviço. (b) Referências de variável (`${{Postgres.DATABASE_URL}}`) resolveram vazias; funcionou com o valor literal e, depois, `DATABASE_URL = ${{DIRECT_URL}}` corrigiu a conexão de runtime. (c) CORS falhou porque o `WEB_ORIGIN` estava com barra no final. (d) Segredos do Neon e do Render apareceram em print; todos foram rotacionados.
+24. **Documentação da migração.** README (seção Deploy) e comentários do `.env.example` reescritos para o Railway, sem valores. S00 e S09 ainda citam Render/Vercel/Neon: anotado em "Perguntas abertas" de cada uma, sem reescrever as fatias. O `apps/web/AGENTS.md` (gerado pelo `next dev`, bloco de regras do Next) ficou fora do git, via `.gitignore`, como a S00 já havia sugerido.
+
 ### Onde parei
 
-S00 concluída (itens 18 a 21). Próximo passo: `bmad-build` da S01 (Auth, carteira e primeira migração), em contexto novo.
+S00 concluída e deploy migrado para o Railway (itens 22 a 24). Em andamento: correção do WEB_ORIGIN na API e S01 (Contas, acesso e carteira).
 
 ## Registro de uso de IA
 
