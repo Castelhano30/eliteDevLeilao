@@ -1,0 +1,1 @@
+-- Migração inicial vazia: a S00 não cria tabelas. A primeira migração real é da S01.
