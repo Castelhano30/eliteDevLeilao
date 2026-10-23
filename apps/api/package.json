@@ -10,11 +10,11 @@
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "prisma": "dotenv -e ../../.env -- prisma",
+    "prisma": "dotenv run -f ../../.env -- prisma",
     "prisma:generate": "prisma generate --schema prisma/schema.prisma",
-    "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy --schema prisma/schema.prisma",
-    "seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
-    "seed:demo": "dotenv -e ../../.env -- tsx prisma/seed.ts --demo"
+    "migrate:deploy": "dotenv run -f ../../.env -- prisma migrate deploy --schema prisma/schema.prisma",
+    "seed": "dotenv run -f ../../.env -- tsx prisma/seed.ts",
+    "seed:demo": "dotenv run -f ../../.env -- tsx prisma/seed.ts --demo"
   },
   "dependencies": {
     "@lanceauto/shared": "0.0.0",
