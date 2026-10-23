@@ -1,0 +1,51 @@
+﻿# Sobe banco, API e web: cp .env.example .env && docker compose up --build
+# Web em http://localhost:3000, API em http://localhost:${PORT:-4000}, banco em localhost:5433.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: lanceauto
+      POSTGRES_PASSWORD: lanceauto
+      POSTGRES_DB: lanceauto
+    ports:
+      - "5433:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lanceauto -d lanceauto"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-4000}
+      # Dentro do Compose o banco é o serviço "db", não o localhost.
+      DATABASE_URL: postgresql://lanceauto:lanceauto@db:5432/lanceauto
+      DIRECT_URL: postgresql://lanceauto:lanceauto@db:5432/lanceauto
+    ports:
+      - "${PORT:-4000}:${PORT:-4000}"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Quem chama a API é o navegador, então o endereço é o do host e não o do serviço.
+        NEXT_PUBLIC_API_URL: http://localhost:${PORT:-4000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  dbdata:
