@@ -1,0 +1,169 @@
+@import "tailwindcss";
+@config "../../tailwind.config.mts";
+
+/* ---------- Tokens: tema claro "De dia · papel" (padrão) ---------- */
+:root,
+[data-theme="claro"] {
+  --c-fundo: #e8dfcb;
+  --c-papel: #f5eedf;
+  --c-suave: #ddd3bc;
+  --c-pontos: #c9bea5;
+  --c-tinta: #1e1c19;
+  --c-tinta2: #5b5449;
+  --c-linha: #1e1c19;
+  --c-sombra: #1e1c19;
+  --c-tracejado: #8a8273;
+  --c-ocre: #e2a514;
+  --c-sobre-ocre: #1e1c19;
+  --c-ferrugem: #a43c1e;
+  --c-verde: #2e6a3e;
+  --c-sobre-cor: #f5eedf;
+  --c-painel: #141311;
+  --c-led: #f2b92b;
+  --c-led-alerta: #ff6a3d;
+  --c-falha: rgba(164, 60, 30, 0.12);
+}
+
+/* ---------- Tokens: tema noite "À noite · carvão" ---------- */
+[data-theme="noite"] {
+  --c-fundo: #161513;
+  --c-papel: #262420;
+  --c-suave: #2f2c27;
+  --c-pontos: #3f3b34;
+  --c-tinta: #ece4d2;
+  --c-tinta2: #b3aa99;
+  --c-linha: #cfc5b0;
+  --c-sombra: #3a362f;
+  --c-tracejado: #6e675c;
+  --c-ocre: #e8ae22;
+  --c-sobre-ocre: #161513;
+  --c-ferrugem: #e36a43;
+  --c-verde: #74b585;
+  --c-sobre-cor: #161513;
+  --c-painel: #0b0b0a;
+  --c-led: #f2b92b;
+  --c-led-alerta: #ff6a3d;
+  --c-falha: rgba(227, 106, 67, 0.16);
+}
+
+/* Sistema em modo escuro, a menos que o usuário tenha escolhido "claro". */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="claro"]) {
+    --c-fundo: #161513;
+    --c-papel: #262420;
+    --c-suave: #2f2c27;
+    --c-pontos: #3f3b34;
+    --c-tinta: #ece4d2;
+    --c-tinta2: #b3aa99;
+    --c-linha: #cfc5b0;
+    --c-sombra: #3a362f;
+    --c-tracejado: #6e675c;
+    --c-ocre: #e8ae22;
+    --c-sobre-ocre: #161513;
+    --c-ferrugem: #e36a43;
+    --c-verde: #74b585;
+    --c-sobre-cor: #161513;
+    --c-painel: #0b0b0a;
+    --c-led: #f2b92b;
+    --c-led-alerta: #ff6a3d;
+    --c-falha: rgba(227, 106, 67, 0.16);
+  }
+}
+
+/* Literais fixos: iguais nos dois temas. */
+:root {
+  --f-faixa-placa: #e2a514;
+  --f-brasil-texto: #ffffff;
+  --f-digito-placa: #f5eedf;
+  --f-linha-central-placa: #000000;
+  --f-rotulo-relogio: #8a8273;
+  --f-rotulo-nota-painel: #b3aa99;
+
+  --gutter-lateral: clamp(16px, 4vw, 56px);
+}
+
+/* ---------- Base ---------- */
+html {
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="claro"]) {
+    color-scheme: dark;
+  }
+}
+[data-theme="noite"] {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--c-fundo);
+  color: var(--c-tinta);
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 17px;
+  line-height: 1.45;
+  min-height: 100vh;
+}
+
+a {
+  color: var(--c-tinta);
+}
+a:hover {
+  color: var(--c-ferrugem);
+}
+
+/* Foco global: nunca remover. */
+:focus-visible,
+label:has(input:focus-visible) {
+  outline: 3px solid var(--c-tinta);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px var(--c-papel);
+}
+
+/* ---------- Tipografia (.t-<nome>) ---------- */
+.t-display { font-family: var(--font-display), Impact, sans-serif; font-weight: 900; line-height: 1; text-transform: uppercase; }
+.t-mono { font-family: var(--font-mono), monospace; font-size: 14px; font-weight: 400; line-height: 1.3; }
+.t-logo { font-family: var(--font-display), Impact, sans-serif; font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: 0.1em; }
+.t-logo-tela { font-family: var(--font-display), Impact, sans-serif; font-size: 30px; font-weight: 800; line-height: 1; letter-spacing: 0.1em; }
+.t-display-hero { font-family: var(--font-display), Impact, sans-serif; font-size: clamp(68px, 11vw, 184px); font-weight: 900; line-height: 0.8; text-transform: uppercase; }
+.t-display-titulo { font-family: var(--font-display), Impact, sans-serif; font-size: clamp(60px, 9vw, 132px); font-weight: 900; line-height: 0.84; text-transform: uppercase; }
+.t-display-secao { font-family: var(--font-display), Impact, sans-serif; font-size: clamp(46px, 6vw, 76px); font-weight: 900; line-height: 1; text-transform: uppercase; }
+.t-cartaz-cartao { font-family: var(--font-display), Impact, sans-serif; font-size: 32px; font-weight: 800; line-height: 1; text-transform: uppercase; }
+.t-cartaz-subtitulo { font-family: var(--font-display), Impact, sans-serif; font-size: 26px; font-weight: 800; line-height: 1; text-transform: uppercase; }
+.t-botao-primario { font-family: var(--font-display), Impact, sans-serif; font-size: 22px; font-weight: 900; line-height: 1; letter-spacing: 0.04em; text-transform: uppercase; }
+.t-botao { font-family: var(--font-display), Impact, sans-serif; font-size: 20px; font-weight: 800; line-height: 1; letter-spacing: 0.04em; text-transform: uppercase; }
+.t-carimbo { font-family: var(--font-display), Impact, sans-serif; font-size: 26px; font-weight: 900; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase; }
+.t-placar { font-family: var(--font-display), Impact, sans-serif; font-size: 30px; font-weight: 900; line-height: 1; text-transform: uppercase; }
+.t-numero-lote { font-family: var(--font-display), Impact, sans-serif; font-size: 52px; font-weight: 900; line-height: 0.9; }
+.t-body-lead { font-family: var(--font-serif), Georgia, serif; font-size: 21px; font-weight: 400; line-height: 1.4; }
+.t-body { font-family: var(--font-serif), Georgia, serif; font-size: 17px; font-weight: 400; line-height: 1.45; }
+.t-body-nota { font-family: var(--font-serif), Georgia, serif; font-size: 15px; font-weight: 400; line-height: 1.35; color: var(--c-tinta2); }
+.t-body-legenda { font-family: var(--font-serif), Georgia, serif; font-size: 13px; font-weight: 400; line-height: 1.3; }
+.t-mono-recibo { font-family: var(--font-mono), monospace; font-size: 17px; font-weight: 400; line-height: 1.7; }
+.t-mono-dado { font-family: var(--font-mono), monospace; font-size: 14px; font-weight: 600; line-height: 1.3; }
+.t-mono-rotulo { font-family: var(--font-mono), monospace; font-size: 12px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; }
+.t-mono-rotulo-pequeno { font-family: var(--font-mono), monospace; font-size: 10px; font-weight: 400; letter-spacing: 0.16em; text-transform: uppercase; }
+.t-cronometro { font-family: var(--font-mono), monospace; font-size: 40px; font-weight: 600; line-height: 1; }
+
+/* ---------- Movimento ---------- */
+@keyframes la-pulsa { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes la-vira { from { transform: rotateX(90deg); } to { transform: rotateX(0); } }
+@keyframes la-bate {
+  from { transform: scale(2.6) rotate(0deg); opacity: 0; }
+  to { transform: scale(1) rotate(-6deg); opacity: 1; }
+}
+@keyframes la-mais { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes la-entra { from { transform: translateY(-16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes la-marca { from { background-color: rgba(226, 165, 20, 0.55); } to { background-color: transparent; } }
+
+/* Nenhum estado depende de animação para ser percebido. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---------- Diálogo nativo ---------- */
+dialog::backdrop {
+  background: rgba(30, 28, 25, 0.65);
+}

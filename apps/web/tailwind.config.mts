@@ -1,0 +1,68 @@
+import type { Config } from "tailwindcss";
+
+/** As cores apontam para variáveis CSS: o tema (claro/noite) troca só as variáveis. */
+const config: Config = {
+  content: ["./src/**/*.{ts,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        fundo: "var(--c-fundo)",
+        papel: "var(--c-papel)",
+        suave: "var(--c-suave)",
+        pontos: "var(--c-pontos)",
+        tinta: "var(--c-tinta)",
+        tinta2: "var(--c-tinta2)",
+        linha: "var(--c-linha)",
+        sombra: "var(--c-sombra)",
+        tracejado: "var(--c-tracejado)",
+        ocre: "var(--c-ocre)",
+        sobreOcre: "var(--c-sobre-ocre)",
+        ferrugem: "var(--c-ferrugem)",
+        verde: "var(--c-verde)",
+        sobreCor: "var(--c-sobre-cor)",
+        painel: "var(--c-painel)",
+        led: "var(--c-led)",
+        ledAlerta: "var(--c-led-alerta)",
+        falha: "var(--c-falha)",
+        // Literais fixos: não acompanham o tema.
+        faixaPlaca: "var(--f-faixa-placa)",
+        brasilTexto: "var(--f-brasil-texto)",
+        digitoPlaca: "var(--f-digito-placa)",
+        linhaCentralPlaca: "var(--f-linha-central-placa)",
+        rotuloRelogio: "var(--f-rotulo-relogio)",
+        rotuloNotaPainel: "var(--f-rotulo-nota-painel)",
+      },
+      borderRadius: {
+        nenhum: "0",
+        placa: "3px",
+        "logo-interno": "6px",
+        "logo-tela": "7px",
+        logo: "10px",
+        circulo: "50%",
+      },
+      boxShadow: {
+        cartao: "6px 6px 0 var(--c-sombra)",
+        botao: "5px 5px 0 var(--c-sombra)",
+        "botao-ativo": "2px 2px 0 var(--c-sombra)",
+        chip: "4px 4px 0 var(--c-sombra)",
+        painel: "8px 8px 0 var(--c-sombra)",
+      },
+      fontFamily: {
+        display: ["var(--font-display)", "Impact", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        serif: ["var(--font-serif)", "Georgia", "serif"],
+      },
+      maxWidth: {
+        container: "1320px",
+        comprovante: "1200px",
+        manual: "1440px",
+      },
+      minHeight: {
+        alvo: "44px",
+        botao: "52px",
+      },
+    },
+  },
+};
+
+export default config;
