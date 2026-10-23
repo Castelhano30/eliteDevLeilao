@@ -295,6 +295,8 @@ Nenhum dado. Cria o esqueleto: `apps/api/prisma/seed.ts` (função `main` vazia 
 - C6 (tema): DESIGN pede select nativo "Tema" e sistema por padrão; arquitetura pede chave manual em localStorage → unificado em 10.1; dark mode continua "opcional" no PRD, mas entra aqui por custo baixo (O5).
 - DESIGN "cartão sempre ilustração, nunca foto" vs PRD (imagem real): vale PRD; tratado na S02 (CarPhoto).
 - Aberta (sugestão): versões exatas de Node/Next/Prisma e hosts (Vercel, Render, Neon) **não foram verificadas na web**; confirmar no dia 1 e deixar o lockfile mandar. Sugestão: Node LTS ativo, Next.js e Prisma no major atual, `bcryptjs`, `jsonwebtoken`, `pino`, `helmet`, `express-rate-limit`, Vitest, Tailwind, TanStack Query.
+- Aberta (sugestão adotada): a §8 não traz os textos "Banco: fora do ar" (API respondeu mas o banco falhou) e "Banco: não verificado" (API fora do ar, banco desconhecido) da página diagnóstica. Sugestão: manter esses dois textos, no mesmo padrão pt-BR sem exclamação, com ponto ferrugem e cinza respectivamente. Falta o dono da SPEC acrescentá-los à §8.
+- Aberta (sugestão adotada): `next dev` gera `apps/web/AGENTS.md` (regras de agente do Next). Sugestão: não versionar, para não misturar com o AGENTS.md da raiz.
 - **Verificações do dia 1** (tarefas, não decisões): (a) `next/font/google` com Newsreader `opsz` + `weight` (ver 10.1); (b) `prisma migrate deploy` com a migração `0_init` vazia na versão instalada; (c) o plano gratuito do Render executa o comando de start com `migrate deploy` e seed (ver S09); (d) CORS e transporte WebSocket entre Vercel e Render funcionando no deploy mínimo.
 
 ## 17. Definition of Done

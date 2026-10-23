@@ -49,6 +49,10 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 16. **Imprevistos locais.** As portas 5432, 3000 e 4000 estavam ocupadas por outros projetos da máquina: o banco do Compose ficou na **5433** e o web aceita `WEB_PORT`. Um `Set-Content` do PowerShell 5.1 gravou BOM e corrompeu acentos em três arquivos; corrigido e `.gitattributes` adicionado.
 17. **Em pausa: deploy mínimo** (Neon, Render, Vercel) depende de ações do Felipe nos painéis.
 
+18. **Deploy verificado (23/10/2026).** Web https://elite-dev-leilao.vercel.app/ (200), API https://elitedevleilao.onrender.com. `GET /health` → `200 {"ok":true,"db":true}` em 1,3 s (API já acordada). CORS: a resposta traz `access-control-allow-origin: https://elite-dev-leilao.vercel.app` (só a origem configurada em `WEB_ORIGIN`). (d) WebSocket: cliente Socket.IO em Node, com `Origin` da Vercel e só transporte `websocket`, conectou na API do Render; o bundle do web aponta para a URL da API. (c) O Render só responde `db:true` com a `DATABASE_URL` do Neon válida; os logs do start (`migrate deploy`) ficam no painel e eu não tenho acesso a eles: **(c) fica "indiretamente confirmado" até o Felipe olhar o log do deploy**. AC-0.8 (página mostrando "API: ok · Banco: ok · Socket: conectado" no navegador): meu Chrome headless só capturou "Consultando…" (a captura sai antes da resposta), então **falta o Felipe confirmar a olho** abrindo a URL. URLs registradas no README, sem string de conexão.
+19. **Primitivos e `/kit`.** Criados Field, RefusalMessage, DataTable, FilterTabs, Dialog (sobre `<dialog>` nativo), IdentityChip e, como sobrou tempo, Stamp, LotTag e Perforation. `/kit` mostra todos; conferido por captura nos dois temas. `next build` + `next start`: `/kit` responde 404 em produção (AC-0.14). 8 testes novos dos primitivos (renderização em servidor, sem DOM); o Vitest do web passou a incluir `.tsx` e usa `oxc.jsx` (o Vitest 5 não usa mais `esbuild`).
+20. **Fechamento da S00.** AGENTS.md com comandos e versões reais. Saída dos comandos na máquina (banco do Compose na 5433): `npm run lint` exit 0; `npm run typecheck` exit 0; `npm test` → shared 7/7, api 19/19, web 15/15; `npm run build` exit 0 (shared → api → web; `/kit` prerenderizado como 404 em produção; sem `transpilePackages`). Pendências para a DoD fechar: Felipe confirmar AC-0.8 a olho e o log do `migrate deploy` no Render; checklist [manual] de a11y (AC-0.9 a 0.13: tema sem flash, teclado, reduced-motion, 320px/zoom 200%) ainda não foi feito por pessoa; CI no GitHub a olhar após o push.
+
 ## Próximos passos
 
 - [x] `bmad-ux`: gerar `DESIGN.md` e `EXPERIENCE.md` a partir do design (aceitos como draft)
@@ -58,17 +62,9 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 
 ### Onde parei na S00 (retomar daqui)
 
-Feito e no GitHub (`main`, CI verde): monorepo, shared, API, web com tema e página diagnóstica, Prisma `0_init`, `.env.example`, Compose, lint, CI, README esqueleto.
+S00 feita no código e no ar (itens 18 a 20). Falta só confirmar com gente: (1) abrir https://elite-dev-leilao.vercel.app/ e ver "API: ok · Banco: ok · Socket: conectado" (AC-0.8); (2) olhar no painel do Render o log do start com `migrate deploy` (verificação c); (3) checklist [manual] AC-0.9 a 0.13 no `/kit` local; (4) CI verde no GitHub. Depois, seguir para a S01.
 
-Falta, nesta ordem:
-
-1. **Deploy mínimo** (depende do Felipe): Neon (copiar as strings pooled e direta direto para o painel do Render), Render (Web Service com build/start do README, variáveis incluindo `WEB_ORIGIN`), Vercel (Root Directory `apps/web`, `NEXT_PUBLIC_API_URL`), depois trocar `WEB_ORIGIN` no Render pela URL da Vercel. As instruções passo a passo estão na conversa e resumidas no README (seções "Deploy"). Ao confirmar, testar AC-0.8 nos links públicos e registrar as URLs no README.
-2. **Verificações pendentes do dia 1:** (c) o Render gratuito executa o start com `migrate deploy`; (d) CORS e WebSocket entre Vercel e Render.
-3. **Primitivos de UI restantes** (já existem: Button, SkipLink, Logo, ThemeSwitch, PageShell, FeedbackState): Field, RefusalMessage, DataTable, FilterTabs, Dialog, IdentityChip. "Se sobrar tempo": Stamp, LotTag, Perforation.
-4. **Página `/kit`** (só fora de produção, `notFound()` em produção) com os primitivos nos dois temas.
-5. **Fechamento:** preencher no AGENTS.md os comandos verificados e as versões (hoje ainda "a definir na S00"), rodar o checklist da Definition of Done da S00 e registrar a saída dos comandos.
-
-Lembretes: o banco do Compose usa a porta 5433 (a 5432 está ocupada por outro projeto); 3000/4000 também estão ocupadas na máquina, use `WEB_PORT`/`PORT` para testar. Perguntas abertas da S00: textos "Banco: fora do ar" e "Banco: não verificado" na página diagnóstica não constam na SPEC.
+Lembretes: banco do Compose na 5433; 3000/4000 ocupadas, use `WEB_PORT`/`PORT`. Perguntas abertas da S00 registradas na fatia (§16).
 
 ## Registro de uso de IA
 
