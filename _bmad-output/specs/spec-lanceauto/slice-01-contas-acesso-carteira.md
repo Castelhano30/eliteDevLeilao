@@ -357,7 +357,7 @@ Vitest, integração contra Postgres real (`DATABASE_URL_TEST`), com `fileParall
 - Aberta (sugestão): rótulo do extrato para HOLD ("Saldo travado · lance") não existe no design; proposto.
 - Aberta: o PRD não define se o leiloeiro vê o extrato dele (`GET /wallet` responde, mas nenhuma tela o mostra). Mantido sem tela (EXPERIENCE: "o Painel é a única superfície").
 
-- Aberta (sugestão adotada): o seed em produção roda no **start da API** no Railway (`migrate deploy` + `tsx prisma/seed.ts` + servidor). O seed recusa rodar com usuários existentes (código 0) e uma falha dele não derruba a API (`|| echo`). A S09 decide se isso muda (advisory lock, seed final 001–005).
+- Aberta (sugestão adotada): o seed em produção roda no **start da API** no Railway (`migrate deploy` + `tsx prisma/seed.ts` + servidor). O seed confere cada conta pelo e-mail e cria só as que faltam (código 0; rodar de novo não duplica) e uma falha dele não derruba a API (`|| echo`). Mudou de "recusa se já houver usuários" porque um cadastro feito antes do primeiro seed (smoke em produção) bloqueava as contas de teste para sempre. A S09 decide se isso muda (advisory lock, seed final 001–005).
 - Aberta (sugestão adotada): "Sair" navega para `/` **antes** de descartar a sessão. Na ordem inversa a guarda da rota privada via o visitante e redirecionava para `/entrar`, desfazendo o "vai a `/`" do AC-1.28.
 - Aberta (sugestão adotada): `apiClient` ganhou `apiPost`; o 401 com token enviado chama o descarte da sessão registrado pelo `AuthProvider`. Login e cadastro não enviam token e nunca disparam esse descarte.
 - Corrigido (fora da fatia): os scripts `prisma`, `migrate:deploy`, `seed` e `seed:demo` usavam a sintaxe antiga do `dotenv-cli`; a v11 pede `dotenv run -f ../../.env -- …`.
