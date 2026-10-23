@@ -300,12 +300,12 @@ Nenhum dado. Cria o esqueleto: `apps/api/prisma/seed.ts` (função `main` vazia 
 - **Verificações do dia 1** (tarefas, não decisões): (a) `next/font/google` com Newsreader `opsz` + `weight` (ver 10.1); (b) `prisma migrate deploy` com a migração `0_init` vazia na versão instalada; (c) o plano gratuito do Render executa o comando de start com `migrate deploy` e seed (ver S09); (d) CORS e transporte WebSocket entre Vercel e Render funcionando no deploy mínimo.
 
 ## 17. Definition of Done
-- [ ] Monorepo com workspaces; `npm run dev`, `build`, `lint`, `typecheck`, `test` na raiz.
-- [ ] `.env.example` completo: `DATABASE_URL`, `DIRECT_URL` (sempre), `JWT_SECRET`, `AUDIT_HMAC_KEY` (valor de dev ≥ 32 caracteres), `WEB_ORIGIN`, `FIPE_BASE_URL`, `FIPE_TOKEN?`, `WIKI_USER_AGENT`, `WIKIPEDIA_BASE_URL` (para poder derrubar a Wikipedia na verificação do AC13), `PORT`, `NEXT_PUBLIC_API_URL`, `AUTH_RATE_LIMIT_MAX` (padrão 30), `RATE_LIMIT_DISABLED` (+ `DATABASE_URL_TEST`).
-- [ ] `packages/shared` compila para `dist`; `npm run build` na raiz na ordem shared → api → web (R-0.9); comandos de build/start da API e Root Directory da Vercel documentados (R-0.10).
-- [ ] `docker-compose.yml` com db (healthcheck), api (`depends_on: service_healthy`; roda `prisma migrate deploy` no start) e web (`NEXT_PUBLIC_API_URL` como build-arg, R-0.11).
-- [ ] Migração inicial vazia `0_init` criada; `trust proxy` e `makeRateLimiter` conforme R-0.5.
-- [ ] CI verde no GitHub.
-- [ ] Deploy mínimo no ar (AC-0.8) com `JWT_SECRET` e `AUDIT_HMAC_KEY` definidos em produção; URLs registradas no README.
-- [ ] Tokens dos dois temas, fontes, tipografia, movimento e foco no código; `/kit` com os primitivos (Stamp, LotTag e Perforation são "se sobrar tempo", R-0.12; o deploy mínimo vem antes dos primitivos).
-- [ ] README esqueleto (visão geral, stack, como rodar, link do deploy) e `progresso.md` atualizado.
+- [x] Monorepo com workspaces; `npm run dev`, `build`, `lint`, `typecheck`, `test` na raiz.
+- [x] `.env.example` completo: `DATABASE_URL`, `DIRECT_URL` (sempre), `JWT_SECRET`, `AUDIT_HMAC_KEY` (valor de dev ≥ 32 caracteres), `WEB_ORIGIN`, `FIPE_BASE_URL`, `FIPE_TOKEN?`, `WIKI_USER_AGENT`, `WIKIPEDIA_BASE_URL` (para poder derrubar a Wikipedia na verificação do AC13), `PORT`, `NEXT_PUBLIC_API_URL`, `AUTH_RATE_LIMIT_MAX` (padrão 30), `RATE_LIMIT_DISABLED` (+ `DATABASE_URL_TEST`).
+- [x] `packages/shared` compila para `dist`; `npm run build` na raiz na ordem shared → api → web (R-0.9); comandos de build/start da API e Root Directory da Vercel documentados (R-0.10).
+- [x] `docker-compose.yml` com db (healthcheck), api (`depends_on: service_healthy`; roda `prisma migrate deploy` no start) e web (`NEXT_PUBLIC_API_URL` como build-arg, R-0.11).
+- [x] Migração inicial vazia `0_init` criada; `trust proxy` e `makeRateLimiter` conforme R-0.5.
+- [x] CI verde no GitHub.
+- [x] Deploy mínimo no ar (AC-0.8) com `JWT_SECRET` e `AUDIT_HMAC_KEY` definidos em produção; URLs registradas no README.
+- [x] Tokens dos dois temas, fontes, tipografia, movimento e foco no código; `/kit` com os primitivos (Stamp, LotTag e Perforation são "se sobrar tempo", R-0.12; o deploy mínimo vem antes dos primitivos).
+- [x] README esqueleto (visão geral, stack, como rodar, link do deploy) e `progresso.md` atualizado.

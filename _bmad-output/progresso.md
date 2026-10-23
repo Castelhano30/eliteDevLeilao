@@ -60,11 +60,11 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - [x] `bmad-spec`: SPEC + 10 fatias (substitui épicos e sprint planning)
 - [ ] `bmad-build`: implementar uma fatia por vez, em contexto novo, da S00 à S09 (deploy mínimo já na S00)
 
-### Onde parei na S00 (retomar daqui)
+21. **Conferência manual (relato do Felipe, 23/10/2026).** Felipe rodou as partes manuais: AC-0.8 na URL pública, log do `migrate deploy` no Render (verificação c) e checklist AC-0.9 a 0.13 no `/kit`. S00 fechada; próxima fatia: S01.
 
-S00 feita no código e no ar (itens 18 a 20). Falta só confirmar com gente: (1) abrir https://elite-dev-leilao.vercel.app/ e ver "API: ok · Banco: ok · Socket: conectado" (AC-0.8); (2) olhar no painel do Render o log do start com `migrate deploy` (verificação c); (3) checklist [manual] AC-0.9 a 0.13 no `/kit` local; (4) CI verde no GitHub. Depois, seguir para a S01.
+### Onde parei
 
-Lembretes: banco do Compose na 5433; 3000/4000 ocupadas, use `WEB_PORT`/`PORT`. Perguntas abertas da S00 registradas na fatia (§16).
+S00 concluída (itens 18 a 21). Próximo passo: `bmad-build` da S01 (Auth, carteira e primeira migração), em contexto novo.
 
 ## Registro de uso de IA
 
