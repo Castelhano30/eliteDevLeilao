@@ -17,7 +17,7 @@ export interface AppDeps {
 export function createApp({ env, db, logger }: AppDeps): Express {
   const app = express();
 
-  // Atrás do Render o IP real vem de X-Forwarded-For; sem isso o rate limit por IP vira global.
+  // Atrás do proxy do Railway o IP real vem de X-Forwarded-For; sem isso o rate limit por IP vira global.
   if (env.NODE_ENV === "production") app.set("trust proxy", 1);
 
   app.use(helmet());
