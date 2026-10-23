@@ -56,6 +56,20 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - [x] `bmad-spec`: SPEC + 10 fatias (substitui épicos e sprint planning)
 - [ ] `bmad-build`: implementar uma fatia por vez, em contexto novo, da S00 à S09 (deploy mínimo já na S00)
 
+### Onde parei na S00 (retomar daqui)
+
+Feito e no GitHub (`main`, CI verde): monorepo, shared, API, web com tema e página diagnóstica, Prisma `0_init`, `.env.example`, Compose, lint, CI, README esqueleto.
+
+Falta, nesta ordem:
+
+1. **Deploy mínimo** (depende do Felipe): Neon (copiar as strings pooled e direta direto para o painel do Render), Render (Web Service com build/start do README, variáveis incluindo `WEB_ORIGIN`), Vercel (Root Directory `apps/web`, `NEXT_PUBLIC_API_URL`), depois trocar `WEB_ORIGIN` no Render pela URL da Vercel. As instruções passo a passo estão na conversa e resumidas no README (seções "Deploy"). Ao confirmar, testar AC-0.8 nos links públicos e registrar as URLs no README.
+2. **Verificações pendentes do dia 1:** (c) o Render gratuito executa o start com `migrate deploy`; (d) CORS e WebSocket entre Vercel e Render.
+3. **Primitivos de UI restantes** (já existem: Button, SkipLink, Logo, ThemeSwitch, PageShell, FeedbackState): Field, RefusalMessage, DataTable, FilterTabs, Dialog, IdentityChip. "Se sobrar tempo": Stamp, LotTag, Perforation.
+4. **Página `/kit`** (só fora de produção, `notFound()` em produção) com os primitivos nos dois temas.
+5. **Fechamento:** preencher no AGENTS.md os comandos verificados e as versões (hoje ainda "a definir na S00"), rodar o checklist da Definition of Done da S00 e registrar a saída dos comandos.
+
+Lembretes: o banco do Compose usa a porta 5433 (a 5432 está ocupada por outro projeto); 3000/4000 também estão ocupadas na máquina, use `WEB_PORT`/`PORT` para testar. Perguntas abertas da S00: textos "Banco: fora do ar" e "Banco: não verificado" na página diagnóstica não constam na SPEC.
+
 ## Registro de uso de IA
 
 - PRD e pesquisa de APIs: Claude, com revisão e ajustes de Felipe
