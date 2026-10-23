@@ -370,6 +370,8 @@ Perguntas abertas (sugestão marcada; decisão é do usuário):
 6. **Valor-base de recomposição de saldo do `seed:demo`** (R$ 100.000 sugerido).
 7. **Cartão Encerrado da Vitrine → auditoria direta ou Sala?** A S08 (AC-8.34) manda o cartão Encerrado direto para a auditoria; o PRD descreve Vitrine → Sala. Ver a pergunta 5 da S08 §16. **Pergunta para o usuário**; o roteiro de demonstração desta fatia vale nos dois casos (a Sala encerrada tem o link "Auditar este lote").
 
+8. **Host do deploy (aviso).** O deploy migrou de Render + Vercel + Neon para o **Railway**. Esta fatia cita Render, Vercel e Neon (hibernação, release/pre-deploy command do Render, pooling do Neon, `WEB_ORIGIN` da Vercel) e, por isso, o item 2 da seção de limitações (hibernação), a pergunta 2 ("Acordando o pátio…") e a checklist de deploy precisam ser relidos contra o Railway: lá a API não hiberna e o seed pode entrar no start, ao lado do `migrate deploy`. Fatia não reescrita; decidir na S09.
+
 Nota de propriedade (rastreabilidade): `O4`/`TST` têm dono nominal nesta fatia, mas os testes são escritos nas S01 a S08; aqui só se **verifica** que todos rodam no CI e se registra a cobertura. O mesmo vale para `T3` (dono S06, Sala já completa na S05) e `DEP` (dono S00): a S09 só confere o resultado final.
 
 ## 17. Definition of Done
