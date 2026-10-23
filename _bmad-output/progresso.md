@@ -72,9 +72,11 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 
 28. **Diagnóstico do deploy sem os logs (23/10/2026).** Reproduzi localmente o build e o start do `apps/api/railway.json` com `NODE_ENV=production` e um banco vazio: build exit 0, `migrate deploy` aplicou `0_init` e `contas_e_carteira`, o seed criou as 3 contas e `POST /auth/login` com corpo vazio respondeu 400 VALIDATION. Ou seja, o código e os comandos funcionam fora do Railway. O web público já serve `/entrar` (200, build da S01 no ar); a API pública segue com o código antigo (404 em `/auth/login`). Causa da falha do deploy da API: desconhecida até alguém ler o log do Railway.
 
+29. **Causa do deploy quebrado achada (23/10/2026).** O log do Railway mostrou `Build Failed … exit code 2` no build da API. Reproduzi num clone limpo: o `buildCommand` rodava `prisma generate` depois do `tsc`, e a S01 passou a importar tipos do Prisma (`User`, `Wallet`, `Prisma.PrismaClientKnownRequestError`), que só existem depois do generate. Na S00 a API não importava nada do Prisma, por isso passava; na minha máquina o client já estava gerado, por isso o erro não aparecia. Correção: `prisma generate` primeiro em `apps/api/railway.json`. Validado no clone limpo (generate, shared, api, `dist/server.js` gerado). Falta o redeploy no Railway, o smoke público e o seed em produção.
+
 ### Onde parei
 
-S01 implementada e verde localmente e no CI (itens 25 a 26). Bloqueio: deploy da API no Railway falhando (item 27); falta ler os logs, corrigir, rodar o smoke público e fechar a DoD da S01 (checkboxes de migração aplicada, seed em produção e smoke).
+S01 implementada e verde localmente e no CI. Causa do deploy da API achada e corrigida no `railway.json` (item 29); falta confirmar o redeploy verde, rodar o smoke público (AC-1.36) e fechar a DoD da S01 (migração aplicada, seed em produção, smoke).
 
 ## Registro de uso de IA
 
