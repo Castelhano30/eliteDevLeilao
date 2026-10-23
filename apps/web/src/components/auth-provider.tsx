@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useSyncExternalStore, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
 import type { AuthResponse, LoginInput, MeResponse, RegisterInput, UserDto } from "@lanceauto/shared";
 import { apiGet, apiPost, setUnauthenticatedHandler, type ApiResult } from "@/lib/api-client";
 import { reconnectSocket } from "@/lib/socket";
@@ -39,6 +39,8 @@ export async function fetchMe(): Promise<MeResponse> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const pathname = usePathname();
+  const leaving = useRef(false);
   // O token vive no localStorage, que o servidor não vê: até hidratar, o estado é "loading".
   const hydrated = useSyncExternalStore(
     () => () => {},
@@ -59,6 +61,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
     reconnectSocket();
   }, [queryClient]);
+
+  // "Sair": primeiro vai à vitrine, depois descarta a sessão. Se fosse na ordem inversa, a guarda da rota privada
+  // veria o visitante e mandaria para /entrar antes de o push chegar.
+  useEffect(() => {
+    if (leaving.current && pathname === "/") {
+      leaving.current = false;
+      endSession();
+    }
+  }, [pathname, endSession]);
 
   // Token expirado ou de usuário que não existe mais: descarta, limpa o cache e as guardas mandam ao login.
   useEffect(() => {
@@ -85,11 +96,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login: async (input) => startSession(await apiPost<AuthResponse>("/auth/login", input)),
       register: async (input) => startSession(await apiPost<AuthResponse>("/auth/register", input)),
       logout: () => {
-        endSession();
+        if (pathname === "/") {
+          endSession();
+          return;
+        }
+        leaving.current = true;
         router.push("/");
       },
     };
-  }, [hydrated, hasToken, me.data, startSession, endSession, router]);
+  }, [hydrated, hasToken, me.data, startSession, endSession, router, pathname]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
