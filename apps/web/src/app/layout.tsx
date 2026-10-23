@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Big_Shoulders, IBM_Plex_Mono, Newsreader } from "next/font/google";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
+import { AvisoPapel } from "@/components/aviso-papel";
 import { SiteHeader } from "@/components/site-header";
 import { SkipLink } from "@/components/ui/skip-link";
 import { themeInitScript } from "@/lib/theme";
@@ -46,11 +47,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
-        <SkipLink />
-        <SiteHeader />
-        <main id="conteudo">
-          <Providers>{children}</Providers>
-        </main>
+        <Providers>
+          <SkipLink />
+          <SiteHeader />
+          <main id="conteudo">
+            <Suspense fallback={null}>
+              <AvisoPapel />
+            </Suspense>
+            {children}
+          </main>
+        </Providers>
       </body>
     </html>
   );

@@ -8,6 +8,8 @@ export interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
   help?: string;
   /** Mensagem do erro; liga `aria-invalid` e a borda ferrugem. O valor digitado é mantido. */
   error?: string;
+  /** Marca o campo como inválido (borda ferrugem e `aria-invalid`) sem mensagem própria, quando a mensagem está em outro lugar. */
+  invalid?: boolean;
   /** Campo composto: prefixo fixo (ex. "R$"), em Plex Mono. */
   prefix?: ReactNode;
   /** Campo composto: sufixo fixo (ex. ",00"). */
@@ -17,7 +19,7 @@ export interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
 }
 
 /** Campo com rótulo sempre visível. Com prefixo/sufixo vira o campo de valor (lance e depósito). */
-export function Field({ label, help, error, prefix, suffix, mask, id, className = "", onChange, disabled, ...rest }: FieldProps) {
+export function Field({ label, help, error, invalid, prefix, suffix, mask, id, className = "", onChange, disabled, ...rest }: FieldProps) {
   const auto = useId();
   const inputId = id ?? auto;
   const helpId = help ? `${inputId}-ajuda` : undefined;
@@ -30,7 +32,8 @@ export function Field({ label, help, error, prefix, suffix, mask, id, className 
     onChange?.(event);
   };
 
-  const border = error ? "border-ferrugem" : "border-linha";
+  const isInvalid = Boolean(error) || invalid === true;
+  const border = isInvalid ? "border-ferrugem" : "border-linha";
   const surface = disabled ? "bg-suave text-tinta2" : "bg-fundo text-tinta";
   const inputSize = composto
     ? "min-h-14 min-w-0 flex-1 bg-transparent px-2 font-mono text-[28px] font-semibold"
@@ -46,7 +49,7 @@ export function Field({ label, help, error, prefix, suffix, mask, id, className 
         <input
           id={inputId}
           disabled={disabled}
-          aria-invalid={error ? true : undefined}
+          aria-invalid={isInvalid ? true : undefined}
           aria-describedby={describedBy}
           onChange={handleChange}
           className={`${inputSize} rounded-nenhum placeholder:text-tinta2`}

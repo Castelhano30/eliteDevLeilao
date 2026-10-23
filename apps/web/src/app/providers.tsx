@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
+import { AuthProvider } from "@/components/auth-provider";
 import { getSocket } from "@/lib/socket";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -13,5 +14,9 @@ export function Providers({ children }: { children: ReactNode }) {
     if (!socket.connected) socket.connect();
   }, []);
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>{children}</AuthProvider>
+    </QueryClientProvider>
+  );
 }
