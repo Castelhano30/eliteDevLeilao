@@ -57,7 +57,13 @@ npm run dev                    # shared em watch, API e web
 | API | Render | build e start na seção abaixo |
 | Banco | Neon | `DATABASE_URL` pooled, `DIRECT_URL` direta |
 
-Links públicos: _a preencher depois do deploy._
+Links públicos:
+
+- Web: https://elite-dev-leilao.vercel.app/
+- API: https://elitedevleilao.onrender.com (teste em `/health`)
+- Banco: Neon (sem link público)
+
+No plano gratuito do Render a API hiberna: a primeira chamada depois de um tempo parado pode levar cerca de 50 s.
 
 ### API no Render
 
