@@ -26,6 +26,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: ${PORT:-4000}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
       # Dentro do Compose o banco é o serviço "db", não o localhost.
       DATABASE_URL: postgresql://lanceauto:lanceauto@db:5432/lanceauto
       DIRECT_URL: postgresql://lanceauto:lanceauto@db:5432/lanceauto
@@ -43,7 +44,7 @@ services:
         # Quem chama a API é o navegador, então o endereço é o do host e não o do serviço.
         NEXT_PUBLIC_API_URL: http://localhost:${PORT:-4000}
     ports:
-      - "3000:3000"
+      - "${WEB_PORT:-3000}:3000"
     depends_on:
       - api
 
