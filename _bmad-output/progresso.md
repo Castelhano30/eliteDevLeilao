@@ -31,9 +31,11 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 5. **Decisões em aberto fechadas** e monorepo adotado (tabela acima).
 6. **Git e GitHub.** Repositório iniciado na `main` e publicado (privado, por enquanto) em `Castelhano30/eliteDevLeilao`. Só o `_bmad-output` vai para o git. Envio com `git push` ao fim de cada etapa, e commits sempre só no nome do autor.
 
+7. **UX gerado.** `DESIGN.md` e `EXPERIENCE.md` escritos a partir do design e do PRD, com as 40 perguntas abertas (P1 a P40) triadas por recomendação. Divergências entre design e PRD resolvidas a favor do PRD (pseudônimo por lote, cancelamento com estorno, auditoria HMAC-SHA256). Aceitos como `draft` para ganhar agilidade, sem o Reviewer Gate.
+
 ## Próximos passos
 
-- [ ] `bmad-ux`: gerar `DESIGN.md` e `EXPERIENCE.md` a partir do design
+- [x] `bmad-ux`: gerar `DESIGN.md` e `EXPERIENCE.md` a partir do design (aceitos como draft)
 - [ ] `bmad-architecture`: fixar as decisões técnicas
 - [ ] `bmad-create-epics-and-stories`
 - [ ] `bmad-sprint-planning`
