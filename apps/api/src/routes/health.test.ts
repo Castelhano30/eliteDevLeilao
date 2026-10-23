@@ -4,7 +4,12 @@ import { createApp } from "../app";
 import { createLogger } from "../infra/logger";
 import { createTestPrisma, testDatabaseUrl, truncateAll } from "../../test/helpers/db";
 
-const env = { NODE_ENV: "test" as const, WEB_ORIGIN: "http://localhost:3000" };
+const env = {
+  NODE_ENV: "test" as const,
+  WEB_ORIGIN: "http://localhost:3000",
+  JWT_SECRET: "j".repeat(32),
+  AUTH_RATE_LIMIT_MAX: 30,
+};
 const logger = createLogger("silent");
 
 describe("GET /health", () => {
