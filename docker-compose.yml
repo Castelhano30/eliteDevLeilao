@@ -1,4 +1,4 @@
-﻿# Sobe banco, API e web: cp .env.example .env && docker compose up --build
+# Sobe banco, API e web: cp .env.example .env && docker compose up --build
 # Web em http://localhost:3000, API em http://localhost:${PORT:-4000}, banco em localhost:5433.
 services:
   db:
