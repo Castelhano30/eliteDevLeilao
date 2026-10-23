@@ -7,3 +7,53 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
+
+enum Role {
+  AUCTIONEER
+  BIDDER
+}
+
+enum LedgerKind {
+  DEPOSIT
+  HOLD
+  RELEASE
+  REFUND
+  SALE_DEBIT
+  SALE_CREDIT
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  /// Gravado pelo service com clock.now().
+  createdAt    DateTime @db.Timestamp(3)
+  wallet       Wallet?
+}
+
+model Wallet {
+  userId         String   @id
+  totalCents     BigInt   @default(0)
+  committedCents BigInt   @default(0)
+  updatedAt      DateTime @updatedAt @db.Timestamp(3)
+  user           User     @relation(fields: [userId], references: [id])
+}
+
+model LedgerEntry {
+  id             String     @id @default(uuid())
+  /// Ordem real de inserção; base do extrato e do cursor.
+  seq            Int        @unique @default(autoincrement())
+  userId         String
+  kind           LedgerKind
+  amountCents    BigInt
+  /// Sem FK: a tabela Lot só existe na S02 e o ledger é histórico imutável.
+  lotId          String?
+  totalAfter     BigInt
+  committedAfter BigInt
+  /// Gravado pelo service com clock.now() (o seed usa FakeClock).
+  createdAt      DateTime   @db.Timestamp(3)
+
+  @@index([userId, seq])
+}
