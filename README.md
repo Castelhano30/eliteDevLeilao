@@ -51,32 +51,53 @@ npm run dev                    # shared em watch, API e web
 
 ## Deploy
 
-| Parte | Host | Configuração |
-|---|---|---|
-| Web | Vercel | Root Directory `apps/web` |
-| API | Render | build e start na seção abaixo |
-| Banco | Neon | `DATABASE_URL` pooled, `DIRECT_URL` direta |
+Tudo roda no Railway, num só projeto e num só ambiente, com três serviços: Postgres, `@lanceauto/api` e `@lanceauto/web`.
 
 Links públicos:
 
-- Web: https://elite-dev-leilao.vercel.app/
-- API: https://elitedevleilao.onrender.com (teste em `/health`)
-- Banco: Neon (sem link público)
+- Web: https://lanceautoweb-production.up.railway.app
+- API: https://lanceautoapi-production.up.railway.app (teste em `/health`)
+- Banco: Postgres do Railway, sem link público (a API o acessa pela rede privada, `postgres.railway.internal`)
 
-No plano gratuito do Render a API hiberna: a primeira chamada depois de um tempo parado pode levar cerca de 50 s.
+### Configuração dos serviços
 
-### API no Render
+Cada serviço lê o próprio arquivo, apontado no painel em "Config file path": [apps/api/railway.json](apps/api/railway.json) na API e [apps/web/railway.json](apps/web/railway.json) no web. Os campos Build Command e Start Command do painel ficam vazios; quando preenchidos, o painel passa por cima do arquivo.
 
-- Build: `npm ci --include=dev && npm run build -w packages/shared -w apps/api && npx prisma generate --schema apps/api/prisma/schema.prisma`
+**API**
+
+- Build: `npm run build -w packages/shared && npm run build -w apps/api && npx prisma generate --schema apps/api/prisma/schema.prisma`
 - Start: `npx prisma migrate deploy --schema apps/api/prisma/schema.prisma && node apps/api/dist/server.js`
 - Health check: `/health`
+- Porta pública: 8080 (o Railway injeta `PORT=8080`)
 
-### Web na Vercel
+Migrações novas são aplicadas sozinhas a cada start.
 
-- Root Directory: `apps/web`
-- Install: `cd ../.. && npm ci`
-- Build: `cd ../.. && npm run build -w packages/shared && npm run build -w apps/web`
-- Variável: `NEXT_PUBLIC_API_URL` com o endereço público da API
+**Web**
+
+- Build: `npm run build -w packages/shared && npm run build -w apps/web`
+- Start: `npm run start -w apps/web`
+- Porta pública: 8080
+
+### Variáveis por serviço
+
+Os valores ficam só no painel do Railway, nunca no repositório. Os nomes estão comentados em [.env.example](.env.example).
+
+| Serviço | Variáveis |
+|---|---|
+| Postgres | as do próprio Railway |
+| API | `DATABASE_URL` e `DIRECT_URL` (iguais, sem pooler), `JWT_SECRET`, `AUDIT_HMAC_KEY`, `WEB_ORIGIN`, `AUTH_RATE_LIMIT_MAX`, `FIPE_BASE_URL`, `FIPE_TOKEN` (opcional), `WIKI_USER_AGENT`, `WIKIPEDIA_BASE_URL` |
+| Web | `NEXT_PUBLIC_API_URL` |
+
+- `NEXT_PUBLIC_API_URL` é embutida no build do web: `https`, sem barra no final; se mudar, refaça o deploy do web.
+- `WEB_ORIGIN` é a URL exata do web, com `https` e sem barra no final.
+- O web só precisa de `NEXT_PUBLIC_API_URL`; banco e segredos ficam só na API.
+
+### Ordem de criação
+
+1. Postgres.
+2. API, com banco e segredos; domínio público na porta 8080.
+3. Web, com `NEXT_PUBLIC_API_URL` apontando para o domínio da API; domínio público na porta 8080.
+4. De volta à API: `WEB_ORIGIN` com o domínio do web.
 
 ## Variáveis de ambiente
 
