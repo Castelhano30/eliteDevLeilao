@@ -1,0 +1,271 @@
+import { z } from "zod";
+
+export const LOT_STATUSES = ["CANCELLED", "SCHEDULED", "LIVE", "CLOSING", "SOLD", "UNSOLD"] as const;
+export type LotStatus = (typeof LOT_STATUSES)[number];
+
+/** Rótulo de UX de cada status (C5: CLOSING é só "apurando"). */
+export const LOT_STATUS_LABEL: Record<LotStatus, string> = {
+  CANCELLED: "Cancelado",
+  SCHEDULED: "Agendado",
+  LIVE: "Ao vivo",
+  CLOSING: "Apurando",
+  SOLD: "Arrematado",
+  UNSOLD: "Sem lances",
+};
+
+type Instant = Date | string;
+const toMs = (value: Instant) => (typeof value === "string" ? Date.parse(value) : value.getTime());
+
+export interface LotStatusInput {
+  startsAt: Instant;
+  endsAt: Instant;
+  cancelledAt: Instant | null;
+  settledAt: Instant | null;
+  bidCount: number;
+}
+
+/**
+ * Status calculado, nunca gravado (INV-11). `now == startsAt` já é LIVE; `now == endsAt` não é mais LIVE.
+ */
+export function lotStatus(lot: LotStatusInput, now: Instant): LotStatus {
+  const at = toMs(now);
+  if (lot.cancelledAt !== null) return "CANCELLED";
+  if (at < toMs(lot.startsAt)) return "SCHEDULED";
+  if (at < toMs(lot.endsAt)) return "LIVE";
+  if (lot.settledAt === null) return "CLOSING";
+  return lot.bidCount > 0 ? "SOLD" : "UNSOLD";
+}
+
+/** Grupo da Vitrine: "Ao vivo" contém LIVE e CLOSING; "Encerrados", SOLD e UNSOLD. */
+export type ShowcaseGroup = "LIVE" | "SCHEDULED" | "ENDED";
+export const SHOWCASE_GROUPS = ["LIVE", "SCHEDULED", "ENDED"] as const;
+
+export function showcaseGroup(status: LotStatus): ShowcaseGroup | null {
+  if (status === "LIVE" || status === "CLOSING") return "LIVE";
+  if (status === "SCHEDULED") return "SCHEDULED";
+  if (status === "SOLD" || status === "UNSOLD") return "ENDED";
+  return null;
+}
+
+/** Sem lances: lance inicial. Com lances: lance atual + incremento. */
+export function minimumNextCents(lot: {
+  currentBidCents: number | null;
+  startingBidCents: number;
+  minIncrementCents: number;
+}): number {
+  return lot.currentBidCents === null ? lot.startingBidCents : lot.currentBidCents + lot.minIncrementCents;
+}
+
+export interface LotCard {
+  id: string;
+  number: number;
+  title: string;
+  brand: string;
+  model: string;
+  year: number;
+  fuel: string;
+  status: LotStatus;
+  currentBidCents: number | null;
+  startingBidCents: number;
+  minIncrementCents: number;
+  referencePriceCents: number;
+  bidCount: number;
+  /** = entryCount (T4); sobe a cada linha da cadeia. */
+  version: number;
+  startsAt: string;
+  endsAt: string;
+  originalEndsAt: string;
+  cancelledAt: string | null;
+  /** Caminho relativo "/items/{itemId}/image"; o web prefixa com a URL da API. */
+  imageUrl: string | null;
+}
+
+export interface LotStateLot {
+  id: string;
+  number: number;
+  title: string;
+  status: LotStatus;
+  startingBidCents: number;
+  minIncrementCents: number;
+  currentBidCents: number | null;
+  minimumNextCents: number;
+  bidCount: number;
+  version: number;
+  /** Alias de `version`, só leitura. */
+  entryCount: number;
+  startsAt: string;
+  endsAt: string;
+  originalEndsAt: string;
+  cancelledAt: string | null;
+  settledAt: string | null;
+}
+
+export interface LotStateCar {
+  brand: string;
+  model: string;
+  year: number;
+  fuel: string;
+  referencePriceCents: number;
+  referenceMonth: string;
+  imageUrl: string | null;
+  imageCredit: string | null;
+  imageCreditUrl: string | null;
+}
+
+export interface LotState {
+  serverTime: string;
+  lot: LotStateLot;
+  car: LotStateCar;
+  /** Vazio até a S03. */
+  bids: unknown[];
+}
+
+export type StoredImageStatus = "STORED" | "NONE" | "FAILED";
+
+export interface CreateLotResponse extends LotState {
+  imageStatus: StoredImageStatus;
+}
+
+export interface LotListResponse {
+  lots: LotCard[];
+  brands: string[];
+  counts: { live: number; scheduled: number; ended: number };
+  serverTime: string;
+}
+
+export interface MyLotsResponse {
+  lots: LotCard[];
+  totalReceivedCents: number;
+  serverTime: string;
+}
+
+export const LOT_TEXT = {
+  idsRequired: "Escolha marca, modelo e ano.",
+  titleRequired: "Dê um título ao lote.",
+  titleTooLong: "O título aceita até 120 caracteres.",
+  startingBid: "O lance inicial precisa ser de pelo menos R$ 1,00.",
+  minIncrement: "O incremento precisa ser de pelo menos R$ 1,00.",
+  startsAtRequired: "Informe o início.",
+  startsAtPast: "O início não pode estar no passado.",
+  endsAtRequired: "Informe o fim.",
+  endsAtTooSoon: "O fim precisa ser pelo menos 5 minutos depois do início.",
+  urlInvalid: "Use um endereço http ou https válido.",
+  creditTooLong: "O crédito aceita até 200 caracteres.",
+  statusInvalid: "Filtro de status inválido. Use LIVE, SCHEDULED ou ENDED.",
+  notFoundTitle: "Lote não encontrado.",
+  notFoundBody: "Esse lote não existe, ou já foi para a gaveta.",
+  cancelledBody: "O leiloeiro cancelou este lote. Nada foi vendido e todo saldo travado voltou.",
+} as const;
+
+export const LOT_TITLE_MAX = 120;
+export const IMAGE_URL_MAX = 2048;
+export const IMAGE_CREDIT_MAX = 200;
+export const IMAGE_CREDIT_URL_MAX = 500;
+/** Duração mínima do lote e tolerância do início (R-2.7, Q2 do SPEC). */
+export const LOT_MIN_DURATION_MS = 5 * 60 * 1000;
+export const LOT_START_TOLERANCE_MS = 60 * 1000;
+
+/** Só `http:` e `https:` (nunca `javascript:` nem `data:`). */
+export function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?Z$/;
+
+const isoUtc = (message: string) =>
+  z
+    .string({ error: message })
+    .refine((value) => ISO_UTC.test(value) && !Number.isNaN(Date.parse(value)), message);
+
+const catalogId = z
+  .string({ error: LOT_TEXT.idsRequired })
+  .trim()
+  .min(1, LOT_TEXT.idsRequired)
+  .max(40, LOT_TEXT.idsRequired)
+  .regex(/^[\w-]+$/, LOT_TEXT.idsRequired);
+
+const cents = (message: string) => z.number({ error: message }).int(message).min(100, message);
+
+/** "" e espaços contam como ausente nos campos opcionais de imagem. */
+const optionalText = <T extends z.ZodType>(schema: T) =>
+  z.preprocess((value) => (typeof value === "string" && value.trim() === "" ? undefined : value), schema.optional());
+
+/** Corpo de `POST /lots` sem as regras que dependem do relógio. */
+export const createLotBaseSchema = z.object({
+  brandId: catalogId,
+  modelId: catalogId,
+  yearId: catalogId,
+  title: z
+    .string({ error: LOT_TEXT.titleRequired })
+    .trim()
+    .min(1, LOT_TEXT.titleRequired)
+    .max(LOT_TITLE_MAX, LOT_TEXT.titleTooLong),
+  startingBidCents: cents(LOT_TEXT.startingBid),
+  minIncrementCents: cents(LOT_TEXT.minIncrement),
+  startsAt: isoUtc(LOT_TEXT.startsAtRequired),
+  endsAt: isoUtc(LOT_TEXT.endsAtRequired),
+  imageUrl: optionalText(
+    z.string({ error: LOT_TEXT.urlInvalid }).trim().max(IMAGE_URL_MAX, LOT_TEXT.urlInvalid).refine(isHttpUrl, LOT_TEXT.urlInvalid),
+  ),
+  imageCredit: optionalText(z.string({ error: LOT_TEXT.creditTooLong }).trim().max(IMAGE_CREDIT_MAX, LOT_TEXT.creditTooLong)),
+  imageCreditUrl: optionalText(
+    z
+      .string({ error: LOT_TEXT.urlInvalid })
+      .trim()
+      .max(IMAGE_CREDIT_URL_MAX, LOT_TEXT.urlInvalid)
+      .refine(isHttpUrl, LOT_TEXT.urlInvalid),
+  ),
+});
+
+export type CreateLotInput = z.infer<typeof createLotBaseSchema>;
+
+const validIso = (value: unknown): value is string =>
+  typeof value === "string" && ISO_UTC.test(value) && !Number.isNaN(Date.parse(value));
+
+/** Regras de data que dependem do relógio: início ≥ agora − 60 s e fim ≥ início + 5 min (R-2.7). */
+export function lotDateErrors(input: { startsAt?: unknown; endsAt?: unknown }, nowMs: number): Record<string, string> {
+  const fields: Record<string, string> = {};
+  if (validIso(input.startsAt) && Date.parse(input.startsAt) < nowMs - LOT_START_TOLERANCE_MS) {
+    fields.startsAt = LOT_TEXT.startsAtPast;
+  }
+  if (validIso(input.startsAt) && validIso(input.endsAt)) {
+    if (Date.parse(input.endsAt) - Date.parse(input.startsAt) < LOT_MIN_DURATION_MS) fields.endsAt = LOT_TEXT.endsAtTooSoon;
+  }
+  return fields;
+}
+
+export type CreateLotValidation = { ok: true; data: CreateLotInput } | { ok: false; fields: Record<string, string> };
+
+/**
+ * Validação completa de `POST /lots`, igual no web e na API. `nowMs` vem do relógio do chamador
+ * (API: `clock.now()`; web: relógio do servidor). Todos os campos com erro voltam juntos.
+ */
+export function validateCreateLot(body: unknown, nowMs: number): CreateLotValidation {
+  const raw = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
+  const parsed = createLotBaseSchema.safeParse(raw);
+  const fields: Record<string, string> = {};
+  if (!parsed.success) {
+    for (const issue of parsed.error.issues) {
+      const key = String(issue.path[0] ?? "_");
+      if (!(key in fields)) fields[key] = issue.message;
+    }
+  }
+  for (const [key, message] of Object.entries(lotDateErrors(raw, nowMs))) {
+    if (!(key in fields)) fields[key] = message;
+  }
+  if (parsed.success && Object.keys(fields).length === 0) return { ok: true, data: parsed.data };
+  return { ok: false, fields };
+}
+
+/** Query de `GET /lots`. */
+export const lotListQuerySchema = z.object({
+  status: z.enum(SHOWCASE_GROUPS, { error: LOT_TEXT.statusInvalid }).optional(),
+  q: z.string({ error: "Busca inválida." }).optional(),
+  brand: z.string({ error: "Marca inválida." }).optional(),
+});
+export type LotListQuery = z.infer<typeof lotListQuerySchema>;
