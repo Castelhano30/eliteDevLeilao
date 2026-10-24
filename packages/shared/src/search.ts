@@ -16,13 +16,14 @@ export function buildSearchText(title: string, brand: string, model: string, yea
 export const SEARCH_MAX_LENGTH = 100;
 
 /**
- * Termos da busca: corta em 100 caracteres, normaliza e remove os curingas do LIKE (`%`, `_`, `\`),
- * para `q=%` não casar todos os lotes. Todos os termos precisam aparecer.
+ * Termos da busca: corta em 100 caracteres, normaliza e escapa os curingas do LIKE (`%`, `_`, `\`), para o termo
+ * ser procurado literalmente: o `contains` do Prisma não escapa, e `q=%` casaria todos os lotes.
+ * Todos os termos precisam aparecer.
  */
 export function searchTerms(q: string | undefined): string[] {
   if (!q) return [];
   return normalizeSearch(q.slice(0, SEARCH_MAX_LENGTH))
     .split(" ")
-    .map((term) => term.replace(/[%_\\]/g, ""))
-    .filter((term) => term.length > 0);
+    .filter((term) => term.length > 0)
+    .map((term) => term.replace(/[\\%_]/g, (char) => `\\${char}`));
 }

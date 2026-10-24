@@ -33,11 +33,11 @@ describe("normalizeSearch e searchTerms", () => {
     expect(buildSearchText("Opala Comodoro", "Chevrolet", "Opala 4.1", 1988)).toBe("opala comodoro chevrolet opala 4.1 1988");
   });
 
-  it("AC-2.18d: remove os curingas do LIKE e corta em 100 caracteres", () => {
-    expect(searchTerms("%")).toEqual([]);
-    expect(searchTerms("_")).toEqual([]);
-    expect(searchTerms("\\")).toEqual([]);
-    expect(searchTerms("go%l  OPALA")).toEqual(["gol", "opala"]);
+  it("AC-2.18d: escapa os curingas do LIKE (busca literal) e corta em 100 caracteres", () => {
+    expect(searchTerms("%")).toEqual(["\\%"]);
+    expect(searchTerms("_")).toEqual(["\\_"]);
+    expect(searchTerms("\\")).toEqual(["\\\\"]);
+    expect(searchTerms("go%l  OPALA")).toEqual(["go\\%l", "opala"]);
     expect(searchTerms(`${"a".repeat(100)}b`)).toEqual(["a".repeat(100)]);
     expect(searchTerms(undefined)).toEqual([]);
   });

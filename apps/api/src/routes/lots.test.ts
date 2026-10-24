@@ -364,11 +364,12 @@ describe.skipIf(!testDatabaseUrl)("lotes (integração)", () => {
     it("AC-2.18d: curingas do LIKE não casam tudo", async () => {
       const { app } = appWith();
       await scenario(app);
+      // O curinga é procurado literalmente: nenhum lote tem "%", "_" ou "\" no texto.
       for (const q of ["%", "_", "\\", "%25"]) {
         const res = await request(app).get(`/lots?q=${encodeURIComponent(q)}`);
         expect(res.status).toBe(200);
+        expect(res.body.lots).toEqual([]);
       }
-      // Termo vazio depois de limpar é "sem busca"; o curinga no meio do termo é removido, não interpretado.
       expect((await request(app).get(`/lots?q=${encodeURIComponent("op%la")}`)).body.lots).toEqual([]);
       expect((await request(app).get(`/lots?q=${encodeURIComponent("o_ala")}`)).body.lots).toEqual([]);
     });
