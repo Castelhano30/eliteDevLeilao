@@ -556,13 +556,13 @@ Vitest em `shared`/`api`; integração contra Postgres real (`DATABASE_URL_TEST`
 
 ## 17. Definition of Done
 
-- [ ] Migração `lots_and_items` aplicada local e em produção (Neon) pelo start da API; CHECKs presentes.
-- [ ] `npm test` verde (itens 1–8 de §14) no CI com Postgres de serviço.
-- [ ] `POST /lots` cria lote com `genesis`/`seal` válidos; `GET /lots`, `GET /lots/:id`, `GET /my/lots`, `GET /items/:id/image` respondendo em produção.
-- [ ] Vitrine, Sala (leitura), Criar lote e Painel base funcionando nos dois temas, 390 px e 1440 px, com AC-2.30 a AC-2.50 percorridos.
-- [ ] Teste de resiliência: FIPE e Wikipedia apontando para host morto → Vitrine/Sala/Painel normais; Criar lote com o estado de erro.
-- [ ] `seed`/`seed:demo` criam o lote ao vivo (30 dias) e o agendado a partir do fixture, sem rede.
-- [ ] `.env.example` e README atualizados (`FIPE_BASE_URL`, `FIPE_TOKEN?`, `WIKI_USER_AGENT`, `WIKIPEDIA_BASE_URL`, nota sobre limite diário da FIPE e cache em memória que zera ao reiniciar).
-- [ ] Verificações do dia 1 da §16 feitas e registradas.
-- [ ] Smoke no link público: visitante vê a Vitrine; leiloeiro cria um lote com a FIPE real e ele aparece em Agendados.
-- [ ] Diário `progresso.md` registra a fatia e o commit; commits atômicos em português.
+- [x] Migração `lots_and_items` aplicada local e em produção (Neon) pelo start da API; CHECKs presentes. (Railway: "3 migrations found … No pending migrations to apply".)
+- [x] `npm test` verde (itens 1–8 de §14) no CI com Postgres de serviço.
+- [x] `POST /lots` cria lote com `genesis`/`seal` válidos; `GET /lots`, `GET /lots/:id`, `GET /my/lots`, `GET /items/:id/image` respondendo em produção.
+- [x] Vitrine, Sala (leitura), Criar lote e Painel base funcionando nos dois temas, 390 px e 1440 px, com AC-2.30 a AC-2.50 percorridos. (Chrome headless, local; ver `progresso.md` itens 40 e 44.)
+- [x] Teste de resiliência: FIPE e Wikipedia apontando para host morto → Vitrine/Sala/Painel normais; Criar lote com o estado de erro.
+- [x] `seed`/`seed:demo` criam o lote ao vivo (30 dias) e o agendado a partir do fixture, sem rede.
+- [x] `.env.example` e README atualizados (`FIPE_BASE_URL`, `FIPE_TOKEN?`, `WIKI_USER_AGENT`, `WIKIPEDIA_BASE_URL`, nota sobre limite diário da FIPE e cache em memória que zera ao reiniciar).
+- [x] Verificações do dia 1 da §16 feitas e registradas.
+- [x] Smoke no link público: visitante vê a Vitrine; leiloeiro cria um lote com a FIPE real e ele aparece em Agendados.
+- [x] Diário `progresso.md` registra a fatia e o commit; commits atômicos em português.
