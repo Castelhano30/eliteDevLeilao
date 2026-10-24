@@ -145,3 +145,7 @@ S03 implementada, verificada, revisada e no ar (itens 46 a 56); revisão geral S
 ## 24/10/2026 — Compactação: tema e ícones
 - Toggle binário acessível substitui o seletor; acompanha sistema sem escolha explícita, persiste claro/noite, sincroniza entre abas e usa memória quando gravação é bloqueada. SVGs locais sem dependência nova.
 - Preferências exercitadas por testes; typecheck web aprovado. Escala de placas e botão de lance complementada no commit anterior.
+
+## 24/10/2026 — Compactação: perfil
+- Criado dropdown de perfil com iniciais, nome, papel e logout existente. Abertura foca Sair, Escape devolve foco, Tab fecha sem aprisionar e clique externo respeita controles focáveis.
+- Typecheck web aprovado; interação real será exercitada pelo roteiro de navegador integrado.
