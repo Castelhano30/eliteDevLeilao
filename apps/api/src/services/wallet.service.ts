@@ -1,10 +1,24 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
-import { AUTH_TEXT, type DepositResponse, type LeadingLotDto, type WalletPageDto } from "@lanceauto/shared";
+import {
+  AUTH_TEXT,
+  EVENTS,
+  type DepositResponse,
+  type DomainEvent,
+  type LeadingLotDto,
+  type WalletPageDto,
+} from "@lanceauto/shared";
 import { AppError } from "../errors";
 import type { Clock } from "../infra/clock";
+import { userRoom } from "../socket";
 import { toLedgerEntryDto, toNumber, toWalletDto } from "./mappers";
 
 export const LEDGER_PAGE_SIZE = 50;
+
+export interface DepositResult {
+  response: DepositResponse;
+  /** Entregues ao `Publisher` pela rota, só depois do commit (INV-4). */
+  events: DomainEvent[];
+}
 
 export interface WalletServiceDeps {
   db: PrismaClient;
@@ -69,8 +83,11 @@ export function makeWalletService({ db, clock }: WalletServiceDeps) {
       };
     },
 
-    /** Soma ao total, travando só a própria carteira (INV-5); carteira e extrato na mesma tx (INV-6). */
-    async deposit(userId: string, amountCents: number): Promise<DepositResponse> {
+    /**
+     * Soma ao total, travando só a própria carteira (INV-5); carteira e extrato na mesma tx (INV-6).
+     * Os eventos voltam para a rota entregar ao `Publisher` depois do commit (INV-4).
+     */
+    async deposit(userId: string, amountCents: number): Promise<DepositResult> {
       try {
         return await db.$transaction(
           async (tx) => {
@@ -91,7 +108,12 @@ export function makeWalletService({ db, clock }: WalletServiceDeps) {
                 createdAt: clock.now(),
               },
             });
-            return { wallet: toWalletDto(wallet), entry: toLedgerEntryDto(entry) };
+            const dto = toWalletDto(wallet);
+            return {
+              response: { wallet: dto, entry: toLedgerEntryDto(entry) },
+              // Só a própria sala do dono: o saldo nunca vai para os outros (R-4.12).
+              events: [{ type: EVENTS.WALLET_UPDATED, room: userRoom(userId), payload: dto }],
+            };
           },
           { maxWait: 10_000, timeout: 10_000 },
         );

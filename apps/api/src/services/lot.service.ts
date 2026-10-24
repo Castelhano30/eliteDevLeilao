@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import {
   AUTH_TEXT,
+  EVENTS,
   LOT_TEXT,
   buildSearchText,
   lotDateErrors,
@@ -10,6 +11,7 @@ import {
   searchTerms,
   type CreateLotInput,
   type CreateLotResponse,
+  type DomainEvent,
   type LotListQuery,
   type LotListResponse,
   type LotState,
@@ -27,8 +29,15 @@ import type { CatalogPort } from "../infra/fipe";
 import type { DownloadedImage, ImageDownloader } from "../infra/image-store";
 import type { Logger } from "../infra/logger";
 import type { ImageSuggestionPort } from "../infra/wikipedia";
+import { SHOWCASE_ROOM } from "../socket";
 import { LOT_SELECT, toLotCard, toLotState, type LotRow, type LotStateExtras } from "./lot-mappers";
 import { toNumber } from "./mappers";
+
+export interface CreateLotResult {
+  response: CreateLotResponse;
+  /** Entregues ao `Publisher` pela rota, só depois do commit (INV-4). */
+  events: DomainEvent[];
+}
 
 /** Teto defensivo da Vitrine (sem paginação). */
 export const SHOWCASE_LIMIT = 200;
@@ -87,7 +96,7 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
      * Cria o lote (R-2.3 a R-2.8): detalhe da FIPE de novo (via cache), download da imagem fora da transação,
      * e uma inserção de `Item` + `Lot` com genesis e selo. Nenhuma chamada externa dentro da transação.
      */
-    async createLot(auctioneerId: string, input: CreateLotInput, options: CreateLotOptions = {}): Promise<CreateLotResponse> {
+    async createLot(auctioneerId: string, input: CreateLotInput, options: CreateLotOptions = {}): Promise<CreateLotResult> {
       const now = clock.now();
       const startsAt = toDate(input.startsAt);
       const endsAt = toDate(input.endsAt);
@@ -162,7 +171,12 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
           },
           select: LOT_SELECT,
         });
-        return { ...toLotState(row, clock.now()), imageStatus };
+        const created = clock.now();
+        return {
+          response: { ...toLotState(row, created), imageStatus },
+          // A Vitrine ao vivo: o cartão do lote novo, para quem está na sala `showcase` (INV-4, só depois do commit).
+          events: [{ type: EVENTS.SHOWCASE_LOT, room: SHOWCASE_ROOM, payload: toLotCard(row, created) }],
+        };
       } catch (err) {
         // Leiloeiro apagado com token ainda válido.
         if (err instanceof Prisma.PrismaClientKnownRequestError && (err.code === "P2025" || err.code === "P2003")) {

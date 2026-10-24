@@ -87,7 +87,9 @@ export function lotsRouter(
     // Corpo e datas antes de qualquer chamada externa (§6.2).
     const result = validateCreateLot(req.body, clock.now().getTime());
     if (!result.ok) throw new AppError("VALIDATION", { fields: result.fields });
-    res.status(201).json(await lots.createLot(req.user!.id, result.data));
+    const { response, events } = await lots.createLot(req.user!.id, result.data);
+    publisher.publish(events);
+    res.status(201).json(response);
   });
 
   router.get("/lots", async (req, res) => {
@@ -114,7 +116,7 @@ export function lotsRouter(
     async (req, res) => {
       const input = parseBody(placeBidSchema, req.body);
       const { response, events } = await bids.placeBid(req.user!.id, req.user!.role, param(req, "id"), input);
-      // Só depois do commit: se o service lançou, nada chega aqui (R-3.11).
+      // Só depois do commit: se o service lançou, nada chega aqui (R-3.11). O publisher é guardado (R-4.2).
       publisher.publish(events);
       res.status(201).json(response);
     },

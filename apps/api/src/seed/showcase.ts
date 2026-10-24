@@ -138,8 +138,8 @@ export async function seedShowcaseLots(deps: SeedShowcaseDeps, { demo = false } 
       },
       { allowPast: true, image: await readFixtureImage(baseDir, car) },
     );
-    numbers.push(created.lot.number);
-    log(`Lote ${formatLotNumber(created.lot.number)} criado: ${plan.title} (${created.lot.status})`);
+    numbers.push(created.response.lot.number);
+    log(`Lote ${formatLotNumber(created.response.lot.number)} criado: ${plan.title} (${created.response.lot.status})`);
   }
   return numbers;
 }
