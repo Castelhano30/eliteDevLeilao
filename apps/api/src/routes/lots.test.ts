@@ -305,8 +305,10 @@ describe.skipIf(!testDatabaseUrl)("lotes (integração)", () => {
       const kept = await request(fresh)
         .post("/lots")
         .set("Authorization", other)
-        .send(body({ imageUrl: `${img.url}/a.png`, imageCredit: WIKI_CREDIT, imageCreditUrl: "https://pt.wikipedia.org/wiki/Toyota_Corolla" }));
+        .send(body({ imageUrl: `${img.url}/a.png`, imageCredit: `${WIKI_CREDIT} e mais nada`, imageCreditUrl: "https://golpe.example/x" }));
+      // Grava o crédito e o link da sugestão, não os do corpo.
       expect(kept.body.car.imageCredit).toBe(WIKI_CREDIT);
+      expect(kept.body.car.imageCreditUrl).toBe("https://pt.wikipedia.org/wiki/Toyota_Corolla");
     });
   });
 

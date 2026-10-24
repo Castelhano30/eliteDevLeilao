@@ -54,17 +54,23 @@ const looksLikeWikiCredit = (credit: string) => credit.startsWith("Foto: Wikiped
 
 export function makeLotService({ db, clock, auditKey, catalog, images, imageStore, logger }: LotServiceDeps) {
   /**
-   * Leiloeiro trocou a imagem mas deixou o crédito da Wikipedia: limpa o crédito (evita atribuição falsa).
-   * Sem confirmação de que a URL é a sugerida, também limpa.
+   * Crédito gravado. Crédito com cara de Wikipedia só vale se a URL for a sugerida para o carro, e aí o texto e o
+   * link gravados são os da sugestão, nunca os do corpo (evita atribuição falsa e link de crédito arbitrário).
+   * Sem confirmação (imagem trocada, Wikipedia fora), o crédito é limpo.
    */
-  async function keepCredit(input: CreateLotInput, brand: string, model: string): Promise<boolean> {
-    if (!input.imageCredit || !looksLikeWikiCredit(input.imageCredit)) return true;
+  async function resolveCredit(input: CreateLotInput, brand: string, model: string) {
+    if (!input.imageCredit || !looksLikeWikiCredit(input.imageCredit)) {
+      return { credit: input.imageCredit ?? null, creditUrl: input.imageCreditUrl ?? null };
+    }
     try {
       const suggestion = await images.suggest(brand, model);
-      return suggestion.status === "FOUND" && suggestion.image.url === input.imageUrl;
+      if (suggestion.status === "FOUND" && suggestion.image.url === input.imageUrl) {
+        return { credit: suggestion.image.credit, creditUrl: suggestion.image.creditUrl };
+      }
     } catch {
-      return false;
+      // sem confirmação: limpa
     }
+    return { credit: null, creditUrl: null };
   }
 
   async function findState(id: string): Promise<LotRow | null> {
@@ -101,7 +107,13 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
         imageStatus = image ? "STORED" : "FAILED";
         if (!image) logger?.info({ auctioneerId }, "imagem do lote não pôde ser baixada; segue com a ilustração");
       }
-      const creditKept = image !== null && (options.image !== undefined || (await keepCredit(input, car.brand, car.model)));
+      const noCredit = { credit: null, creditUrl: null };
+      const { credit, creditUrl } =
+        image === null
+          ? noCredit
+          : options.image !== undefined
+            ? { credit: input.imageCredit ?? null, creditUrl: input.imageCreditUrl ?? null }
+            : await resolveCredit(input, car.brand, car.model);
 
       const id = randomUUID();
       const startingBidCents = BigInt(input.startingBidCents);
@@ -136,8 +148,8 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
                 referenceMonth: car.referenceMonth,
                 imageData: image ? new Uint8Array(image.data) : null,
                 imageMime: image?.mime ?? null,
-                imageCredit: creditKept ? (input.imageCredit ?? null) : null,
-                imageCreditUrl: creditKept ? (input.imageCreditUrl ?? null) : null,
+                imageCredit: credit,
+                imageCreditUrl: creditUrl,
                 rawData: (detail.raw ?? {}) as Prisma.InputJsonValue,
                 fetchedAt: detail.fetchedAt,
               },
