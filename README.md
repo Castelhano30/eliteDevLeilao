@@ -41,13 +41,19 @@ npm run dev                    # shared em watch, API e web
 
 ### Contas de teste
 
-`npm run seed` cria as três contas abaixo pelos mesmos services da API (e se recusa a rodar se já houver usuários). Senha de todas: `lance1234`.
+`npm run seed` cria as três contas abaixo pelos mesmos services da API (confere cada uma pelo e-mail e cria só as que faltam). Senha de todas: `lance1234`.
 
 | Papel | E-mail | Saldo |
 |---|---|---|
 | Leiloeiro | leiloeiro@lanceauto.test | — |
 | Licitante | ana@lanceauto.test | R$ 500.000,00 |
 | Licitante | bruno@lanceauto.test | R$ 300.000,00 |
+
+### Lotes de demonstração
+
+O mesmo `npm run seed` cria dois lotes do leiloeiro, **sem rede**, a partir de [apps/api/prisma/fipe-fixture.json](apps/api/prisma/fipe-fixture.json) e pelo mesmo serviço de criação da API (com genesis e selo válidos): um **ao vivo** (Fiat Uno Mille Way 2010, aberto há 1 h, fecha em 30 dias) e um **agendado** (Toyota Corolla XEi 2015, abre em 2 dias). Só cria se o banco ainda não tiver lote nenhum, então é seguro a cada deploy. `npm run seed:demo` cria mais um lote ao vivo de 30 dias com datas relativas a agora. Esses lotes são provisórios: o seed final (lotes 001 a 005, um em cada estado) chega no polimento.
+
+As fotos do seed usam a ilustração padrão do pátio (`image: null` no fixture); para usar uma foto, coloque o arquivo em `apps/api/prisma/seed-images/` e aponte `image`, `imageCredit` e `imageCreditUrl` no fixture.
 
 ### Comandos
 
@@ -58,6 +64,16 @@ npm run dev                    # shared em watch, API e web
 | `npm run lint` | ESLint |
 | `npm run typecheck` | compila o shared e checa os tipos dos três pacotes |
 | `npm test` | compila o shared e roda os testes (a API usa `DATABASE_URL_TEST`) |
+| `npm run seed` / `npm run seed:demo` | contas de teste e lotes de demonstração (ver acima) |
+
+## Catálogo: Tabela FIPE e Wikipedia
+
+Só o back-end fala com as APIs externas, e só em duas situações: as rotas `/catalog/*` (selects do Criar lote) e a criação do lote (`POST /lots`, que busca de novo o detalhe do carro na FIPE em vez de confiar no navegador). Vitrine, Sala, Painel e imagens leem só o banco: com a FIPE e a Wikipedia fora do ar, só o Criar lote mostra o aviso "A tabela FIPE não respondeu.", e nada do que foi digitado se perde.
+
+- **FIPE** ([parallelum v2](https://fipe.parallelum.com.br/api/v2), `FIPE_BASE_URL`): sem token, a cota observada é de **500 requisições por dia** (cabeçalho `x-ratelimit-limit`; um `FIPE_TOKEN` opcional aumenta). Por isso: cache em memória de 24 h por URL (até 500 entradas), uma única requisição para chamadas simultâneas, timeout de 4 s com uma repetição só em falha de rede ou 5xx, e **429 nunca repete**. Se a FIPE falha e há entrada vencida, ela é servida (com log de aviso); falha nunca entra no cache.
+- **O cache vive na memória do processo**: zera a cada reinício ou deploy da API, e a primeira consulta volta a gastar cota.
+- **Wikipedia** (`WIKIPEDIA_BASE_URL`, resumo `page/summary` em português, com `WIKI_USER_AGENT`): a foto sugerida sai do artigo "{marca} {modelo}" (ou só do modelo, se o resumo falar de carro), em miniatura de 1280 px. O resumo não traz autor nem licença do arquivo; o crédito sugerido é "Foto: Wikipedia, artigo … (licença Creative Commons, veja a página do artigo)" com link para o artigo. Se o leiloeiro troca a URL, o crédito da Wikipedia é apagado.
+- **A imagem é baixada na criação do lote** e guardada no banco (`GET /items/:id/image`); depois disso nenhuma tela depende da Wikipedia. O download só aceita http/https nas portas 80/443, recusa endereços privados e de nuvem (inclusive por DNS e redirecionamento), para em 4 MB e aceita só JPEG, PNG, WebP e GIF. Falhou, o lote nasce com a ilustração padrão.
 
 ## Deploy
 
@@ -75,12 +91,12 @@ Cada serviço lê o próprio arquivo, apontado no painel em "Config file path": 
 
 **API**
 
-- Build: `npm run build -w packages/shared && npm run build -w apps/api && npx prisma generate --schema apps/api/prisma/schema.prisma`
+- Build: `npx prisma generate --schema apps/api/prisma/schema.prisma && npm run build -w packages/shared && npm run build -w apps/api`
 - Start: `npx prisma migrate deploy --schema apps/api/prisma/schema.prisma && (npx tsx apps/api/prisma/seed.ts || echo seed-falhou-subindo-sem-ele) && node apps/api/dist/server.js`
 - Health check: `/health`
 - Porta pública: 8080 (o Railway injeta `PORT=8080`)
 
-Migrações novas são aplicadas sozinhas a cada start. O seed das contas de teste também roda no start: ele recusa rodar se já houver usuários (sai com código 0), então é seguro a cada deploy, e uma falha nele não derruba a API.
+Migrações novas são aplicadas sozinhas a cada start. O seed também roda no start: cria só as contas que faltam e os lotes de demonstração só se ainda não houver lote, então é seguro a cada deploy; uma falha nele não derruba a API.
 
 **Web**
 

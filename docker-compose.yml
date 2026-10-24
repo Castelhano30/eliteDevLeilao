@@ -43,6 +43,9 @@ services:
       args:
         # Quem chama a API é o navegador, então o endereço é o do host e não o do serviço.
         NEXT_PUBLIC_API_URL: http://localhost:${PORT:-4000}
+    environment:
+      # O SSR roda dentro do container: lá a API é o serviço "api", não o localhost.
+      INTERNAL_API_URL: http://api:${PORT:-4000}
     ports:
       - "${WEB_PORT:-3000}:3000"
     depends_on:
