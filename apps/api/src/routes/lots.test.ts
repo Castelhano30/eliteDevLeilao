@@ -221,8 +221,13 @@ describe.skipIf(!testDatabaseUrl)("lotes (integração)", () => {
       expect(image.headers["x-content-type-options"]).toBe("nosniff");
       expect(image.headers.etag).toBeTruthy();
       expect(Buffer.compare(image.body as Buffer, PNG)).toBe(0);
-      const cached = await request(app).get(res.body.car.imageUrl).set("If-None-Match", image.headers.etag as string);
-      expect(cached.status).toBe(304);
+      const itemId = String(res.body.car.imageUrl).split("/")[2];
+      expect(image.headers.etag).toBe(`"img-${itemId}"`);
+      for (const header of [image.headers.etag as string, `W/${image.headers.etag}`, `"outro", ${image.headers.etag}`]) {
+        const cached = await request(app).get(res.body.car.imageUrl).set("If-None-Match", header);
+        expect(cached.status).toBe(304);
+      }
+      expect((await request(app).get(res.body.car.imageUrl).set("If-None-Match", '"outro"')).status).toBe(200);
     });
 
     it("AC-2.18: imagem em IP privado (produção) → lote criado com FAILED e nenhuma conexão", async () => {

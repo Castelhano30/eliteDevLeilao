@@ -9,6 +9,15 @@ import type { LotService } from "../services/lot.service";
 
 const param = (req: Request, name: string) => String(req.params[name] ?? "");
 
+/** `If-None-Match` casa com o ETag? Aceita `*`, `W/"…"` e lista separada por vírgula. */
+export function etagMatches(header: string | undefined, etag: string): boolean {
+  if (!header) return false;
+  return header
+    .split(",")
+    .map((tag) => tag.trim().replace(/^W\//, ""))
+    .some((tag) => tag === "*" || tag === etag);
+}
+
 /**
  * Ids da FIPE: só letras, dígitos, `_` e `-` (até 40). Um `..` reescreveria o caminho na FIPE e gastaria cota.
  * Inválido vira `VALIDATION` com a mensagem de §6.2.
@@ -80,17 +89,19 @@ export function lotsRouter(auth: AuthMiddleware, lots: LotService, clock: Clock)
   });
 
   router.get("/items/:id/image", async (req, res) => {
-    const image = await lots.getItemImage(param(req, "id"));
+    const id = param(req, "id");
+    const image = await lots.getItemImageMeta(id);
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
     res.setHeader("ETag", image.etag);
     // O web vive em outro domínio: a imagem precisa poder ser embutida lá.
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
     res.setHeader("X-Content-Type-Options", "nosniff");
-    if (req.headers["if-none-match"] === image.etag) {
+    // Revalidação responde 304 sem ler o blob; aceita ETag fraco (W/) e lista separada por vírgula.
+    if (etagMatches(req.headers["if-none-match"], image.etag)) {
       res.status(304).end();
       return;
     }
-    res.type(image.mime).send(image.data);
+    res.type(image.mime).send(await lots.getItemImageData(id));
   });
 
   return router;

@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import {
   AUTH_TEXT,
@@ -48,6 +48,7 @@ export interface CreateLotOptions {
 }
 
 const lotNotFound = () => new AppError("NOT_FOUND", undefined, LOT_TEXT.notFoundTitle);
+const imageNotFound = () => new AppError("NOT_FOUND", undefined, "Imagem não encontrada.");
 
 /** O crédito tem a cara do que a Wikipedia sugere? */
 const looksLikeWikiCredit = (credit: string) => credit.startsWith("Foto: Wikipedia");
@@ -253,13 +254,21 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
       return { lots: sorted.map(({ row }) => toLotCard(row, now)), totalReceivedCents: 0, serverTime: now.toISOString() };
     },
 
+    /**
+     * Metadados da imagem do item, sem ler o blob. O snapshot é imutável, então o ETag sai do próprio id
+     * e a revalidação (304) nunca toca em `imageData`.
+     */
+    async getItemImageMeta(itemId: string): Promise<{ mime: string; etag: string }> {
+      const item = await db.item.findUnique({ where: { id: itemId }, select: { imageMime: true } });
+      if (!item?.imageMime) throw imageNotFound();
+      return { mime: item.imageMime, etag: `"img-${itemId}"` };
+    },
+
     /** Bytes da imagem do item. Único lugar que lê `Item.imageData`. */
-    async getItemImage(itemId: string): Promise<{ data: Buffer; mime: string; etag: string }> {
-      const item = await db.item.findUnique({ where: { id: itemId }, select: { imageData: true, imageMime: true } });
-      if (!item?.imageData || !item.imageMime) throw new AppError("NOT_FOUND", undefined, "Imagem não encontrada.");
-      const data = Buffer.from(item.imageData);
-      const etag = `"${createHash("sha256").update(data).digest("hex").slice(0, 32)}"`;
-      return { data, mime: item.imageMime, etag };
+    async getItemImageData(itemId: string): Promise<Buffer> {
+      const item = await db.item.findUnique({ where: { id: itemId }, select: { imageData: true } });
+      if (!item?.imageData) throw imageNotFound();
+      return Buffer.from(item.imageData);
     },
   };
 }
