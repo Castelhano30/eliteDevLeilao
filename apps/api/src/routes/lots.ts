@@ -1,11 +1,22 @@
 import { Router, type Request } from "express";
-import { CATALOG_TEXT, LOT_TEXT, fieldErrors, lotListQuerySchema, validateCreateLot } from "@lanceauto/shared";
+import {
+  BID_TEXT,
+  CATALOG_TEXT,
+  LOT_TEXT,
+  fieldErrors,
+  lotListQuerySchema,
+  placeBidSchema,
+  validateCreateLot,
+} from "@lanceauto/shared";
 import { AppError } from "../errors";
 import type { Clock } from "../infra/clock";
+import type { Publisher } from "../infra/publisher";
 import type { AuthMiddleware } from "../middleware/auth";
 import { makeRateLimiter } from "../middleware/rate-limit";
+import type { BidService } from "../services/bid.service";
 import type { CatalogService } from "../services/catalog.service";
 import type { LotService } from "../services/lot.service";
+import { parseBody } from "./auth";
 
 const param = (req: Request, name: string) => String(req.params[name] ?? "");
 
@@ -63,7 +74,13 @@ export function catalogRouter(auth: AuthMiddleware, catalog: CatalogService): Ro
 }
 
 /** Lotes: criação (leiloeiro), Vitrine e Sala (públicas), Painel (leiloeiro) e imagem do item. */
-export function lotsRouter(auth: AuthMiddleware, lots: LotService, clock: Clock): Router {
+export function lotsRouter(
+  auth: AuthMiddleware,
+  lots: LotService,
+  bids: BidService,
+  clock: Clock,
+  publisher: Publisher,
+): Router {
   const router = Router();
 
   router.post("/lots", auth.requireAuth, auth.requireRole("AUCTIONEER", CATALOG_TEXT.roleNotAllowed), async (req, res) => {
@@ -79,10 +96,29 @@ export function lotsRouter(auth: AuthMiddleware, lots: LotService, clock: Clock)
     res.json(await lots.listLots(parsed.data));
   });
 
-  // O token é opcional e ignorado nesta fatia (a S03 usa para myPseudonym).
+  // Token opcional: inválido ou expirado vira visitante, sem 401 (R-1.11).
   router.get("/lots/:id", auth.optionalAuth, async (req, res) => {
-    res.json(await lots.getLotState(param(req, "id")));
+    res.json(await lots.getLotState(param(req, "id"), req.user));
   });
+
+  // Lance: 30/min por usuário. O leiloeiro também chega ao service e é barrado na checagem de papel (INV-8).
+  router.post(
+    "/lots/:id/bids",
+    auth.requireAuth,
+    makeRateLimiter({
+      windowMs: 60_000,
+      max: 30,
+      keyGenerator: (req) => `bids:${req.user?.id ?? "?"}`,
+      message: BID_TEXT.rateLimited,
+    }),
+    async (req, res) => {
+      const input = parseBody(placeBidSchema, req.body);
+      const { response, events } = await bids.placeBid(req.user!.id, req.user!.role, param(req, "id"), input);
+      // Só depois do commit: se o service lançou, nada chega aqui (R-3.11).
+      publisher.publish(events);
+      res.status(201).json(response);
+    },
+  );
 
   router.get("/my/lots", auth.requireAuth, auth.requireRole("AUCTIONEER", CATALOG_TEXT.roleNotAllowed), async (req, res) => {
     res.json(await lots.myLots(req.user!.id));

@@ -7,6 +7,7 @@ import type { Logger } from "./infra/logger";
 import type { PrismaClient } from "@prisma/client";
 import { makeAuth } from "./middleware/auth";
 import { SystemClock, type Clock } from "./infra/clock";
+import { NoopPublisher, type Publisher } from "./infra/publisher";
 import { ExternalCache } from "./infra/external-cache";
 import { makeFipeCatalog, type CatalogPort } from "./infra/fipe";
 import { makeImageStore, type ImageDownloader, type ImageStoreOptions } from "./infra/image-store";
@@ -17,6 +18,7 @@ import { authRouter } from "./routes/auth";
 import { healthRouter } from "./routes/health";
 import { catalogRouter, lotsRouter } from "./routes/lots";
 import { makeAuthService } from "./services/auth.service";
+import { makeBidService } from "./services/bid.service";
 import { makeCatalogService } from "./services/catalog.service";
 import { makeLotService } from "./services/lot.service";
 import { makeWalletService } from "./services/wallet.service";
@@ -37,6 +39,8 @@ export interface AppDeps {
   db: PrismaClient;
   logger: Logger;
   clock?: Clock;
+  /** Entrega os eventos de domínio depois do commit; a S04 troca pelo Socket.IO. */
+  publisher?: Publisher;
   /** Portas externas; ausentes, saem dos adaptadores reais apontados pelo env. Os testes injetam. */
   external?: {
     catalog?: CatalogPort;
@@ -49,7 +53,14 @@ export interface AppDeps {
   };
 }
 
-export function createApp({ env, db, logger, clock = new SystemClock(), external = {} }: AppDeps): Express {
+export function createApp({
+  env,
+  db,
+  logger,
+  clock = new SystemClock(),
+  publisher = new NoopPublisher(),
+  external = {},
+}: AppDeps): Express {
   const app = express();
 
   // Atrás do proxy do Railway o IP real vem de X-Forwarded-For; sem isso o rate limit por IP vira global.
@@ -86,11 +97,13 @@ export function createApp({ env, db, logger, clock = new SystemClock(), external
   const catalogService = makeCatalogService({ catalog, images });
   const lotService = makeLotService({ db, clock, auditKey: env.AUDIT_HMAC_KEY, catalog, images, imageStore, logger });
 
+  const bidService = makeBidService({ db, clock, auditKey: env.AUDIT_HMAC_KEY });
+
   app.use(healthRouter(db));
   app.use(authRouter(authService, env.AUTH_RATE_LIMIT_MAX));
   app.use(accountRouter(auth, authService, walletService));
   app.use(catalogRouter(auth, catalogService));
-  app.use(lotsRouter(auth, lotService, clock));
+  app.use(lotsRouter(auth, lotService, bidService, clock, publisher));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

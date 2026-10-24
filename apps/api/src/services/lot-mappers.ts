@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { lotStatus, minimumNextCents, type LotCard, type LotState } from "@lanceauto/shared";
+import { lotStatus, minimumNextCents, type BidDTO, type LotCard, type LotState } from "@lanceauto/shared";
 import { toNumber } from "./mappers";
 
 /**
@@ -70,7 +70,18 @@ export function toLotCard(row: LotRow, now: Date): LotCard {
   };
 }
 
-export function toLotState(row: LotRow, now: Date): LotState {
+/** O que a leitura acrescenta ao lote: lances, licitantes distintos e a posição de quem está olhando. */
+export interface LotStateExtras {
+  bids: BidDTO[];
+  bidderCount: number;
+  myPseudonym: string | null;
+  myRank: number | null;
+  myBestBidCents: number | null;
+}
+
+const NO_EXTRAS: LotStateExtras = { bids: [], bidderCount: 0, myPseudonym: null, myRank: null, myBestBidCents: null };
+
+export function toLotState(row: LotRow, now: Date, extras: LotStateExtras = NO_EXTRAS): LotState {
   const card = toLotCard(row, now);
   return {
     serverTime: now.toISOString(),
@@ -83,7 +94,7 @@ export function toLotState(row: LotRow, now: Date): LotState {
       minIncrementCents: card.minIncrementCents,
       currentBidCents: card.currentBidCents,
       minimumBidCents: minimumNextCents(card),
-      bidderCount: 0,
+      bidderCount: extras.bidderCount,
       bidCount: card.bidCount,
       version: card.version,
       entryCount: card.version,
@@ -92,9 +103,9 @@ export function toLotState(row: LotRow, now: Date): LotState {
       originalEndsAt: card.originalEndsAt,
       cancelledAt: card.cancelledAt,
       settledAt: isoOrNull(row.settledAt),
-      myPseudonym: null,
-      myRank: null,
-      myBestBidCents: null,
+      myPseudonym: extras.myPseudonym,
+      myRank: extras.myRank,
+      myBestBidCents: extras.myBestBidCents,
     },
     car: {
       brand: row.item.brand,
@@ -107,6 +118,6 @@ export function toLotState(row: LotRow, now: Date): LotState {
       imageCredit: card.imageUrl ? row.item.imageCredit : null,
       imageCreditUrl: card.imageUrl ? row.item.imageCreditUrl : null,
     },
-    bids: [],
+    bids: extras.bids,
   };
 }

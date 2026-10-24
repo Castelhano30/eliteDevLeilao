@@ -1,8 +1,8 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
-import { AUTH_TEXT, type DepositResponse, type WalletPageDto } from "@lanceauto/shared";
+import { AUTH_TEXT, type DepositResponse, type LeadingLotDto, type WalletPageDto } from "@lanceauto/shared";
 import { AppError } from "../errors";
 import type { Clock } from "../infra/clock";
-import { toLedgerEntryDto, toWalletDto } from "./mappers";
+import { toLedgerEntryDto, toNumber, toWalletDto } from "./mappers";
 
 export const LEDGER_PAGE_SIZE = 50;
 
@@ -40,11 +40,32 @@ export function makeWalletService({ db, clock }: WalletServiceDeps) {
       const hasMore = rows.length > LEDGER_PAGE_SIZE;
       const pageRows = rows.slice(0, LEDGER_PAGE_SIZE);
       const last = pageRows[pageRows.length - 1];
+      // O ledger não tem FK para o lote (histórico imutável): o número vem de uma busca só pelos ids da página.
+      const lotIds = [...new Set(pageRows.flatMap((row) => (row.lotId ? [row.lotId] : [])))];
+      const numbers = new Map(
+        (await db.lot.findMany({ where: { id: { in: lotIds } }, select: { id: true, number: true } })).map((lot) => [
+          lot.id,
+          lot.number,
+        ]),
+      );
+      // Lotes em que lidero e que ainda não foram liquidados nem cancelados (ao vivo ou apurando), os que fecham antes primeiro.
+      const leading: LeadingLotDto[] = (
+        await db.lot.findMany({
+          where: { leaderId: userId, cancelledAt: null, settledAt: null },
+          orderBy: [{ endsAt: "asc" }, { number: "asc" }],
+          select: { id: true, number: true, title: true, currentBidCents: true },
+        })
+      ).map((lot) => ({
+        lotId: lot.id,
+        number: lot.number,
+        title: lot.title,
+        committedCents: lot.currentBidCents === null ? 0 : toNumber(lot.currentBidCents),
+      }));
       return {
         ...toWalletDto(wallet),
-        entries: pageRows.map(toLedgerEntryDto),
+        entries: pageRows.map((row) => toLedgerEntryDto(row, row.lotId ? (numbers.get(row.lotId) ?? null) : null)),
         nextCursor: hasMore && last ? encodeCursor(last.seq) : null,
-        leadingLots: [],
+        leadingLots: leading,
       };
     },
 

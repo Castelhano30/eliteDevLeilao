@@ -15,16 +15,20 @@ import {
   type LotState,
   type LotStatus,
   type MyLotsResponse,
+  type Role,
   type StoredImageStatus,
 } from "@lanceauto/shared";
 import { genesisHash, sealHash } from "../domain/audit-chain";
+import { pseudonymFor } from "../domain/pseudonym";
+import { rankFrom } from "../domain/rank";
 import { AppError } from "../errors";
 import { toDate, type Clock } from "../infra/clock";
 import type { CatalogPort } from "../infra/fipe";
 import type { DownloadedImage, ImageDownloader } from "../infra/image-store";
 import type { Logger } from "../infra/logger";
 import type { ImageSuggestionPort } from "../infra/wikipedia";
-import { LOT_SELECT, toLotCard, toLotState, type LotRow } from "./lot-mappers";
+import { LOT_SELECT, toLotCard, toLotState, type LotRow, type LotStateExtras } from "./lot-mappers";
+import { toNumber } from "./mappers";
 
 /** Teto defensivo da Vitrine (sem paginação). */
 export const SHOWCASE_LIMIT = 200;
@@ -224,11 +228,44 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
       return { lots: rows.map((row) => toLotCard(row, now)), brands, counts, serverTime: now.toISOString() };
     },
 
-    /** Estado do lote, inclusive agendado e cancelado (R-2.11). Id inexistente ou malformado: 404. */
-    async getLotState(id: string): Promise<LotState> {
+    /**
+     * Estado do lote, inclusive agendado e cancelado (R-2.11). Id inexistente ou malformado: 404.
+     * Lê o lote primeiro e os lances com `seq <= entryCount` desse mesmo instante: o lance atual nunca aparece sem a
+     * sua linha no histórico (AC-3.43), porque lote e lance são gravados na mesma transação.
+     * `viewer` (token válido) só muda a posição pessoal; `BIDDER` recebe pseudônimo, posição e melhor lance.
+     */
+    async getLotState(id: string, viewer?: { id: string; role: Role }): Promise<LotState> {
       const row = await findState(id);
       if (!row) throw lotNotFound();
-      return toLotState(row, clock.now());
+      const now = clock.now();
+      const bidRows = await db.bid.findMany({
+        where: { lotId: id, kind: "BID", seq: { lte: row.entryCount } },
+        orderBy: { seq: "desc" },
+        select: { seq: true, kind: true, pseudonym: true, amountCents: true, at: true, bidderId: true },
+      });
+      const bestByBidder = new Map<string, number>();
+      for (const bid of bidRows) {
+        if (bid.bidderId === null || bid.amountCents === null) continue;
+        const amount = toNumber(bid.amountCents);
+        if (amount > (bestByBidder.get(bid.bidderId) ?? 0)) bestByBidder.set(bid.bidderId, amount);
+      }
+      const isBidder = viewer?.role === "BIDDER";
+      const position = isBidder ? rankFrom(bestByBidder, viewer.id) : null;
+      const extras: LotStateExtras = {
+        // `bidderId` fica aqui dentro: o DTO público só leva o pseudônimo (INV-13).
+        bids: bidRows.map((bid) => ({
+          seq: bid.seq,
+          kind: "BID" as const,
+          pseudonym: bid.pseudonym ?? "",
+          amountCents: toNumber(bid.amountCents ?? 0n),
+          at: bid.at.toISOString(),
+        })),
+        bidderCount: bestByBidder.size,
+        myPseudonym: isBidder ? pseudonymFor(auditKey, viewer.id, id) : null,
+        myRank: position?.rank ?? null,
+        myBestBidCents: position?.myBestBidCents ?? null,
+      };
+      return toLotState(row, now, extras);
     },
 
     /** Lotes do leiloeiro, cancelados no fim (R-2.11). `totalReceivedCents` é 0 até a S05. */

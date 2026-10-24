@@ -20,13 +20,14 @@ export function toWalletDto(wallet: Pick<Wallet, "totalCents" | "committedCents"
   return { totalCents, committedCents, availableCents: totalCents - committedCents };
 }
 
-export function toLedgerEntryDto(entry: LedgerEntry): LedgerEntryDto {
+/** `lotNumber` vem do join com `Lot` feito pelo chamador; o ledger não tem FK para o lote. */
+export function toLedgerEntryDto(entry: LedgerEntry, lotNumber: number | null = null): LedgerEntryDto {
   return {
     id: entry.id,
     kind: entry.kind,
     amountCents: toNumber(entry.amountCents),
     lotId: entry.lotId,
-    lotNumber: null,
+    lotNumber,
     totalAfterCents: toNumber(entry.totalAfter),
     committedAfterCents: toNumber(entry.committedAfter),
     createdAt: entry.createdAt.toISOString(),
