@@ -68,6 +68,8 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
     queryFn: ({ signal }) => fetchLots(filters, signal),
     placeholderData: keepPreviousData,
     retry: 1,
+    // API caída (inclusive no SSR): tenta de novo sozinha até voltar, sem recarregar à mão (AC-2.35).
+    refetchInterval: (q) => (q.state.status === "error" ? 10_000 : false),
   });
   const data = query.data;
   const serverTime = data?.serverTime ?? initialServerTime;
