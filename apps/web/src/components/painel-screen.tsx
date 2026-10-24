@@ -22,28 +22,36 @@ async function fetchMyLots(signal?: AbortSignal): Promise<MyLotsResponse> {
   return result.data;
 }
 
-/** "Lote 025 agendado. Abre sozinho em 25/10 às 10:00 (Brasília)." Mostrada uma vez depois de criar. */
+/**
+ * Mostrada uma vez depois de criar: "Lote 025 agendado. Abre sozinho em 25/10 às 10:00 (Brasília)." ou, se o lote
+ * nasceu ao vivo (início dentro da tolerância de 60 s), "Lote 025 no ar.". `criado` que não seja inteiro é ignorado.
+ */
 function useCreatedNotice(lots: LotCardDto[] | undefined) {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const [notice, setNotice] = useState<string | null>(null);
-  const created = params.get("criado");
+  const raw = params.get("criado");
+  const created = raw !== null && /^\d{1,9}$/.test(raw) ? Number(raw) : null;
   const imageFailed = params.get("imagem") === "falhou";
 
   // Guarda a mensagem quando os dados chegam (estado derivado no render); o efeito só limpa a URL.
-  if (created && lots && notice === null) {
-    const lot = lots.find((l) => String(l.number) === created);
-    const opens = lot ? brasiliaDayAndTime(lot.startsAt) : null;
-    const base = opens
-      ? `Lote ${formatLotNumber(Number(created))} agendado. Abre sozinho em ${opens.day} às ${opens.time} (Brasília).`
-      : `Lote ${formatLotNumber(Number(created))} agendado.`;
+  if (created !== null && lots && notice === null) {
+    const lot = lots.find((l) => l.number === created);
+    const label = `Lote ${formatLotNumber(created)}`;
+    let base = `${label} criado.`;
+    if (lot?.status === "SCHEDULED") {
+      const opens = brasiliaDayAndTime(lot.startsAt);
+      base = `${label} agendado. Abre sozinho em ${opens.day} às ${opens.time} (Brasília).`;
+    } else if (lot?.status === "LIVE" || lot?.status === "CLOSING") {
+      base = `${label} no ar.`;
+    }
     setNotice(imageFailed ? `${base} A imagem não pôde ser baixada; o lote usa a ilustração padrão.` : base);
   }
 
   useEffect(() => {
-    if (created && notice !== null) router.replace(pathname);
-  }, [created, notice, pathname, router]);
+    if (raw !== null && (notice !== null || created === null)) router.replace(pathname);
+  }, [raw, created, notice, pathname, router]);
 
   return notice;
 }
