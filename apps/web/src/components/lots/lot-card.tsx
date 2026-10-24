@@ -42,7 +42,7 @@ export function LotCard({ card, serverTime, preview = false, emptyNote }: LotCar
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="t-mono-rotulo">{card.currentBidCents === null ? "LANCE INICIAL" : "LANCE ATUAL"}</p>
-          <p className="font-mono text-[22px] font-semibold">{formatBRL(card.currentBidCents ?? card.startingBidCents)}</p>
+          <p className="font-mono text-[20px] break-all font-semibold">{formatBRL(card.currentBidCents ?? card.startingBidCents)}</p>
           <p className="t-mono mt-1 text-tinta2">{status === "CLOSING" ? "Apurando…" : bidsLabel(card.bidCount)}</p>
         </div>
         <Cronometro
@@ -61,10 +61,10 @@ export function LotCard({ card, serverTime, preview = false, emptyNote }: LotCar
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="t-mono-rotulo">LANCE INICIAL</p>
-          <p className="font-mono text-[22px] font-semibold">{formatBRL(card.startingBidCents)}</p>
+          <p className="font-mono text-[20px] break-all font-semibold">{formatBRL(card.startingBidCents)}</p>
           <p className="t-mono mt-1 text-tinta2">incremento {formatBRL(card.minIncrementCents)}</p>
         </div>
-        <div className="border-[3px] border-linha bg-papel px-3 py-2 text-center">
+        <div className="border-2 border-linha bg-papel px-3 py-2 text-center">
           <p className="t-mono-rotulo-pequeno">ABERTURA</p>
           <p className="font-display text-[26px] font-black leading-none">
             {validStart ? brasiliaWeekday(card.startsAt).toUpperCase() : ""} {day}
@@ -102,13 +102,13 @@ export function LotCard({ card, serverTime, preview = false, emptyNote }: LotCar
           </span>
         ) : null}
         {status === "SCHEDULED" ? (
-          <span className="t-mono absolute right-3 top-3 border-[3px] border-linha bg-papel px-2 py-1 text-[12px]">
+          <span className="t-mono absolute right-3 top-3 border-2 border-linha bg-papel px-2 py-1 text-[12px]">
             {validStart ? opensLabel(card.startsAt) : "ABRE —"}
           </span>
         ) : null}
       </div>
-      <div className="p-5">
-        <h3 id={titleId} className="font-display text-[32px] font-black uppercase leading-none">
+      <div className="p-4">
+        <h3 id={titleId} className="font-display text-[26px] font-black uppercase leading-none">
           {card.title}
         </h3>
         <p className="mt-2 font-mono text-[13px] text-tinta2">{meta}</p>
@@ -118,7 +118,7 @@ export function LotCard({ card, serverTime, preview = false, emptyNote }: LotCar
     </>
   );
 
-  const shell = "relative block rounded-nenhum border-[3px] border-linha bg-papel text-tinta no-underline shadow-cartao";
+  const shell = "relative block rounded-nenhum border-2 border-linha bg-papel text-tinta no-underline shadow-cartao";
   if (preview) return <div className={shell}>{body}</div>;
   return (
     <Link href={lotCardHref(card)} aria-labelledby={titleId} className={`${shell} hover:!text-tinta`}>

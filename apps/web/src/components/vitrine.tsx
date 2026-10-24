@@ -85,7 +85,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
   const nothingPublished = counts !== undefined && counts.live + counts.scheduled + counts.ended === 0;
 
   return (
-    <div className="mx-auto pb-16" style={{ width: "min(100% - 2 * var(--gutter-lateral), 1320px)" }}>
+    <div className="mx-auto pb-8" style={{ width: "min(100% - 2 * var(--gutter-lateral), 1320px)" }}>
       <p className="t-mono-rotulo flex flex-wrap items-center gap-x-3 gap-y-1 border-b-2 border-dashed border-tracejado py-3">
         <span className="inline-flex items-center gap-2">
           <span aria-hidden="true" className="inline-block h-[10px] w-[10px] rounded-circulo bg-ferrugem" style={{ animation: "la-pulsa 1.2s infinite" }} />
@@ -107,7 +107,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
         ) : null}
       </p>
 
-      <section className="py-12" aria-labelledby={`${searchId}-hero`}>
+      <section className="py-8" aria-labelledby={`${searchId}-hero`}>
         <h1 id={`${searchId}-hero`} className="t-display-hero">
           Quem dá mais, leva.
         </h1>
@@ -118,7 +118,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
         <p className="t-body-nota mt-3">Referência: Tabela FIPE. Nenhum carro de verdade troca de dono aqui.</p>
       </section>
 
-      <section id="como-funciona" className="scroll-mt-6 pb-12" aria-labelledby="como-funciona-titulo">
+      <section id="como-funciona" className="scroll-mt-6 pb-8" aria-labelledby="como-funciona-titulo">
         <h2 id="como-funciona-titulo" className="t-display-secao">
           Como funciona
         </h2>
@@ -143,7 +143,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Marca, modelo, ano…"
-            className="h-12 w-full rounded-nenhum border-[3px] border-linha bg-fundo px-3 font-serif text-[19px] text-tinta placeholder:text-tinta2"
+            className="h-12 w-full rounded-nenhum border-2 border-linha bg-fundo px-3 font-serif text-[16px] text-tinta placeholder:text-tinta2"
           />
         </div>
         <div className="min-w-[min(100%,200px)]">
@@ -154,7 +154,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
             id={brandId}
             value={filters.brand}
             onChange={(event) => setFilters((current) => ({ ...current, brand: event.target.value }))}
-            className="h-12 w-full rounded-nenhum border-[3px] border-linha bg-fundo px-3 font-serif text-[19px] text-tinta"
+            className="h-12 w-full rounded-nenhum border-2 border-linha bg-fundo px-3 font-serif text-[16px] text-tinta"
           >
             <option value="">Todas</option>
             {(data?.brands ?? []).map((brand) => (
@@ -187,7 +187,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
                 Nenhum lote publicado por enquanto.
               </FeedbackState>
             ) : data.lots.length === 0 ? (
-              <div className="t-body border-[3px] border-dashed border-tracejado bg-papel p-6 text-tinta2" role="status">
+              <div className="t-body border-2 border-dashed border-tracejado bg-papel p-6 text-tinta2" role="status">
                 <p className="t-cartaz-subtitulo text-tinta">Pátio vazio</p>
                 <p className="mt-2">Nada com esse filtro. Afrouxe a busca ou volte quando o leiloeiro acordar.</p>
                 <div className="mt-4">
@@ -199,8 +199,8 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
                 const lots = data.lots.filter((lot) => showcaseGroup(lot.status) === group);
                 if (lots.length === 0) return null;
                 return (
-                  <section key={group} aria-labelledby={`secao-${group}`} className="mb-16">
-                    <div className="mb-14 flex flex-wrap items-end justify-between gap-3 border-b-[3px] border-linha pb-3">
+                  <section key={group} aria-labelledby={`secao-${group}`} className="mb-8">
+                    <div className="mb-10 flex flex-wrap items-end justify-between gap-3 border-b-[3px] border-linha pb-3">
                       <div>
                         <h2 id={`secao-${group}`} className="t-display-secao">
                           {title}
@@ -209,7 +209,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
                       </div>
                       <p className="t-mono-dado">{lotCountLabel(lots.length)}</p>
                     </div>
-                    <div className="grid gap-x-8 gap-y-10" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 330px), 1fr))" }}>
+                    <div className="grid gap-x-6 gap-y-10" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 330px), 1fr))" }}>
                       {lots.map((lot) => (
                         <LotCard key={lot.id} card={lot} serverTime={serverTime} />
                       ))}

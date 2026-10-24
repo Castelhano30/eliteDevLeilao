@@ -61,7 +61,7 @@ const carLabel = (lot: LotCardDto) => `${lot.brand} ${lot.model} ${lot.year}`;
 function LotLink({ lot }: { lot: LotCardDto }) {
   return (
     <span className="flex items-center gap-3">
-      <span className="t-mono-dado shrink-0 border-[3px] border-linha bg-ocre px-2 py-1 text-sobreOcre">{formatLotNumber(lot.number)}</span>
+      <span className="t-mono-dado shrink-0 border-2 border-linha bg-ocre px-2 py-1 text-sobreOcre">{formatLotNumber(lot.number)}</span>
       <Link href={`/lotes/${lot.id}`} className="t-body font-semibold">
         {lot.title}
       </Link>
@@ -79,11 +79,11 @@ function SeeRoom({ lot }: { lot: LotCardDto }) {
 
 function Counter({ label, value, alert = false }: { label: string; value: number; alert?: boolean }) {
   return (
-    <div className="flex min-w-[150px] flex-1 flex-col justify-between border-[3px] border-linha bg-painel px-4 py-3">
+    <div className="flex min-w-[150px] flex-1 flex-col justify-between border-2 border-linha bg-painel px-4 py-3">
       <p className="t-mono-rotulo-pequeno" style={{ color: "var(--f-rotulo-relogio)" }}>
         {label}
       </p>
-      <p className="mt-3 font-mono text-[48px] font-semibold leading-none" style={{ color: alert ? "var(--c-led-alerta)" : "var(--c-led)" }}>
+      <p className="mt-3 font-mono text-[36px] font-semibold leading-none" style={{ color: alert ? "var(--c-led-alerta)" : "var(--c-led)" }}>
         {String(value).padStart(2, "0")}
       </p>
     </div>
@@ -149,7 +149,7 @@ export function PainelScreen() {
       ) : null}
 
       {!data ? (
-        <div className="mt-10">
+        <div className="mt-8">
           {query.isError ? (
             <FeedbackState variant="erro" onRetry={() => void query.refetch()}>
               Não consegui trazer seus lotes.
@@ -165,10 +165,10 @@ export function PainelScreen() {
               Não consegui atualizar seus lotes. Os dados abaixo estão desatualizados.
             </FeedbackState>
           ) : null}
-          <section aria-label="Resumo" className="mt-10 flex flex-wrap gap-6">
-            <div className="min-w-[260px] flex-[2] border-[3px] border-linha bg-papel p-5 shadow-cartao">
+          <section aria-label="Resumo" className="mt-8 flex flex-wrap gap-6">
+            <div className="min-w-0 basis-[260px] flex-[2] border-2 border-linha bg-papel p-5 shadow-cartao">
               <p className="t-mono-rotulo">TOTAL RECEBIDO · 0 ARREMATES</p>
-              <p className="mt-2 font-mono text-[34px] font-semibold">{formatBRL(data.totalReceivedCents)}</p>
+              <p className="mt-2 font-mono text-[28px] break-all font-semibold">{formatBRL(data.totalReceivedCents)}</p>
               <p className="t-body-nota mt-2">Saldo simulado. O pátio agradece mesmo assim.</p>
             </div>
             <div className="flex flex-[3] flex-wrap gap-4">
@@ -178,7 +178,7 @@ export function PainelScreen() {
             </div>
           </section>
 
-          <section aria-labelledby="painel-ao-vivo" className="mt-14">
+          <section aria-labelledby="painel-ao-vivo" className="mt-8">
             <h2 id="painel-ao-vivo" className="t-display-secao mb-6">
               Ao vivo
             </h2>
@@ -189,7 +189,7 @@ export function PainelScreen() {
             )}
           </section>
 
-          <section aria-labelledby="painel-agendados" className="mt-14">
+          <section aria-labelledby="painel-agendados" className="mt-8">
             <h2 id="painel-agendados" className="t-display-secao mb-6">
               Agendados
             </h2>
@@ -200,12 +200,12 @@ export function PainelScreen() {
             )}
           </section>
 
-          <section aria-labelledby="painel-encerrados" className="mt-14">
+          <section aria-labelledby="painel-encerrados" className="mt-8">
             <h2 id="painel-encerrados" className="t-display-secao mb-6">
               Encerrados
             </h2>
             {ended.length ? (
-              <div className="grid gap-x-8 gap-y-10 pt-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 330px), 1fr))" }}>
+              <div className="grid gap-x-6 gap-y-10 pt-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 330px), 1fr))" }}>
                 {ended.map((lot) => (
                   <LotCard key={lot.id} card={lot} serverTime={data.serverTime} />
                 ))}

@@ -62,7 +62,7 @@ export function AccessScreen() {
 
   return (
     <PageShell>
-      <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
+      <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
         <section aria-labelledby="titulo-acesso">
           <h1 id="titulo-acesso" className="t-display-titulo mb-6">
             Quem dá mais, leva.

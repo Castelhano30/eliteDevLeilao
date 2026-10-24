@@ -7,7 +7,7 @@ export interface CarPhotoProps {
   /** Caminho relativo da API (snapshot) ou URL absoluta (prévia do Criar lote). */
   imageUrl: string | null;
   title: string;
-  /** "cartao": 200 px de altura; "sala"/"previa": 16:9 fluido. */
+  /** "cartao": 176 px de altura; "sala"/"previa": 16:9 fluido. */
   size: "cartao" | "sala" | "previa";
   /** Legendas aparecem na Sala e na prévia; nunca no cartão (evita link aninhado). */
   showCaption?: boolean;
@@ -42,7 +42,7 @@ export function CarPhoto({ imageUrl, title, size, showCaption = false, credit, c
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const broken = src !== null && failedSrc === src;
   const showImage = src !== null && !broken;
-  const frame = size === "cartao" ? { height: 200 } : { aspectRatio: "16 / 9" };
+  const frame = size === "cartao" ? { height: 176 } : { aspectRatio: "16 / 9" };
   const link = safeHref(creditUrl);
 
   let caption: ReactNode = null;

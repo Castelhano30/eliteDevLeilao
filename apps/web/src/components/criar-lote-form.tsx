@@ -67,7 +67,7 @@ type Errors = Partial<Record<(typeof FIELD_ORDER)[number][0], string>>;
 function Group({ number, title, children }: { number: string; title: string; children: ReactNode }) {
   const id = useId();
   return (
-    <fieldset aria-labelledby={id} className="min-w-0 rounded-nenhum border-[3px] border-linha bg-papel p-6 shadow-cartao">
+    <fieldset aria-labelledby={id} className="min-w-0 rounded-nenhum border-2 border-linha bg-papel p-4 shadow-cartao">
       <legend className="sr-only">{`${number} ${title}`}</legend>
       <h2 id={id} className="t-cartaz-subtitulo mb-5 flex items-baseline gap-3">
         <span className="font-mono text-[18px]">{number}</span>
@@ -104,7 +104,7 @@ function CatalogSelect({ id, label, value, onChange, options, disabled, down, pl
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-erro` : undefined}
         onChange={(event) => onChange(event.target.value)}
-        className={`min-h-12 w-full rounded-nenhum border-[3px] bg-fundo px-3 font-serif text-[19px] text-tinta ${
+        className={`min-h-12 w-full rounded-nenhum border-2 bg-fundo px-3 font-serif text-[16px] text-tinta ${
           error ? "border-ferrugem" : "border-linha"
         } ${down ? "border-dashed opacity-50" : ""} disabled:bg-suave`}
       >
@@ -325,7 +325,7 @@ export function CriarLoteForm() {
       <p className="t-body-lead mt-4">Escolha o carro na Tabela FIPE, ajuste as regras e solte no pátio.</p>
 
       {fipeDown ? (
-        <div role="alert" className="mt-8 border-[3px] border-dashed border-ferrugem bg-papel p-6">
+        <div role="alert" className="mt-8 border-2 border-dashed border-ferrugem bg-papel p-4">
           <p className="t-cartaz-subtitulo text-ferrugem">{CATALOG_TEXT.fipeUnavailable}</p>
           <p className="t-body mt-2">{CATALOG_TEXT.fipeUnavailableBody}</p>
           <div className="mt-4">
@@ -347,7 +347,7 @@ export function CriarLoteForm() {
       ) : null}
 
       <div className="mt-8 flex flex-wrap items-start gap-8">
-        <form noValidate onSubmit={(event) => void submit(event)} className="min-w-0 space-y-8" style={{ flex: "1 1 560px" }}>
+        <form noValidate onSubmit={(event) => void submit(event)} className="min-w-0 space-y-6" style={{ flex: "1 1 560px" }}>
           <Group number="01" title="O carro">
             <p role="status" aria-live="polite" className="t-mono-rotulo inline-flex items-center gap-2" style={{ color: fipeColor }}>
               <span
@@ -393,9 +393,9 @@ export function CriarLoteForm() {
             />
             {catalogNotFound && !fipeDown ? <FeedbackState variant="vazio">{catalogNotFound}</FeedbackState> : null}
             {hasCar && car ? (
-              <div className="border-[3px] border-linha bg-fundo p-4">
+              <div className="border-2 border-linha bg-fundo p-4">
                 <p className="t-mono-rotulo">REFERÊNCIA FIPE · {formatReferenceMonth(car.referenceMonth)}</p>
-                <p className="mt-1 font-mono text-[28px] font-semibold">{formatBRL(car.referencePriceCents)}</p>
+                <p className="mt-1 font-mono text-[24px] font-semibold">{formatBRL(car.referencePriceCents)}</p>
                 <p className="t-mono mt-1 text-tinta2">
                   {car.brand} · {car.model} · {car.year} · {car.fuel}
                 </p>
@@ -524,7 +524,7 @@ export function CriarLoteForm() {
         </form>
 
         <aside aria-label="Assim ele aparece na Vitrine" className="min-w-0 pt-6" style={{ flex: "1 1 340px", maxWidth: 440 }}>
-          <p className="t-mono-rotulo mb-14">ASSIM ELE APARECE NA VITRINE</p>
+          <p className="t-mono-rotulo mb-10">ASSIM ELE APARECE NA VITRINE</p>
           <LotCard card={previewCard} preview emptyNote={hasCar ? undefined : "Sem carro escolhido. A FIPE está de folga."} />
           {!noPhoto && previewImage && credit ? <p className="t-body-legenda mt-3 text-tinta2">{credit}</p> : null}
         </aside>

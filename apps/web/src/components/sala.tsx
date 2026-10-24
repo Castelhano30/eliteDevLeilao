@@ -79,7 +79,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
   useOnReach(boundary === null ? null : boundary + 500, now, () => void query.refetch());
 
   const shell = (children: ReactNode) => (
-    <div className="mx-auto py-12" style={{ width: "min(100% - 2 * var(--gutter-lateral), 1320px)" }}>
+    <div className="mx-auto py-6 md:py-8" style={{ width: "min(100% - 2 * var(--gutter-lateral), 1320px)" }}>
       {children}
     </div>
   );
@@ -158,7 +158,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
           Não consegui atualizar o lote. Os dados abaixo estão desatualizados.
         </FeedbackState>
       ) : null}
-      <div className="flex flex-wrap gap-9">
+      <div className="flex flex-wrap gap-6">
         <section aria-label="Ficha do carro" className="min-w-0" style={{ flex: "1 1 520px" }}>
           <CarPhoto imageUrl={car.imageUrl} title={lot.title} size="sala" showCaption credit={car.imageCredit} creditUrl={car.imageCreditUrl} dimmed={ended} />
           <dl className="mt-6 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))" }}>
@@ -186,10 +186,10 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
             <LotTag number={lot.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} />
             {status === "LIVE" ? <Stamp variant="ao-vivo" /> : null}
           </div>
-          <h1 className="font-display mt-6 font-black uppercase" style={{ fontSize: "clamp(48px, 7vw, 104px)", lineHeight: 0.84 }}>
+          <h1 className="font-display mt-6 font-black uppercase" style={{ fontSize: "clamp(40px, 5vw, 72px)", lineHeight: 0.84 }}>
             {lot.title}
           </h1>
-          <div className="mt-8">{panel}</div>
+          <div className="mt-6">{panel}</div>
         </section>
       </div>
     </>,

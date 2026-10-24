@@ -39,13 +39,13 @@ async function fetchLedgerPage(cursor: string | null): Promise<WalletPageDto> {
 
 function Equation({ total, committed, available }: { total?: number; committed?: number; available?: number }) {
   const show = (cents?: number) => (cents === undefined ? "R$ …" : formatBRL(cents));
-  const card = "min-w-0 flex-1 rounded-nenhum border-[3px] border-linha bg-papel p-5";
+  const card = "min-w-0 flex-1 rounded-nenhum border-2 border-linha bg-papel p-5";
   const glyph = "t-display-titulo self-center text-center";
   return (
-    <div className="flex flex-col gap-3 sm:flex-row" role="group" aria-label="Saldo">
+    <div className="flex flex-col gap-3 lg:flex-row" role="group" aria-label="Saldo">
       <div className={card}>
         <p className="t-mono-rotulo mb-2">Total</p>
-        <p className="font-mono text-[28px] font-semibold" aria-label={total === undefined ? undefined : show(total)}>
+        <p className="font-mono text-[24px] break-all font-semibold" aria-label={total === undefined ? undefined : show(total)}>
           {show(total)}
         </p>
       </div>
@@ -54,14 +54,14 @@ function Equation({ total, committed, available }: { total?: number; committed?:
       </span>
       <div className={card}>
         <p className="t-mono-rotulo mb-2">Comprometido</p>
-        <p className="font-mono text-[28px] font-semibold">{show(committed)}</p>
+        <p className="font-mono text-[24px] break-all font-semibold">{show(committed)}</p>
       </div>
       <span aria-hidden="true" className={glyph}>
         =
       </span>
-      <div className={`${card} !border-[5px]`}>
+      <div className={`${card} !border-[3px]`}>
         <p className="t-mono-rotulo mb-2">Disponível</p>
-        <p className="font-mono text-[28px] font-semibold">{show(available)}</p>
+        <p className="font-mono text-[24px] break-all font-semibold">{show(available)}</p>
       </div>
     </div>
   );
@@ -159,13 +159,13 @@ export function WalletScreen() {
     <PageShell title="Carteira">
       <p className="t-body-lead mb-8">Dinheiro de mentira, emoção de verdade.</p>
 
-      <section aria-label="Saldo" className="mb-10 space-y-4">
+      <section aria-label="Saldo" className="mb-8 space-y-4">
         {summary.isPending ? (
           <FeedbackState variant="carregando">Carregando…</FeedbackState>
         ) : (
           <Equation total={wallet?.totalCents} committed={wallet?.committedCents} available={wallet?.availableCents} />
         )}
-        <div className="rounded-nenhum border-[3px] border-dashed border-tracejado bg-papel p-4">
+        <div className="rounded-nenhum border-2 border-dashed border-tracejado bg-papel p-4">
           <p className="t-mono-rotulo mb-2">Comprometido</p>
           {leadingLots.length === 0 ? (
             <p className="t-body">Nada travado no momento.</p>
@@ -187,7 +187,7 @@ export function WalletScreen() {
         </div>
       </section>
 
-      <section aria-labelledby="depositar" className="mb-12 max-w-[640px]">
+      <section aria-labelledby="depositar" className="mb-8 max-w-[640px]">
         <h2 id="depositar" className="t-display-secao mb-4">
           Depositar
         </h2>
@@ -204,7 +204,7 @@ export function WalletScreen() {
                   setCustom("");
                   setError(null);
                 }}
-                className={`t-botao min-h-botao rounded-nenhum border-[3px] border-linha px-2 ${
+                className={`t-botao min-h-botao rounded-nenhum border-2 border-linha px-2 ${
                   pressed ? "bg-ocre text-sobreOcre shadow-botao" : "bg-papel text-tinta"
                 }`}
               >

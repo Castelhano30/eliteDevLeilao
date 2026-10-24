@@ -137,3 +137,7 @@ S03 implementada, verificada, revisada e no ar (itens 46 a 56); revisão geral S
 ## 24/10/2026 — Compactação: escala compartilhada
 - Aplicada proposta aprovada aos tokens, sombras, botões, campos, logo e contêiner de página. Paleta, fontes e foco preservados; alvos mínimos de 44 px.
 - Guia local do Next sobre CSS e componentes cliente lido. Typecheck do web aprovado. Navegador e build completo serão conferidos após integração do header.
+
+## 24/10/2026 — Compactação: telas e cards
+- Ajustadas medidas locais de Vitrine, Sala, Carteira, Painel, acesso, formulário de lote e componentes de lotes. Fotos de cards com 176 px reservados; campos e painéis menores, sem alterar regras ou consultas.
+- Carteira empilha resumo até desktop e valores extensos podem quebrar; typecheck web aprovado. Validação visual integrada pendente.

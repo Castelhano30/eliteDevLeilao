@@ -13,11 +13,11 @@ export interface CanhotoProps {
 export function Canhoto({ number, title, children }: CanhotoProps) {
   const label = String(number).padStart(2, "0");
   return (
-    <article className="flex flex-col rounded-nenhum border-[3px] border-linha bg-papel p-6 shadow-cartao">
+    <article className="flex flex-col rounded-nenhum border-2 border-linha bg-papel p-4 shadow-cartao">
       <span
         aria-hidden="true"
         className="font-display font-black leading-none"
-        style={{ fontSize: 76, color: "var(--c-ocre)", WebkitTextStroke: "3px var(--c-linha)" }}
+        style={{ fontSize: 56, color: "var(--c-ocre)", WebkitTextStroke: "2px var(--c-linha)" }}
       >
         {label}
       </span>
