@@ -78,7 +78,15 @@ Consequência dessa ordem: o líder que reenvia um valor **abaixo** do mínimo r
 
 **Privacidade e cadeia:** o histórico mostra um pseudônimo por lote ("Licitante 7F3A", 4 hex de um HMAC de usuário e lote), então a mesma pessoa aparece com nomes diferentes em lotes diferentes. Com 4 hex a colisão entre dois licitantes do mesmo lote é possível (1 em 65.536 por par) e foi aceita: o pseudônimo é só rótulo, o lance sempre pertence ao `userId` gravado. Nenhuma resposta pública leva `userId`, nome ou e-mail. Cada lance entra na cadeia HMAC-SHA256 do lote (`prevHash` e `hash`) e a tabela `Bid` recusa `UPDATE` e `DELETE` por trigger.
 
-**Tempo real:** nesta versão a Sala **não** atualiza sozinha. Quem dá o lance vê o resultado na hora; os outros navegadores só veem o lance ao recarregar. O tempo real (Socket.IO) chega na S04: o serviço já produz os eventos, falta trocar o `Publisher`.
+**Tempo real (Socket.IO):** lance, prorrogação, saldo e cartão da Vitrine chegam sem recarregar. Quem muda o dado é sempre uma rota REST: o service devolve os eventos, a rota os entrega ao `Publisher` **depois do commit**, e um evento nunca sai de uma recusa. Falha ao publicar é logada e não derruba a requisição já confirmada.
+
+- **Salas:** `lot:{id}` (a Sala do lote; o cliente entra com `lot:join`, que responde o snapshot, e sai com `lot:leave`), `showcase` (Vitrine e Painel; `showcase:join`) e `user:{id}` (só o servidor atribui, a partir do JWT do handshake; o cliente não consegue pedir). Token ausente, inválido ou vencido conecta como visitante.
+- **Eventos:** `bid:placed` (leva `version`, `minimumBidCents`, `endsAt` e `extended`), `showcase:lot` (o cartão do lote), `wallet:updated` (só o novo líder e o líder anterior, ou o dono no depósito). Todo payload leva `serverTime`, carimbado pelo `Publisher`; nenhum leva `userId`, nome ou e-mail.
+- **Uma só regra de ordem:** o cliente aplica `bid:placed` se `version == atual + 1`, descarta se `<= atual` e, se houve salto, refaz o `GET /lots/:id`. O mesmo reducer trata a resposta do próprio lance, então a linha não duplica.
+- **Queda e volta:** o servidor detecta a queda em até ~20 s (`pingInterval` e `pingTimeout` de 10 s). Com o socket fora, a Sala mostra "Sem sinal com o pátio. Tentando reconectar.", trava o botão de lance e mantém o valor digitado. Ao voltar, entra de novo na sala, refaz o `GET` e só então libera o botão. Nada é reenviado sozinho: lance com resposta ambígua pede conferir o histórico.
+- **Sem WebSocket não há bloqueio eterno:** na primeira conexão o aviso aparece depois de 3 s e, passados 10 s, o botão de lance é liberado; o servidor valida tudo (`expectedCurrentCents`), então dar lance não depende do socket.
+- **Relógio:** o cronômetro usa o relógio do servidor (`offset` da resposta HTTP de menor latência). Evento do socket não mexe no `offset`.
+- **Fora desta versão:** replay de eventos perdidos (a reconciliação é um snapshot) e mais de uma instância da API (sem adapter Redis).
 
 ## Catálogo: Tabela FIPE e Wikipedia
 
@@ -111,6 +119,8 @@ Build e start ficam gravados no próprio serviço do Railway (painel, campos Cus
 - Porta pública: 8080 (o Railway injeta `PORT=8080`)
 
 Migrações novas são aplicadas sozinhas a cada start. O seed também roda no start: cria só as contas que faltam e os lotes de demonstração só se ainda não houver lote, então é seguro a cada deploy; uma falha nele não derruba a API.
+
+**Tempo real no Railway:** a API é uma instância só e não hiberna, então não há cold start de socket. Um deploy da API reinicia o processo e derruba os sockets; os navegadores reconectam sozinhos (atraso de 1 s crescendo até 5 s), entram de novo nas salas e refazem o `GET`, e a Sala mostra "De volta ao pátio" por 4 s. O Railway repassa WebSocket pelo mesmo domínio público da API.
 
 **Web**
 
