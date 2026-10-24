@@ -2,8 +2,6 @@
 
 Casa de leilões online de carros: leiloeiros montam lotes a partir de carros da tabela FIPE, licitantes com saldo simulado disputam cada lote com lances ao vivo, o vencedor recebe um comprovante compartilhável e qualquer pessoa pode auditar o histórico de um lote. Teste técnico Elite Dev (Verzel).
 
-> Este README é o esqueleto da fundação (S00). As seções de regras, auditoria e usuários de teste entram nas fatias seguintes.
-
 ## Stack
 
 - Web: Next.js (App Router), React, TypeScript, Tailwind, TanStack Query, Socket.IO client
@@ -23,7 +21,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-- Web: http://localhost:3000 (mude com `WEB_PORT`)
+- Web: http://localhost:3000 (mude com `WEB_PORT` e ajuste `WEB_ORIGIN` no `.env` para a mesma porta, senão o CORS recusa a API)
 - API: http://localhost:4000, teste em `/health` (muda com `PORT`)
 - Postgres: `localhost:5433`
 
