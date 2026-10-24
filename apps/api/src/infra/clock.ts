@@ -29,3 +29,8 @@ export class FakeClock implements Clock {
     this.current = new Date(this.current.getTime() + ms);
   }
 }
+
+/** Converte ISO ou milissegundos em `Date`. Fica aqui porque `new Date` só é permitido neste arquivo (T6). */
+export function toDate(value: string | number): Date {
+  return new Date(value);
+}

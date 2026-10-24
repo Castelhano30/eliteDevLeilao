@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import request from "supertest";
-import { createApp } from "../../src/app";
+import { createApp, type AppDeps } from "../../src/app";
 import { signToken } from "../../src/auth/token";
 import { FakeClock } from "../../src/infra/clock";
 import { createLogger } from "../../src/infra/logger";
@@ -12,11 +12,21 @@ export const testEnv = {
   WEB_ORIGIN: "http://localhost:3000",
   JWT_SECRET: TEST_JWT_SECRET,
   AUTH_RATE_LIMIT_MAX: 30,
+  AUDIT_HMAC_KEY: "k".repeat(32),
+  // Sem servidor nesses endereços: quem precisa de FIPE/Wikipedia passa um servidor falso.
+  FIPE_BASE_URL: "http://127.0.0.1:9",
+  FIPE_TOKEN: undefined as string | undefined,
+  WIKI_USER_AGENT: "LanceAuto/teste",
+  WIKIPEDIA_BASE_URL: "http://127.0.0.1:9",
 };
 
-export function makeTestApp(prisma: PrismaClient, overrides: Partial<typeof testEnv> = {}) {
+export function makeTestApp(
+  prisma: PrismaClient,
+  overrides: Partial<typeof testEnv> = {},
+  external: AppDeps["external"] = { timeoutMs: 300 },
+) {
   const clock = new FakeClock("2026-10-23T12:00:00.000Z");
-  const app = createApp({ env: { ...testEnv, ...overrides }, db: prisma, logger: createLogger("silent"), clock });
+  const app = createApp({ env: { ...testEnv, ...overrides }, db: prisma, logger: createLogger("silent"), clock, external });
   return { app, clock };
 }
 

@@ -1,0 +1,87 @@
+import { Router, type Request } from "express";
+import { CATALOG_TEXT, LOT_TEXT, fieldErrors, lotListQuerySchema, validateCreateLot } from "@lanceauto/shared";
+import { AppError } from "../errors";
+import type { Clock } from "../infra/clock";
+import type { AuthMiddleware } from "../middleware/auth";
+import { makeRateLimiter } from "../middleware/rate-limit";
+import type { CatalogService } from "../services/catalog.service";
+import type { LotService } from "../services/lot.service";
+
+const param = (req: Request, name: string) => String(req.params[name] ?? "");
+
+/** `/catalog/*`: só leiloeiro, 120 req/min por usuário. */
+export function catalogRouter(auth: AuthMiddleware, catalog: CatalogService): Router {
+  const router = Router();
+  router.use(
+    "/catalog",
+    auth.requireAuth,
+    auth.requireRole("AUCTIONEER", CATALOG_TEXT.roleNotAllowed),
+    makeRateLimiter({ windowMs: 60_000, max: 120, keyGenerator: (req) => `catalog:${req.user?.id ?? "?"}` }),
+  );
+
+  router.get("/catalog/brands", async (_req, res) => {
+    res.json(await catalog.brands());
+  });
+  router.get("/catalog/brands/:brandId/models", async (req, res) => {
+    res.json(await catalog.models(param(req, "brandId")));
+  });
+  router.get("/catalog/brands/:brandId/models/:modelId/years", async (req, res) => {
+    res.json(await catalog.years(param(req, "brandId"), param(req, "modelId")));
+  });
+  router.get("/catalog/preview", async (req, res) => {
+    const pick = (name: string) => (typeof req.query[name] === "string" ? (req.query[name] as string).trim() : "");
+    const ids = { brandId: pick("brandId"), modelId: pick("modelId"), yearId: pick("yearId") };
+    const missing = Object.fromEntries(
+      Object.entries(ids)
+        .filter(([, value]) => !/^[\w-]{1,40}$/.test(value))
+        .map(([key]) => [key, LOT_TEXT.idsRequired]),
+    );
+    if (Object.keys(missing).length > 0) throw new AppError("VALIDATION", { fields: missing });
+    res.json(await catalog.preview(ids.brandId, ids.modelId, ids.yearId));
+  });
+
+  return router;
+}
+
+/** Lotes: criação (leiloeiro), Vitrine e Sala (públicas), Painel (leiloeiro) e imagem do item. */
+export function lotsRouter(auth: AuthMiddleware, lots: LotService, clock: Clock): Router {
+  const router = Router();
+
+  router.post("/lots", auth.requireAuth, auth.requireRole("AUCTIONEER", CATALOG_TEXT.roleNotAllowed), async (req, res) => {
+    // Corpo e datas antes de qualquer chamada externa (§6.2).
+    const result = validateCreateLot(req.body, clock.now().getTime());
+    if (!result.ok) throw new AppError("VALIDATION", { fields: result.fields });
+    res.status(201).json(await lots.createLot(req.user!.id, result.data));
+  });
+
+  router.get("/lots", async (req, res) => {
+    const parsed = lotListQuerySchema.safeParse(req.query);
+    if (!parsed.success) throw new AppError("VALIDATION", { fields: fieldErrors(parsed.error) });
+    res.json(await lots.listLots(parsed.data));
+  });
+
+  // O token é opcional e ignorado nesta fatia (a S03 usa para myPseudonym).
+  router.get("/lots/:id", auth.optionalAuth, async (req, res) => {
+    res.json(await lots.getLotState(param(req, "id")));
+  });
+
+  router.get("/my/lots", auth.requireAuth, auth.requireRole("AUCTIONEER", CATALOG_TEXT.roleNotAllowed), async (req, res) => {
+    res.json(await lots.myLots(req.user!.id));
+  });
+
+  router.get("/items/:id/image", async (req, res) => {
+    const image = await lots.getItemImage(param(req, "id"));
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.setHeader("ETag", image.etag);
+    // O web vive em outro domínio: a imagem precisa poder ser embutida lá.
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    if (req.headers["if-none-match"] === image.etag) {
+      res.status(304).end();
+      return;
+    }
+    res.type(image.mime).send(image.data);
+  });
+
+  return router;
+}
