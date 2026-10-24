@@ -372,6 +372,43 @@ describe.skipIf(!testDatabaseUrl)("lances (integração, DATABASE_URL_TEST)", ()
       expect(await bidCount()).toBe(1);
     });
 
+    it("Bid_shape_chk: BID sem autor, sem pseudônimo ou sem valor positivo, e CANCEL com dados, são recusados", async () => {
+      const insert = (seq: number, kind: "BID" | "CANCEL", bidderId: string | null, pseudonym: string | null, amountCents: number | null) =>
+        prisma.$executeRawUnsafe(
+          `INSERT INTO "Bid" ("id","lotId","seq","kind","bidderId","pseudonym","amountCents","at","prevHash","hash")
+           VALUES ('chk-' || $1::text, $2, $1, $3::"ChainKind", $4, $5, $6, now(), 'x', 'y')`,
+          seq,
+          lotId,
+          kind,
+          bidderId,
+          pseudonym,
+          amountCents,
+        );
+      await expect(insert(1, "BID", ana.id, "Licitante AAAA", null)).rejects.toThrow(/Bid_shape_chk/);
+      await expect(insert(2, "BID", ana.id, "Licitante AAAA", 0)).rejects.toThrow(/Bid_shape_chk/);
+      await expect(insert(3, "BID", null, "Licitante AAAA", 3_000_000)).rejects.toThrow(/Bid_shape_chk/);
+      await expect(insert(4, "BID", ana.id, null, 3_000_000)).rejects.toThrow(/Bid_shape_chk/);
+      await expect(insert(5, "CANCEL", ana.id, null, null)).rejects.toThrow(/Bid_shape_chk/);
+      await expect(insert(6, "CANCEL", null, null, 3_000_000)).rejects.toThrow(/Bid_shape_chk/);
+      expect(await bidCount()).toBe(0);
+      // Contraprova: as duas formas válidas entram, então o CHECK não está só recusando tudo.
+      await insert(7, "BID", ana.id, "Licitante AAAA", 3_000_000);
+      await insert(8, "CANCEL", null, null, null);
+      expect(await bidCount()).toBe(2);
+    });
+
+    it("CHECKs de Lot: contadores negativos e lance atual abaixo do inicial são recusados", async () => {
+      await expect(prisma.$executeRawUnsafe(`UPDATE "Lot" SET "bidCount" = -1 WHERE "id" = $1`, lotId)).rejects.toThrow(/lot_bid_count_nonneg/);
+      await expect(prisma.$executeRawUnsafe(`UPDATE "Lot" SET "entryCount" = -1 WHERE "id" = $1`, lotId)).rejects.toThrow(/lot_entry_count_nonneg/);
+      await expect(
+        prisma.$executeRawUnsafe(`UPDATE "Lot" SET "currentBidCents" = "startingBidCents" - 1 WHERE "id" = $1`, lotId),
+      ).rejects.toThrow(/lot_current_bid_min/);
+      // Contraprova: o lance atual igual ao inicial é aceito (limite do CHECK).
+      await prisma.$executeRawUnsafe(`UPDATE "Lot" SET "currentBidCents" = "startingBidCents" WHERE "id" = $1`, lotId);
+      const lot = await prisma.lot.findUniqueOrThrow({ where: { id: lotId } });
+      expect(lot.currentBidCents).toBe(lot.startingBidCents);
+    });
+
     it("AC-3.30: pseudônimo muda de lote e fica igual dentro do mesmo lote", async () => {
       await topUp(ana, 5_000_000);
       const other = await live();
