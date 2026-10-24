@@ -51,7 +51,7 @@ npm run dev                    # shared em watch, API e web
 
 ### Lotes de demonstração
 
-O mesmo `npm run seed` cria dois lotes do leiloeiro, **sem rede**, a partir de [apps/api/prisma/fipe-fixture.json](apps/api/prisma/fipe-fixture.json) e pelo mesmo serviço de criação da API (com genesis e selo válidos): um **ao vivo** (Fiat Uno Mille Way 2010, aberto há 1 h, fecha em 30 dias) e um **agendado** (Toyota Corolla XEi 2015, abre em 2 dias). Só cria se o banco ainda não tiver lote nenhum, então é seguro a cada deploy. `npm run seed:demo` cria mais um lote ao vivo de 30 dias com datas relativas a agora. Esses lotes são provisórios: o seed final (lotes 001 a 005, um em cada estado) chega no polimento.
+O mesmo `npm run seed` cria dois lotes do leiloeiro, **sem rede**, a partir de [apps/api/prisma/fipe-fixture.json](apps/api/prisma/fipe-fixture.json) e pelo mesmo serviço de criação da API (com genesis e selo válidos): um **ao vivo** (Fiat Uno Mille Way 2010, aberto há 1 h, fecha em 30 dias) e um **agendado** (Toyota Corolla XEi 2015, abre em 2 dias). Só cria se o banco ainda não tiver lote nenhum, então é seguro a cada deploy. `npm run seed:demo` cria mais um lote ao vivo de 30 dias com datas relativas a agora. O seed também dá **5 lances alternados** no lote ao vivo (Bruno, Ana, Bruno, Ana, Bruno, cada um no mínimo corrente), pelo mesmo `placeBid` da API, então a cadeia de hashes nasce válida e o Bruno termina liderando. Essa parte roda em todo deploy e só age se o lote ao vivo ainda não tiver lance, o que a faz alcançar um banco já populado sem repetir. Esses lotes são provisórios: o seed final (lotes 001 a 005, um em cada estado) chega no polimento.
 
 As fotos do seed usam a ilustração padrão do pátio (`image: null` no fixture); para usar uma foto, coloque o arquivo em `apps/api/prisma/seed-images/` e aponte `image`, `imageCredit` e `imageCreditUrl` no fixture.
 
@@ -65,6 +65,22 @@ As fotos do seed usam a ilustração padrão do pátio (`image: null` no fixture
 | `npm run typecheck` | compila o shared e checa os tipos dos três pacotes |
 | `npm test` | compila o shared e roda os testes (a API usa `DATABASE_URL_TEST`) |
 | `npm run seed` / `npm run seed:demo` | contas de teste e lotes de demonstração (ver acima) |
+
+## Lances
+
+Cada lance é uma única transação no Postgres: o lote é travado (`FOR UPDATE`) e só depois as carteiras, em ordem de `userId`, o que evita deadlock entre lances cruzados. O relógio é lido depois do lock, o saldo vem da própria query que trava, e os eventos (`bid:placed`, `showcase:lot`, `wallet:updated`) só são entregues depois do commit.
+
+**Ordem de validação** (a do PRD): lote cancelado, ainda não aberto, encerrado, valor abaixo do mínimo, líder reenviando, papel, saldo. A API devolve o primeiro código que falhar.
+
+Consequência dessa ordem: o líder que reenvia um valor **abaixo** do mínimo recebe `BELOW_MINIMUM`, não `ALREADY_WINNING`. Para não dizer ao próprio líder que "alguém levantou a mão antes de você", o erro leva `details.reason = "OWN_LEAD"` e uma mensagem própria ("Você já está na frente. Para cobrir o próprio lance, o mínimo é R$ X"). Os outros motivos são `OUTDATED` (o lance que a tela viu já não é o atual) e `MINIMUM`. Reenviar um valor suficiente cai em `ALREADY_WINNING`, e o leiloeiro só recebe `ROLE_NOT_ALLOWED` quando o lance passaria nas checagens anteriores.
+
+**Prorrogação:** lance feito quando faltam 2 minutos ou menos (inclusive) leva o fim a *hora do lance + 2 min*, sem teto de prorrogações. O `originalEndsAt` nunca muda; a Sala mostra o selo "+2 MIN" quando `endsAt > originalEndsAt`.
+
+**Saldo:** quem lidera tem o valor do lance atual comprometido; ao ser superado, o valor volta ao disponível na mesma transação do lance que o superou. O total só muda na liquidação (S05). O extrato registra `HOLD` e `RELEASE` com o número do lote.
+
+**Privacidade e cadeia:** o histórico mostra um pseudônimo por lote ("Licitante 7F3A", 4 hex de um HMAC de usuário e lote), então a mesma pessoa aparece com nomes diferentes em lotes diferentes. Com 4 hex a colisão entre dois licitantes do mesmo lote é possível (1 em 65.536 por par) e foi aceita: o pseudônimo é só rótulo, o lance sempre pertence ao `userId` gravado. Nenhuma resposta pública leva `userId`, nome ou e-mail. Cada lance entra na cadeia HMAC-SHA256 do lote (`prevHash` e `hash`) e a tabela `Bid` recusa `UPDATE` e `DELETE` por trigger.
+
+**Tempo real:** nesta versão a Sala **não** atualiza sozinha. Quem dá o lance vê o resultado na hora; os outros navegadores só veem o lance ao recarregar. O tempo real (Socket.IO) chega na S04: o serviço já produz os eventos, falta trocar o `Publisher`.
 
 ## Catálogo: Tabela FIPE e Wikipedia
 
