@@ -119,6 +119,13 @@ describe("validateCreateLot", () => {
     });
   });
 
+  it("recusa data que o Date corrigiria sozinho (31/02, 24:00, mês 13)", () => {
+    for (const startsAt of ["2026-02-31T10:00:00Z", "2026-10-25T24:00:00Z", "2026-13-01T10:00:00Z", "2026-10-25T10:60:00Z"]) {
+      expect(fields({ ...valid, startsAt })).toEqual({ startsAt: LOT_TEXT.startsAtRequired });
+    }
+    expect(validateCreateLot({ ...valid, startsAt: "2026-10-31T10:00Z", endsAt: "2026-11-30T23:59:59.999Z" }, now).ok).toBe(true);
+  });
+
   it("junta erros de vários campos, inclusive o de data no passado", () => {
     expect(fields({ ...valid, title: "", startingBidCents: 0, startsAt: "2026-10-01T00:00:00.000Z" })).toEqual({
       title: LOT_TEXT.titleRequired,

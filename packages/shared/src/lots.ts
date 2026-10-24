@@ -175,12 +175,25 @@ export function isHttpUrl(value: string): boolean {
   }
 }
 
-const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?Z$/;
+const ISO_UTC = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d{1,3})?Z$/;
 
-const isoUtc = (message: string) =>
-  z
-    .string({ error: message })
-    .refine((value) => ISO_UTC.test(value) && !Number.isNaN(Date.parse(value)), message);
+/** O `Date` "corrige" 31/02 para 03/03 e 24:00 para o dia seguinte; aqui a data tem que existir como escrita. */
+function isRealIsoUtc(value: string): boolean {
+  const match = ISO_UTC.exec(value);
+  if (!match || Number.isNaN(Date.parse(value))) return false;
+  const [year, month, day, hour, minute, second] = match.slice(1, 7).map((part) => Number(part ?? 0));
+  const back = new Date(Date.UTC(year!, month! - 1, day!, hour!, minute!, second!));
+  return (
+    back.getUTCFullYear() === year &&
+    back.getUTCMonth() === month! - 1 &&
+    back.getUTCDate() === day &&
+    back.getUTCHours() === hour &&
+    back.getUTCMinutes() === minute &&
+    back.getUTCSeconds() === second
+  );
+}
+
+const isoUtc = (message: string) => z.string({ error: message }).refine(isRealIsoUtc, message);
 
 const catalogId = z
   .string({ error: LOT_TEXT.idsRequired })
@@ -224,8 +237,7 @@ export const createLotBaseSchema = z.object({
 
 export type CreateLotInput = z.infer<typeof createLotBaseSchema>;
 
-const validIso = (value: unknown): value is string =>
-  typeof value === "string" && ISO_UTC.test(value) && !Number.isNaN(Date.parse(value));
+const validIso = (value: unknown): value is string => typeof value === "string" && isRealIsoUtc(value);
 
 /** Regras de data que dependem do relógio: início ≥ agora − 60 s e fim ≥ início + 5 min (R-2.7). */
 export function lotDateErrors(input: { startsAt?: unknown; endsAt?: unknown }, nowMs: number): Record<string, string> {
