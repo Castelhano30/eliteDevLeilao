@@ -16,6 +16,35 @@ export function plural(n: number, singular: string, pluralForm = `${singular}s`)
   return n === 1 ? singular : pluralForm;
 }
 
+// ---------------------------------------------------------------- Sala agendada que devia ter aberto (§9.2)
+
+/** Quantas respostas do servidor, de 2 em 2 s, a Sala agendada confere antes de desistir de esperar a abertura. */
+export const OPENING_CHECKS = 10;
+
+export interface OpeningChecks {
+  /** `dataUpdatedAt` da última resposta contada; `null` até a primeira avaliação. */
+  seenAt: number | null;
+  /** Respostas do servidor vistas depois que o início passou. */
+  count: number;
+}
+
+export const INITIAL_OPENING_CHECKS: OpeningChecks = { seenAt: null, count: 0 };
+
+/**
+ * Passo puro da conferência de abertura. O TanStack reavalia o `refetchInterval` a cada render, então contar
+ * avaliações gastaria as tentativas em segundos: só conta quando chega uma resposta nova (`dataUpdatedAt` mudou).
+ * A carga que já estava na tela não conta como conferência.
+ */
+export function nextOpeningCheck(prev: OpeningChecks, dataUpdatedAt: number): { next: OpeningChecks; keepPolling: boolean } {
+  const next: OpeningChecks =
+    prev.seenAt === null
+      ? { seenAt: dataUpdatedAt, count: 0 }
+      : prev.seenAt === dataUpdatedAt
+        ? prev
+        : { seenAt: dataUpdatedAt, count: prev.count + 1 };
+  return { next, keepPolling: next.count < OPENING_CHECKS };
+}
+
 // ---------------------------------------------------------------- reducer único (T4)
 
 /** O que um lance novo faz ao estado da Sala. O `bid:placed` da S04 tem exatamente este formato. */

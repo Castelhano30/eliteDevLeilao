@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { BidDTO, LotState, PlaceBidResponse } from "@lanceauto/shared";
 import {
+  INITIAL_OPENING_CHECKS,
+  OPENING_CHECKS,
+  nextOpeningCheck,
   applyBidResponse,
   applyLotEvent,
   applyShortcut,
@@ -263,5 +266,28 @@ describe("campo de lance", () => {
   it("atalho respeita o limite de 13 dígitos", () => {
     const next = applyShortcut({ text: "9.999.999.999.999", dirty: true }, 500, 100);
     expect(next.text.replace(/\D/g, "")).toHaveLength(13);
+  });
+});
+
+describe("nextOpeningCheck", () => {
+  it("a carga que já estava na tela não conta como conferência", () => {
+    const { next, keepPolling } = nextOpeningCheck(INITIAL_OPENING_CHECKS, 1_000);
+    expect(next).toEqual({ seenAt: 1_000, count: 0 });
+    expect(keepPolling).toBe(true);
+  });
+
+  it("reavaliar o intervalo sem resposta nova (cada render) não gasta tentativa", () => {
+    let current = nextOpeningCheck(INITIAL_OPENING_CHECKS, 1_000).next;
+    for (let render = 0; render < 50; render++) current = nextOpeningCheck(current, 1_000).next;
+    expect(current.count).toBe(0);
+  });
+
+  it("cada resposta nova do servidor conta uma e, na décima, para de insistir", () => {
+    let step = nextOpeningCheck(INITIAL_OPENING_CHECKS, 0);
+    for (let check = 1; check <= OPENING_CHECKS; check++) {
+      step = nextOpeningCheck(step.next, check * 2_000);
+      expect(step.next.count).toBe(check);
+      expect(step.keepPolling).toBe(check < OPENING_CHECKS);
+    }
   });
 });

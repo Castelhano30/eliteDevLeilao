@@ -21,11 +21,9 @@ import { LotTag } from "@/components/ui/lot-tag";
 import { Stamp } from "@/components/ui/stamp";
 import { bidCountLabel } from "@/lib/lots";
 import { fetchLot, lotKey, LotNotFoundError } from "@/lib/lot-query";
+import { INITIAL_OPENING_CHECKS, nextOpeningCheck } from "@/lib/lot-state";
 import { serverNow } from "@/lib/server-clock";
 import { useOnReach, useServerNow } from "@/lib/use-server-clock";
-
-/** Quantas vezes, de 2 em 2 s, a Sala agendada confere se o servidor já abriu o lote. */
-const OPENING_CHECKS = 10;
 
 function BackToShowcase() {
   return (
@@ -51,7 +49,7 @@ function when(iso: string) {
  */
 export function Sala({ id, initial, notFound = false }: { id: string; initial?: LotState; notFound?: boolean }) {
   const { user, status: authStatus } = useAuth();
-  const openingChecks = useRef(0);
+  const openingChecks = useRef(INITIAL_OPENING_CHECKS);
   const query = useQuery({
     queryKey: lotKey(id),
     queryFn: ({ signal }) => fetchLot(id, signal),
@@ -66,8 +64,9 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
       if (status === "CLOSING" || (status === "LIVE" && serverNow() >= Date.parse(endsAt))) return 3_000;
       // Agendado que já devia ter aberto: só renderiza o painel quando o servidor devolver AO VIVO (2 s, até 10 vezes).
       if (status === "SCHEDULED" && serverNow() >= Date.parse(startsAt)) {
-        openingChecks.current += 1;
-        return openingChecks.current <= OPENING_CHECKS ? 2_000 : false;
+        const step = nextOpeningCheck(openingChecks.current, q.state.dataUpdatedAt);
+        openingChecks.current = step.next;
+        return step.keepPolling ? 2_000 : false;
       }
       return false;
     },
