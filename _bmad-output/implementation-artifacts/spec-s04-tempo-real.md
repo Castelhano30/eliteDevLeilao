@@ -3,7 +3,7 @@ title: 'S04 — Tempo real (Socket.IO: salas, eventos pós-commit, relógio, rec
 type: 'feature'
 created: '2026-10-24'
 status: 'ready-for-dev'
-baseline_commit: 'pendente'
+baseline_commit: 'e7749a847163c3e61ac13245a2668e80c0181b80'
 route: 'dispatch'
 review_loop_iteration: 0
 context:
