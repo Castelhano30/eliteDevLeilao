@@ -33,6 +33,7 @@ model User {
   wallet        Wallet?
   lotsAuctioned Lot[]    @relation("LotAuctioneer")
   lotsLeading   Lot[]    @relation("LotLeader")
+  bids          Bid[]
 }
 
 model Wallet {
@@ -115,6 +116,34 @@ model Lot {
   /// Gravado pelo service com clock.now().
   createdAt         DateTime  @db.Timestamp(3)
 
+  bids              Bid[]
+
   @@index([endsAt])
   @@index([auctioneerId])
+  @@index([leaderId])
+}
+
+enum ChainKind {
+  BID
+  CANCEL
+}
+
+/// Linha da cadeia HMAC do lote. Só recebe INSERT (trigger); `bids[]` público lê só kind=BID.
+model Bid {
+  id          String    @id @default(uuid())
+  lotId       String
+  seq         Int
+  kind        ChainKind
+  bidderId    String?
+  pseudonym   String?
+  amountCents BigInt?
+  /// Gravado pelo service com clock.now().
+  at          DateTime  @db.Timestamp(3)
+  prevHash    String
+  hash        String
+  lot         Lot       @relation(fields: [lotId], references: [id])
+  bidder      User?     @relation(fields: [bidderId], references: [id])
+
+  @@unique([lotId, seq])
+  @@index([lotId, bidderId])
 }
