@@ -133,6 +133,13 @@ describe("adaptador da FIPE", () => {
     expect(fipe.hits).toHaveLength(1);
   });
 
+  it("ano Zero Km (32000-*) no detalhe → NOT_FOUND sem chamar a FIPE", async () => {
+    const fipe = await server(fipeHandler);
+    const catalog = makeFipeCatalog({ baseUrl: fipe.url, cache: newCache() });
+    expect(await codeOf(catalog.detail("56", "2204", "32000-5"))).toBe("NOT_FOUND:null");
+    expect(fipe.hits).toHaveLength(0);
+  });
+
   it("5xx repete uma vez e então 503 EXTERNAL_UNAVAILABLE {source:FIPE}", async () => {
     const fipe = await server((_req, res) => json(res, 502, {}));
     const catalog = makeFipeCatalog({ baseUrl: fipe.url, cache: newCache() });

@@ -105,6 +105,8 @@ export function makeFipeCatalog({ baseUrl, token, cache, timeoutMs = EXTERNAL_TI
       return items.filter((item) => !item.id.startsWith("32000"));
     },
     async detail(brandId, modelId, yearId) {
+      // "Zero Km" (32000-*) não é ano: gravaria um Item com ano 32000.
+      if (yearId.startsWith("32000")) throw carNotFound();
       const { body, fetchedAt } = await read(`/cars/brands/${seg(brandId)}/models/${seg(modelId)}/years/${seg(yearId)}`);
       try {
         return { car: normalizeFipeDetail(body, yearId), raw: body, fetchedAt };
