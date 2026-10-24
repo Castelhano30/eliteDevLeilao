@@ -706,6 +706,24 @@ describe.skipIf(!testDatabaseUrl)("lances (integração, DATABASE_URL_TEST)", ()
       expect(page.leadingLots.map((lot: { lotId: string }) => lot.lotId)).toEqual([l2.id]);
     });
 
+    it("leadingLots esconde lote cancelado ou apurado e ordena pelo fim mais próximo", async () => {
+      await topUp(ana, 6_000_000);
+      const soon = await live({ title: "Fecha em 5 h", endsAt: iso(NOW_MS + 5 * HOUR) });
+      const cancelled = await live({ title: "Vai ser cancelado", endsAt: iso(NOW_MS + 2 * HOUR) });
+      const settled = await live({ title: "Vai ser apurado", endsAt: iso(NOW_MS + 3 * HOUR) });
+      for (const id of [lotId, soon.id, cancelled.id, settled.id]) {
+        expect((await postBid(app, ana, id, 2_500_000)).status).toBe(201);
+      }
+      let page = (await request(app).get("/wallet").set("Authorization", ana.auth)).body;
+      expect(page.leadingLots.map((lot: { lotId: string }) => lot.lotId)).toEqual([cancelled.id, settled.id, soon.id, lotId]);
+
+      // A S05 e a S06 marcam estes campos; aqui direto no banco, só para provar o filtro.
+      await prisma.lot.update({ where: { id: cancelled.id }, data: { cancelledAt: iso(NOW_MS) } });
+      await prisma.lot.update({ where: { id: settled.id }, data: { settledAt: iso(NOW_MS) } });
+      page = (await request(app).get("/wallet").set("Authorization", ana.auth)).body;
+      expect(page.leadingLots.map((lot: { lotId: string }) => lot.lotId)).toEqual([soon.id, lotId]);
+    });
+
     it("o extrato traz o número do lote nas linhas HOLD e RELEASE", async () => {
       const lot = await prisma.lot.findUniqueOrThrow({ where: { id: lotId } });
       await postBid(app, ana, lotId, 3_000_000);
