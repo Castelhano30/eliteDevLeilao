@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { formatBRL } from "@lanceauto/shared";
 
 export interface PlacaLanceProps {
@@ -7,10 +10,16 @@ export interface PlacaLanceProps {
 
 /**
  * Lance atual/inicial em placas (§10.5): cada dígito numa placa de 40×60 px com linha central.
- * Dígito que muda remonta e vira com `la-vira` (parado em reduced-motion). As placas são decorativas;
- * o valor vai no `aria-label`.
+ * Só vira (`la-vira`, parado em reduced-motion) quando o valor muda: a primeira pintura fica parada. O dígito que muda
+ * remonta, os demais mantêm o nó. As placas são decorativas; o valor vai no `aria-label`.
  */
 export function PlacaLance({ cents, label }: PlacaLanceProps) {
+  const [shown, setShown] = useState(cents);
+  const [flip, setFlip] = useState(false);
+  if (shown !== cents) {
+    setShown(cents);
+    setFlip(true);
+  }
   const money = formatBRL(cents);
   const reais = money.replace(/^R\$\s/, "").replace(/,00$/, "");
   const spoken = `${label === "LANCE ATUAL" ? "Lance atual" : "Lance inicial"} ${money}`;
@@ -36,7 +45,7 @@ export function PlacaLance({ cents, label }: PlacaLanceProps) {
                   height: 60,
                   fontSize: 40,
                   color: "var(--f-digito-placa)",
-                  animation: `la-vira 0.5s ${index * 0.06}s both`,
+                  animation: flip ? `la-vira 0.5s ${index * 0.06}s both` : undefined,
                 }}
               >
                 {char}

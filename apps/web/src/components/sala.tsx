@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import {
   LOT_TEXT,
   brasiliaDayAndTime,
@@ -10,6 +10,8 @@ import {
   formatReferenceMonth,
   type LotState,
 } from "@lanceauto/shared";
+import { useAuth } from "@/components/auth-provider";
+import { BidPanel } from "@/components/lots/bid-panel";
 import { CarPhoto } from "@/components/lots/car-photo";
 import { Cronometro } from "@/components/lots/cronometro";
 import { PlacaLance } from "@/components/lots/placa-lance";
@@ -17,20 +19,13 @@ import { buttonClasses } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { LotTag } from "@/components/ui/lot-tag";
 import { Stamp } from "@/components/ui/stamp";
-import { apiGet } from "@/lib/api-client";
 import { bidCountLabel } from "@/lib/lots";
+import { fetchLot, lotKey, LotNotFoundError } from "@/lib/lot-query";
+import { serverNow } from "@/lib/server-clock";
 import { useOnReach, useServerNow } from "@/lib/use-server-clock";
 
-export const lotKey = (id: string) => ["lot", id] as const;
-
-class LotNotFoundError extends Error {}
-
-async function fetchLot(id: string, signal?: AbortSignal): Promise<LotState> {
-  const result = await apiGet<LotState>(`/lots/${encodeURIComponent(id)}`, { signal });
-  if (result.ok) return result.data;
-  if (result.status === 404) throw new LotNotFoundError(LOT_TEXT.notFoundTitle);
-  throw new Error("Não consegui trazer o lote.");
-}
+/** Quantas vezes, de 2 em 2 s, a Sala agendada confere se o servidor já abriu o lote. */
+const OPENING_CHECKS = 10;
 
 function BackToShowcase() {
   return (
@@ -50,16 +45,32 @@ function when(iso: string) {
   );
 }
 
-/** Sala do lote, só leitura nesta fatia (§9.2). A S03 insere o painel de lance abaixo do cronômetro. */
+/**
+ * Sala do lote (§9.2): ficha do carro à esquerda; à direita, o painel de lance quando o lote está ao vivo ou apurando.
+ * O servidor decide o estado: o relógio local só pede um novo GET ao cruzar o início ou o fim.
+ */
 export function Sala({ id, initial, notFound = false }: { id: string; initial?: LotState; notFound?: boolean }) {
+  const { user, status: authStatus } = useAuth();
+  const openingChecks = useRef(0);
   const query = useQuery({
     queryKey: lotKey(id),
     queryFn: ({ signal }) => fetchLot(id, signal),
     initialData: initial,
     enabled: !notFound,
     retry: (count, error) => !(error instanceof LotNotFoundError) && count < 1,
-    // Apurando: olha de novo a cada 3 s até o servidor fechar o resultado.
-    refetchInterval: (q) => (q.state.data?.lot.status === "CLOSING" ? 3_000 : false),
+    refetchInterval: (q) => {
+      const data = q.state.data;
+      if (!data) return false;
+      const { status, startsAt, endsAt } = data.lot;
+      // Apurando, ou ao vivo com o relógio já em 00:00: olha de novo a cada 3 s até o servidor decidir.
+      if (status === "CLOSING" || (status === "LIVE" && serverNow() >= Date.parse(endsAt))) return 3_000;
+      // Agendado que já devia ter aberto: só renderiza o painel quando o servidor devolver AO VIVO (2 s, até 10 vezes).
+      if (status === "SCHEDULED" && serverNow() >= Date.parse(startsAt)) {
+        openingChecks.current += 1;
+        return openingChecks.current <= OPENING_CHECKS ? 2_000 : false;
+      }
+      return false;
+    },
   });
   const state = query.data;
   const now = useServerNow(state?.serverTime);
@@ -119,30 +130,24 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
         </p>
       </div>
     );
+  } else if (status === "LIVE" || status === "CLOSING") {
+    panel = (
+      <BidPanel
+        id={id}
+        state={state}
+        viewer={user ? { role: user.role } : null}
+        authLoading={authStatus === "loading"}
+      />
+    );
   } else {
-    const hasBid = lot.currentBidCents !== null;
+    // Encerrado (S05 entrega o resultado completo).
     panel = (
       <div className="space-y-6">
-        <PlacaLance cents={lot.currentBidCents ?? lot.startingBidCents} label={hasBid ? "LANCE ATUAL" : "LANCE INICIAL"} />
+        <PlacaLance cents={lot.currentBidCents ?? lot.startingBidCents} label={lot.currentBidCents !== null ? "LANCE ATUAL" : "LANCE INICIAL"} />
         <p className="t-mono-dado">{bidCountLabel(lot.bidCount)}</p>
         <Cronometro size="sala" status={status} startsAt={lot.startsAt} endsAt={lot.endsAt} originalEndsAt={lot.originalEndsAt} serverTime={state.serverTime} />
-        {status === "CLOSING" ? <p className="t-body-lead">Martelo batido. Apurando o resultado…</p> : null}
-        {status === "LIVE" ? (
-          <p className="t-body">
-            {hasBid ? null : "Nenhum lance ainda. O mínimo é o lance inicial."}
-            <span className="t-mono mt-1 block">
-              Mínimo aceito {formatBRL(lot.minimumBidCents)} · incremento {formatBRL(lot.minIncrementCents)}
-            </span>
-          </p>
-        ) : null}
-        {ended ? <Stamp variant={status === "SOLD" ? "arrematado" : "sem-lances"} /> : null}
-        {ended && lot.currentBidCents !== null ? <p className="t-mono-dado">Lance final {formatBRL(lot.currentBidCents)}</p> : null}
-        {status === "LIVE" || status === "CLOSING" ? (
-          <section aria-label="Histórico de lances" className="border-[3px] border-dashed border-tracejado bg-papel p-4">
-            <p className="t-mono-rotulo">HISTÓRICO</p>
-            <p className="t-body-nota mt-2">{lot.bidCount === 0 ? "Nenhum lance por aqui ainda." : "O histórico chega com os lances."}</p>
-          </section>
-        ) : null}
+        <Stamp variant={status === "SOLD" ? "arrematado" : "sem-lances"} />
+        {lot.currentBidCents !== null ? <p className="t-mono-dado">Lance final {formatBRL(lot.currentBidCents)}</p> : null}
       </div>
     );
   }
