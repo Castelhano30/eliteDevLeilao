@@ -1,4 +1,4 @@
-import { formatBRL, type BidDTO, type LotState, type PlaceBidResponse } from "@lanceauto/shared";
+import { formatBRL, type LotState } from "@lanceauto/shared";
 import { BID_MAX_DIGITS, maskReais } from "./money-mask";
 
 type Lot = LotState["lot"];
@@ -43,82 +43,6 @@ export function nextOpeningCheck(prev: OpeningChecks, dataUpdatedAt: number): { 
         ? prev
         : { seenAt: dataUpdatedAt, count: prev.count + 1 };
   return { next, keepPolling: next.count < OPENING_CHECKS };
-}
-
-// ---------------------------------------------------------------- reducer único (T4)
-
-/** O que um lance novo faz ao estado da Sala. O `bid:placed` da S04 tem exatamente este formato. */
-export interface BidEvent {
-  bid: BidDTO;
-  currentBidCents: number;
-  bidCount: number;
-  bidderCount: number;
-  /** = entryCount do lote depois deste lance. */
-  version: number;
-  endsAt: string;
-  serverTime: string;
-}
-
-/** Posição de quem tem o pseudônimo, pelo maior lance de cada pseudônimo no histórico completo. */
-export function positionFromBids(bids: readonly BidDTO[], pseudonym: string | null): { rank: number; best: number } | null {
-  if (pseudonym === null) return null;
-  const best = new Map<string, number>();
-  for (const bid of bids) if (bid.amountCents > (best.get(bid.pseudonym) ?? 0)) best.set(bid.pseudonym, bid.amountCents);
-  const mine = best.get(pseudonym);
-  if (mine === undefined) return null;
-  let above = 0;
-  for (const value of best.values()) if (value > mine) above += 1;
-  return { rank: 1 + above, best: mine };
-}
-
-/**
- * Reducer único do estado da Sala (puro). Lê só `version`: evento com versão menor ou igual à atual é descartado,
- * então a mesma resposta chegando por REST e por evento não duplica linha. A S04 reaproveita para `bid:placed`.
- */
-export function applyLotEvent(state: LotState, event: BidEvent): LotState {
-  if (event.version <= state.lot.version) return state;
-  const bids = [event.bid, ...state.bids.filter((bid) => bid.seq !== event.bid.seq)].sort((a, b) => b.seq - a.seq);
-  const position = positionFromBids(bids, state.lot.myPseudonym);
-  return {
-    ...state,
-    serverTime: event.serverTime,
-    lot: {
-      ...state.lot,
-      currentBidCents: event.currentBidCents,
-      minimumBidCents: event.currentBidCents + state.lot.minIncrementCents,
-      bidCount: event.bidCount,
-      bidderCount: event.bidderCount,
-      version: event.version,
-      entryCount: event.version,
-      endsAt: event.endsAt,
-      myRank: position?.rank ?? null,
-      myBestBidCents: position?.best ?? null,
-    },
-    bids,
-  };
-}
-
-/** Resposta do próprio lance: aplica o evento e fica com a posição que o servidor calculou. */
-export function applyBidResponse(state: LotState, response: PlaceBidResponse): LotState {
-  const next = applyLotEvent(state, {
-    bid: response.bid,
-    currentBidCents: response.lot.currentBidCents ?? response.bid.amountCents,
-    bidCount: response.lot.bidCount,
-    bidderCount: response.lot.bidderCount,
-    version: response.lot.version,
-    endsAt: response.lot.endsAt,
-    serverTime: response.serverTime,
-  });
-  if (next === state) return state;
-  return {
-    ...next,
-    lot: {
-      ...next.lot,
-      myRank: response.lot.myRank,
-      myBestBidCents: response.lot.myBestBidCents,
-      myPseudonym: response.lot.myPseudonym ?? next.lot.myPseudonym,
-    },
-  };
 }
 
 // ---------------------------------------------------------------- viewer × estado (§9.2)

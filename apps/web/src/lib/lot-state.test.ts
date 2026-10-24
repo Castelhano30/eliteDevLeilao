@@ -1,11 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { BidDTO, LotState, PlaceBidResponse } from "@lanceauto/shared";
 import {
   INITIAL_OPENING_CHECKS,
   OPENING_CHECKS,
   nextOpeningCheck,
-  applyBidResponse,
-  applyLotEvent,
   applyShortcut,
   deriveSituation,
   initialField,
@@ -13,71 +10,10 @@ import {
   minimumText,
   ordinal,
   plural,
-  positionFromBids,
   situationText,
   syncField,
-  type BidEvent,
 } from "./lot-state";
 
-const bid = (seq: number, pseudonym: string, amountCents: number): BidDTO => ({
-  seq,
-  kind: "BID",
-  pseudonym,
-  amountCents,
-  at: `2026-10-24T15:00:0${seq}.000Z`,
-});
-
-function state(over: Partial<LotState["lot"]> = {}, bids: BidDTO[] = []): LotState {
-  return {
-    serverTime: "2026-10-24T15:00:00.000Z",
-    lot: {
-      id: "lot-1",
-      number: 1,
-      title: "Uno",
-      status: "LIVE",
-      startingBidCents: 1_500_000,
-      minIncrementCents: 50_000,
-      currentBidCents: bids[0]?.amountCents ?? null,
-      minimumBidCents: bids[0] ? bids[0].amountCents + 50_000 : 1_500_000,
-      bidCount: bids.length,
-      bidderCount: new Set(bids.map((b) => b.pseudonym)).size,
-      version: bids.length,
-      entryCount: bids.length,
-      startsAt: "2026-10-24T10:00:00.000Z",
-      endsAt: "2026-10-25T10:00:00.000Z",
-      originalEndsAt: "2026-10-25T10:00:00.000Z",
-      cancelledAt: null,
-      settledAt: null,
-      myPseudonym: null,
-      myRank: null,
-      myBestBidCents: null,
-      ...over,
-    },
-    car: {
-      brand: "Fiat",
-      model: "Uno",
-      year: 2010,
-      fuel: "Flex",
-      referencePriceCents: 2_000_000,
-      referenceMonth: "2026-10",
-      imageUrl: null,
-      imageCredit: null,
-      imageCreditUrl: null,
-    },
-    bids,
-  };
-}
-
-const event = (over: Partial<BidEvent> = {}): BidEvent => ({
-  bid: bid(1, "Licitante AAAA", 1_500_000),
-  currentBidCents: 1_500_000,
-  bidCount: 1,
-  bidderCount: 1,
-  version: 1,
-  endsAt: "2026-10-25T10:00:00.000Z",
-  serverTime: "2026-10-24T15:00:05.000Z",
-  ...over,
-});
 
 describe("ordinal e plural", () => {
   it("ordinal", () => {
@@ -89,104 +25,6 @@ describe("ordinal e plural", () => {
     expect(plural(0, "lance")).toBe("lances");
     expect(plural(2, "lance")).toBe("lances");
     expect(plural(2, "papel", "papéis")).toBe("papéis");
-  });
-});
-
-describe("applyLotEvent", () => {
-  it("aplica o primeiro lance: lance atual, mínimo, contagens, versão e linha no topo", () => {
-    const next = applyLotEvent(state(), event());
-    expect(next.lot).toMatchObject({ currentBidCents: 1_500_000, minimumBidCents: 1_550_000, bidCount: 1, bidderCount: 1, version: 1, entryCount: 1 });
-    expect(next.bids.map((b) => b.seq)).toEqual([1]);
-    expect(next.serverTime).toBe("2026-10-24T15:00:05.000Z");
-  });
-
-  it("descarta evento com versão menor ou igual à atual (mesmo lance por REST e por evento)", () => {
-    const first = applyLotEvent(state(), event());
-    expect(applyLotEvent(first, event())).toBe(first);
-    expect(applyLotEvent(first, event({ version: 0 }))).toBe(first);
-  });
-
-  it("empilha o mais novo no topo e leva o fim prorrogado", () => {
-    const first = applyLotEvent(state(), event());
-    const next = applyLotEvent(
-      first,
-      event({
-        bid: bid(2, "Licitante BBBB", 1_550_000),
-        currentBidCents: 1_550_000,
-        bidCount: 2,
-        bidderCount: 2,
-        version: 2,
-        endsAt: "2026-10-25T10:02:00.000Z",
-      }),
-    );
-    expect(next.bids.map((b) => b.seq)).toEqual([2, 1]);
-    expect(next.lot.endsAt).toBe("2026-10-25T10:02:00.000Z");
-    expect(next.lot.originalEndsAt).toBe("2026-10-25T10:00:00.000Z");
-  });
-
-  it("recalcula a posição de quem já tem pseudônimo: líder passa a 1º, superado cai", () => {
-    let current = state({ myPseudonym: "Licitante AAAA" });
-    current = applyLotEvent(current, event());
-    expect(current.lot).toMatchObject({ myRank: 1, myBestBidCents: 1_500_000 });
-    current = applyLotEvent(
-      current,
-      event({ bid: bid(2, "Licitante BBBB", 1_550_000), currentBidCents: 1_550_000, bidCount: 2, bidderCount: 2, version: 2 }),
-    );
-    expect(current.lot).toMatchObject({ myRank: 2, myBestBidCents: 1_500_000 });
-  });
-
-  it("quem ainda não deu lance continua sem posição", () => {
-    const next = applyLotEvent(state({ myPseudonym: "Licitante ZZZZ" }), event());
-    expect(next.lot.myRank).toBeNull();
-    expect(next.lot.myBestBidCents).toBeNull();
-  });
-});
-
-describe("applyBidResponse", () => {
-  const response: PlaceBidResponse = {
-    bid: bid(1, "Licitante AAAA", 1_500_000),
-    lot: {
-      id: "lot-1",
-      status: "LIVE",
-      currentBidCents: 1_500_000,
-      minimumBidCents: 1_550_000,
-      bidCount: 1,
-      bidderCount: 1,
-      version: 1,
-      entryCount: 1,
-      endsAt: "2026-10-25T10:02:00.000Z",
-      originalEndsAt: "2026-10-25T10:00:00.000Z",
-      extended: true,
-      myRank: 1,
-      myBestBidCents: 1_500_000,
-      myPseudonym: "Licitante AAAA",
-    },
-    wallet: { totalCents: 5_000_000, committedCents: 1_500_000, availableCents: 3_500_000 },
-    serverTime: "2026-10-24T15:00:05.000Z",
-  };
-
-  it("fica com a posição e o pseudônimo que o servidor calculou", () => {
-    const next = applyBidResponse(state(), response);
-    expect(next.lot).toMatchObject({ myRank: 1, myBestBidCents: 1_500_000, myPseudonym: "Licitante AAAA", version: 1 });
-    expect(next.lot.endsAt).toBe("2026-10-25T10:02:00.000Z");
-    expect(next.bids).toHaveLength(1);
-  });
-
-  it("se um refetch já trouxe essa versão, não mexe no estado", () => {
-    const fresh = applyBidResponse(state(), response);
-    expect(applyBidResponse(fresh, response)).toBe(fresh);
-  });
-});
-
-describe("positionFromBids", () => {
-  const bids = [bid(4, "Licitante AAAA", 3_300_000), bid(3, "Licitante CCCC", 3_200_000), bid(2, "Licitante BBBB", 3_100_000), bid(1, "Licitante AAAA", 3_000_000)];
-  it("conta cada pseudônimo uma vez, pelo maior lance", () => {
-    expect(positionFromBids(bids, "Licitante AAAA")).toEqual({ rank: 1, best: 3_300_000 });
-    expect(positionFromBids(bids, "Licitante BBBB")).toEqual({ rank: 3, best: 3_100_000 });
-  });
-  it("sem lance ou sem pseudônimo, null", () => {
-    expect(positionFromBids(bids, "Licitante ZZZZ")).toBeNull();
-    expect(positionFromBids(bids, null)).toBeNull();
   });
 });
 
