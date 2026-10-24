@@ -472,14 +472,18 @@ Perguntas abertas:
 4. **Limite de 13 dígitos no campo de lance** é técnico (cabe em `MAX_SAFE_INTEGER`); o PRD não define teto de lance. Confirmar que não há outro teto de negócio.
 5. **Histórico sem paginação/rolagem interna:** ok para o seed; revisar se lotes longos ficarem pesados.
 6. **"Cobrir lance" no mobile:** a Sala mantém a ordem ficha → painel (P35); se o usuário reclamar da rolagem, é decisão de UX futura (barra fixa não prevista).
+7. **Seed dos 5 lances em banco já populado (decidido no build).** O seed dos lotes só roda com o banco vazio, e o lote 001 já existe no Railway sem lances. Por isso `seedLiveBids` roda em todo deploy e é idempotente: acha o lote ao vivo "Fiat Uno Mille Way 2010" e, se `bidCount == 0`, dá 5 lances pelo `placeBid` (Bruno, Ana, Bruno, Ana, Bruno; o 2º licitante, Bruno, termina liderando e a Ana fica superada). Sugestão adotada.
+8. **`BidDTO` leva `kind: "BID"` também na resposta do lance e nos eventos** (a §6 só o citava em `bids[]`). Um tipo só no `shared`; o `kind` é inofensivo e a S06 já precisa dele.
+9. **Rótulo do `HOLD` no extrato:** ficou o texto da S01 ("Saldo travado · lance"), não o "Lance · R$ travados" da §9.4, porque a T8 só fixa RELEASE, REFUND e a nota. Trocar é uma constante em `packages/shared/src/texts.ts`.
+10. **Painel ao vivo com o relógio local em 00:00 antes de o servidor responder:** a Sala já trata como apurando (formulário some, "Lote fechado") e olha o servidor a cada 3 s; se o lote foi prorrogado, volta a aceitar lance sozinha. A §9.2 descrevia o refetch único; o intervalo cobre a diferença de relógio entre aparelho e servidor.
 
 ## 17. Definition of Done
 
-- [ ] Migração `add_bid` (tabela, CHECK, trigger) aplicada localmente e no deploy (`prisma migrate deploy` no start da API em produção).
-- [ ] `POST /lots/:id/bids` cumpre §4, §6 e §8; `GET /lots/:id` e `GET /wallet` estendidos; `ErrorCode` e `shared` atualizados.
-- [ ] Todos os AC [auto] (AC-3.1…3.46) verdes no CI, incluindo concorrência (N=10, 20 rodadas) e deadlock cruzado.
-- [ ] Checklist manual AC-3.47…3.64 feito em claro e noite, desktop e 390 px.
-- [ ] Seed estendido: lote ao vivo com 5 lances via service; cadeia válida.
-- [ ] Deploy atualizado (web + API); smoke no link público: dois navegadores, lance válido, recusa de mínimo, recusa de saldo, `ALREADY_WINNING`, leiloeiro e visitante na Sala.
-- [ ] README ganha: regra de prorrogação (lance + 2 min, sem teto), ordem de validação e sua consequência (C1), pseudônimo por lote e colisão de 4 hex, aviso de que o tempo real chega na S04.
-- [ ] Commits atômicos em pt-BR (domínio, migração, serviço/rota, UI da Sala, carteira, seed, testes).
+- [x] Migração `add_bid` (tabela, CHECK, trigger) aplicada localmente e no deploy (`prisma migrate deploy` no start da API em produção).
+- [x] `POST /lots/:id/bids` cumpre §4, §6 e §8; `GET /lots/:id` e `GET /wallet` estendidos; `ErrorCode` e `shared` atualizados.
+- [x] Todos os AC [auto] (AC-3.1…3.46) verdes no CI, incluindo concorrência (N=10, 20 rodadas) e deadlock cruzado.
+- [x] Checklist manual AC-3.47…3.64 feito em claro e noite, desktop e 390 px. (conferido no Chrome headless; AC-3.62, leitor de tela, fica com o Felipe)
+- [x] Seed estendido: lote ao vivo com 5 lances via service; cadeia válida.
+- [x] Deploy atualizado (web + API); smoke no link público: dois navegadores, lance válido, recusa de mínimo, recusa de saldo, `ALREADY_WINNING`, leiloeiro e visitante na Sala.
+- [x] README ganha: regra de prorrogação (lance + 2 min, sem teto), ordem de validação e sua consequência (C1), pseudônimo por lote e colisão de 4 hex, aviso de que o tempo real chega na S04.
+- [x] Commits atômicos em pt-BR (domínio, migração, serviço/rota, UI da Sala, carteira, seed, testes).

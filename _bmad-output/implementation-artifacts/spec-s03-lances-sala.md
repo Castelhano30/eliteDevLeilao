@@ -2,7 +2,7 @@
 title: 'S03 — Lances e Sala (transação do lance, saldo comprometido, painel de lance)'
 type: 'feature'
 created: '2026-10-24'
-status: 'in-progress'
+status: 'in-review'
 baseline_commit: '9af63121c26cd340af70436a57209720d28da5da'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -63,19 +63,21 @@ context:
 ## Tasks & Acceptance
 
 **Execution (ordem; um commit atômico por bloco):**
-- [ ] `packages/shared` -- `bids.ts` (schema, DTOs, textos), renomear `minimumNextCents` no `LotStateLot`, estender `LotState`/`LotSummary` -- contrato único para API e web; testes dos textos.
-- [ ] `apps/api/src/domain` -- `bid-rules`, `entryHash`, `pseudonym`, `rank` com testes unitários (vetor fixo da §4.5 por `createHmac` independente, 4 limites da prorrogação, matriz C1).
-- [ ] `apps/api/prisma` -- schema + migração `add_bid` (CHECKs, trigger, CHECKs de `Lot`); aplicar local e no banco de teste.
-- [ ] `apps/api/src/services` + `routes` + `app.ts` -- `placeBid`, rate limit, `Publisher` injetável, `GET /lots/:id` estendido, `GET /wallet` com `leadingLots` e `lotNumber`.
-- [ ] `apps/api/test` -- integração AC-3.1…3.46 e AC-3.65 (um `it` cada, `FakeClock`, varredura de chaves proibidas, rollback forçado, publisher falso), concorrência AC-3.38…3.43 com `assertLotInvariants`.
-- [ ] `apps/web` -- utilitários puros + testes (`maskReais`/`parseReais`, `plural`, `ordinal`, `applyLotEvent`, faixa/placar, `dirty`, atalhos, `useOnReach` puro); componentes; Sala; chip; Carteira.
-- [ ] `apps/api/prisma/seed.ts` + `src/seed` -- 5 lances idempotentes e teste do seed.
-- [ ] `README.md`, `progresso.md`, fatia (§16 e §17) -- texto, diário (itens a partir do 46: o 45 já é a revisão geral), perguntas abertas.
-- [ ] Deploy -- push, CI verde, migração no start da API no Railway, smoke HTTP público.
+- [x] `packages/shared` -- `bids.ts` (schema, DTOs, textos), renomear `minimumNextCents` no `LotStateLot`, estender `LotState`/`LotSummary` -- contrato único para API e web; testes dos textos.
+- [x] `apps/api/src/domain` -- `bid-rules`, `entryHash`, `pseudonym`, `rank` com testes unitários (vetor fixo da §4.5 por `createHmac` independente, 4 limites da prorrogação, matriz C1).
+- [x] `apps/api/prisma` -- schema + migração `add_bid` (CHECKs, trigger, CHECKs de `Lot`); aplicar local e no banco de teste.
+- [x] `apps/api/src/services` + `routes` + `app.ts` -- `placeBid`, rate limit, `Publisher` injetável, `GET /lots/:id` estendido, `GET /wallet` com `leadingLots` e `lotNumber`.
+- [x] `apps/api/test` -- integração AC-3.1…3.46 e AC-3.65 (um `it` cada, `FakeClock`, varredura de chaves proibidas, rollback forçado, publisher falso), concorrência AC-3.38…3.43 com `assertLotInvariants`.
+- [x] `apps/web` -- utilitários puros + testes (`maskReais`/`parseReais`, `plural`, `ordinal`, `applyLotEvent`, faixa/placar, `dirty`, atalhos, `useOnReach` puro); componentes; Sala; chip; Carteira.
+- [x] `apps/api/prisma/seed.ts` + `src/seed` -- 5 lances idempotentes e teste do seed.
+- [x] `README.md`, `progresso.md`, fatia (§16 e §17) -- texto, diário (itens a partir do 46: o 45 já é a revisão geral), perguntas abertas.
+- [x] Deploy -- push, CI verde, migração no start da API no Railway, smoke HTTP público.
 
 **Acceptance Criteria:** AC-3.1 a AC-3.46 e AC-3.65 [auto] da §12; AC-3.47 a AC-3.64 [manual] (o que não for possível conferir fica listado para o Felipe); §17 inteira.
 
 ## Implementation Notes
+
+Implementado direto, sem subagente de implementação. Decisões novas do build estão nas perguntas 7 a 10 da §16 da fatia. A camada de revisão (step-04) não rodou: ela exige três revisores em paralelo e o pedido não os autorizava; fica para o Felipe pedir (`/code-review` ou `bmad-code-review`). Verificação e smoke no diário, itens 46 a 55.
 
 ## Spec Change Log
 
