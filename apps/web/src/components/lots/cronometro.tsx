@@ -71,12 +71,12 @@ export function Cronometro({ status, startsAt, endsAt, originalEndsAt, size, lab
   // Leitor de tela: a cada 10 s, não a cada segundo.
   const spoken = formatCountdown(Math.ceil(state.remainingMs / 10_000) * 10_000);
   const ariaLabel = closed ? "Encerrado" : `${scheduled ? "Abre em" : "Tempo restante"} ${spoken}`;
-  const digits = size === "sala" ? 58 : 28;
+  const digits = size === "sala" ? 44 : 24;
 
   return (
     <div
       className="relative inline-flex flex-col gap-1 bg-painel"
-      style={{ border: `3px solid ${alert ? "var(--c-ferrugem)" : "var(--c-linha)"}`, padding: "10px 14px 12px" }}
+      style={{ border: `2px solid ${alert ? "var(--c-ferrugem)" : "var(--c-linha)"}`, padding: "8px 10px" }}
     >
       <span className="t-mono-rotulo-pequeno" style={{ color: alert ? "var(--c-led-alerta)" : "var(--f-rotulo-relogio)" }}>
         {shownLabel}

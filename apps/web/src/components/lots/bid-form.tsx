@@ -104,7 +104,7 @@ export function BidForm({ id, lot, situation }: BidFormProps) {
         loading={sending}
         loadingText={BID_TEXT.sending}
         aria-busy={sending || undefined}
-        className="w-full !min-h-[64px] !text-[30px]"
+        className="w-full !min-h-12 !text-[24px]"
       >
         Dar lance
       </Button>

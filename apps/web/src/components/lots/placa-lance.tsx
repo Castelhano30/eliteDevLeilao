@@ -41,9 +41,9 @@ export function PlacaLance({ cents, label }: PlacaLanceProps) {
                 key={`${index}-${char}`}
                 className="relative inline-flex items-center justify-center rounded-placa bg-painel font-mono font-semibold"
                 style={{
-                  width: 40,
-                  height: 60,
-                  fontSize: 40,
+                  width: 32,
+                  height: 48,
+                  fontSize: 32,
                   color: "var(--f-digito-placa)",
                   animation: flip ? `la-vira 0.5s ${index * 0.06}s both` : undefined,
                 }}
