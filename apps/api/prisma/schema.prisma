@@ -23,14 +23,16 @@ enum LedgerKind {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         Role
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  passwordHash  String
+  role          Role
   /// Gravado pelo service com clock.now().
-  createdAt    DateTime @db.Timestamp(3)
-  wallet       Wallet?
+  createdAt     DateTime @db.Timestamp(3)
+  wallet        Wallet?
+  lotsAuctioned Lot[]    @relation("LotAuctioneer")
+  lotsLeading   Lot[]    @relation("LotLeader")
 }
 
 model Wallet {
@@ -56,4 +58,63 @@ model LedgerEntry {
   createdAt      DateTime   @db.Timestamp(3)
 
   @@index([userId, seq])
+}
+
+/// Snapshot do carro (FIPE + imagem) gravado na criação do lote.
+model Item {
+  id                  String   @id @default(uuid())
+  /// "FIPE"
+  source              String
+  /// "{codeFipe}-{yearId}", ex. "002118-8-2015-1"
+  externalId          String
+  /// Nome limpo (cleanBrand).
+  brand               String
+  model               String
+  year                Int
+  fuel                String
+  referencePriceCents BigInt
+  /// "YYYY-MM", ou o texto cru da FIPE.
+  referenceMonth      String
+  /// Só GET /items/:id/image lê esta coluna (R-2.15).
+  imageData           Bytes?
+  imageMime           String?
+  imageCredit         String?
+  imageCreditUrl      String?
+  /// Resposta bruta do detalhe da FIPE.
+  rawData             Json
+  /// Quando a entrada do catálogo foi realmente buscada (não "agora" se veio de cache).
+  fetchedAt           DateTime @db.Timestamp(3)
+  lots                Lot[]
+}
+
+model Lot {
+  id                String    @id @default(uuid())
+  number            Int       @unique @default(autoincrement())
+  auctioneerId      String
+  auctioneer        User      @relation("LotAuctioneer", fields: [auctioneerId], references: [id])
+  itemId            String
+  item              Item      @relation(fields: [itemId], references: [id])
+  title             String
+  /// Minúsculo, sem acento: título + marca + modelo + ano.
+  searchText        String
+  startingBidCents  BigInt
+  minIncrementCents BigInt
+  startsAt          DateTime  @db.Timestamp(3)
+  endsAt            DateTime  @db.Timestamp(3)
+  originalEndsAt    DateTime  @db.Timestamp(3)
+  currentBidCents   BigInt?
+  leaderId          String?
+  leader            User?     @relation("LotLeader", fields: [leaderId], references: [id])
+  bidCount          Int       @default(0)
+  /// version = entryCount (T4).
+  entryCount        Int       @default(0)
+  lastHash          String
+  seal              String
+  cancelledAt       DateTime? @db.Timestamp(3)
+  settledAt         DateTime? @db.Timestamp(3)
+  /// Gravado pelo service com clock.now().
+  createdAt         DateTime  @db.Timestamp(3)
+
+  @@index([endsAt])
+  @@index([auctioneerId])
 }
