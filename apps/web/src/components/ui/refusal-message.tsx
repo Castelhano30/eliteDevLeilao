@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 export interface RefusalMessageProps {
@@ -32,9 +33,9 @@ export function RefusalMessage({ children, action, className = "" }: RefusalMess
         {action ? (
           <>
             {" "}
-            <a href={action.href} className="font-semibold !text-ferrugem">
+            <Link href={action.href} className="font-semibold !text-ferrugem">
               {action.label}
-            </a>
+            </Link>
           </>
         ) : null}
       </p>
