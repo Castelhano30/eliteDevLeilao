@@ -50,7 +50,7 @@ model LedgerEntry {
   userId         String
   kind           LedgerKind
   amountCents    BigInt
-  /// Sem FK: a tabela Lot só existe na S02 e o ledger é histórico imutável.
+  /// Sem FK: o ledger é histórico imutável e não pode depender da vida do lote.
   lotId          String?
   totalAfter     BigInt
   committedAfter BigInt

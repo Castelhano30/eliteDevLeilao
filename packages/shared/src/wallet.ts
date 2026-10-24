@@ -27,7 +27,7 @@ export interface LedgerEntryDto {
   kind: LedgerKind;
   amountCents: number;
   lotId: string | null;
-  /** Sempre `null` até a S02, que faz o join com o lote. */
+  /** Ainda `null`: o join com o lote entra na S03, quando o extrato passa a ter `lotId`. */
   lotNumber: number | null;
   totalAfterCents: number;
   committedAfterCents: number;
