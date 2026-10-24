@@ -2,8 +2,8 @@ const CHAMFER = "polygon(18px 0, 100% 0, 100% 100%, 18px 100%, 0 calc(100% - 18p
 const CHAMFER_INNER = "polygon(17px 0, 100% 0, 100% 100%, 17px 100%, 0 calc(100% - 17px), 0 17px)";
 
 export interface LotTagProps {
-  /** Número do lote; aparece com três dígitos (`018`). */
-  number: number;
+  /** Número do lote (aparece com três dígitos, `018`) ou um texto curto, como "NOVO" antes de o lote existir. */
+  number: number | string;
   /** Ocre para ao vivo ou agendado, papel para encerrado. */
   tone?: "ocre" | "papel";
   /** Inclinação de -4° a +3° (-2° nos encerrados). */
@@ -40,7 +40,7 @@ export function LotTag({ number, tone = "ocre", rotate = tone === "papel" ? -2 :
             aria-hidden="true"
           />
           <span className="block font-mono text-[11px] tracking-[0.14em]">LOTE</span>
-          <span className="t-numero-lote block">{String(number).padStart(3, "0")}</span>
+          <span className="t-numero-lote block">{typeof number === "number" ? String(number).padStart(3, "0") : number}</span>
         </span>
       </span>
     </span>

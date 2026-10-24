@@ -13,9 +13,9 @@ import { useAuth } from "./auth-provider";
 const LINK = "t-mono-rotulo inline-flex min-h-alvo items-center border-b-[3px] border-transparent text-tinta no-underline";
 
 /** Item de navegação: o ativo leva sublinhado de 3px e `aria-current="page"`. */
-function NavLink({ href, children }: { href: string; children: ReactNode }) {
+function NavLink({ href, children, exact = false }: { href: string; children: ReactNode; exact?: boolean }) {
   const pathname = usePathname();
-  const active = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+  const active = href === "/" || exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
   return (
     <Link
       href={href}
@@ -53,6 +53,10 @@ export function SiteHeader() {
           ) : user?.role === "AUCTIONEER" ? (
             <>
               <nav aria-label="Leiloeiro" className="flex flex-wrap items-center gap-x-6">
+                <NavLink href="/painel" exact>
+                  Meus lotes
+                </NavLink>
+                <NavLink href="/painel/criar-lote">Criar lote</NavLink>
                 <NavLink href="/">Vitrine</NavLink>
                 {process.env.NODE_ENV !== "production" ? <NavLink href="/kit">Kit</NavLink> : null}
               </nav>
@@ -61,8 +65,11 @@ export function SiteHeader() {
             </>
           ) : (
             <>
-              <nav aria-label="Principal" className="flex flex-wrap items-center gap-x-6">
+              <nav aria-label="Visitante" className="flex flex-wrap items-center gap-x-6">
                 <NavLink href="/">Vitrine</NavLink>
+                <Link href="/#como-funciona" className={LINK}>
+                  Como funciona
+                </Link>
                 {process.env.NODE_ENV !== "production" ? <NavLink href="/kit">Kit</NavLink> : null}
               </nav>
               <div className="flex flex-wrap items-center gap-3">

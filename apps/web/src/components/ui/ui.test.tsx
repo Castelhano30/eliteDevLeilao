@@ -106,4 +106,8 @@ describe("LotTag", () => {
   it("mostra o número com três dígitos", () => {
     expect(renderToStaticMarkup(<LotTag number={18} />)).toContain(">018<");
   });
+
+  it("aceita texto, como NOVO", () => {
+    expect(renderToStaticMarkup(<LotTag number="NOVO" />)).toContain(">NOVO<");
+  });
 });

@@ -11,13 +11,16 @@ export interface MoneyFieldProps {
   onChange: (masked: string) => void;
   /** Borda e `aria-invalid` sem texto: a mensagem fica numa RefusalMessage colada ao botão. */
   invalid?: boolean;
+  /** Mensagem do erro junto ao campo (liga `aria-describedby`). */
+  error?: string;
+  required?: boolean;
   help?: string;
   disabled?: boolean;
   id?: string;
 }
 
 /** Campo de valor em reais inteiros: "R$" + dígitos com ponto de milhar + ",00". Reaplica a máscara a cada tecla ou colagem. */
-export function MoneyField({ label, value, onChange, invalid, help, disabled, id }: MoneyFieldProps) {
+export function MoneyField({ label, value, onChange, invalid, error, required, help, disabled, id }: MoneyFieldProps) {
   const pending = useRef<{ input: HTMLInputElement; caret: number } | null>(null);
 
   // O React recoloca o cursor no fim ao trocar o valor; devolvemos para onde o usuário estava.
@@ -46,6 +49,8 @@ export function MoneyField({ label, value, onChange, invalid, help, disabled, id
       value={value}
       onChange={handle}
       invalid={invalid}
+      error={error}
+      required={required}
       help={help}
       disabled={disabled}
     />
