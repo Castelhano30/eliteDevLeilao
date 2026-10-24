@@ -1,5 +1,5 @@
 import { errorEnvelopeSchema, type ErrorEnvelope } from "@lanceauto/shared";
-import { syncServerTime } from "./server-clock";
+import { clockMark, syncServerTime } from "./server-clock";
 import { getToken } from "./token";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -45,6 +45,7 @@ async function apiRequest<T>(
   const headers: Record<string, string> = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = `Bearer ${token}`;
+  const sentAt = clockMark();
   try {
     const res = await fetch(`${API_URL}${path}`, {
       method,
@@ -52,10 +53,11 @@ async function apiRequest<T>(
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
+    const receivedAt = clockMark();
     const parsed: unknown = await res.json().catch(() => null);
-    // Toda resposta com serverTime acerta o relógio da tela (INV-1).
+    // Toda resposta com serverTime acerta o relógio da tela (INV-1); a de menor latência é a que vale (R-4.10).
     const serverTime = (parsed as { serverTime?: unknown } | null)?.serverTime;
-    if (typeof serverTime === "string") syncServerTime(serverTime);
+    if (typeof serverTime === "string") syncServerTime(serverTime, { sentAt, receivedAt });
     if (res.ok) return { ok: true, status: res.status, data: parsed as T };
     const envelope = errorEnvelopeSchema.safeParse(parsed);
     const error = envelope.success ? envelope.data.error : null;
