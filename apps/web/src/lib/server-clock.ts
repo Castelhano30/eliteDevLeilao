@@ -5,6 +5,8 @@
  * Único arquivo do web (com os formatadores) que lê `Date.now()` (T6).
  */
 let offset = 0;
+/** Alguma resposta (ou a carga do SSR) já acertou o relógio? */
+let synced = false;
 let current = Date.now();
 let timer: ReturnType<typeof setInterval> | null = null;
 const listeners = new Set<() => void>();
@@ -18,6 +20,11 @@ export function serverNow(): number {
   return Date.now() + offset;
 }
 
+/** Já houve um `syncServerTime` válido? */
+export function isServerClockSynced(): boolean {
+  return synced;
+}
+
 /** Offset atual (ms), para testes e diagnóstico. */
 export function serverOffset(): number {
   return offset;
@@ -28,6 +35,7 @@ export function syncServerTime(iso: string): void {
   const parsed = Date.parse(iso);
   if (Number.isNaN(parsed)) return;
   offset = parsed - Date.now();
+  synced = true;
   current = serverNow();
   emit();
 }

@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { hydrationNow, serverClockSnapshot, subscribeServerClock } from "./server-clock";
+import { hydrationNow, isServerClockSynced, serverClockSnapshot, subscribeServerClock, syncServerTime } from "./server-clock";
 
 /**
  * Agora (ms) pelo relógio do servidor, atualizado a cada segundo. No SSR e na hidratação vale o
- * `serverTime` da carga; depois, o relógio vivo.
+ * `serverTime` da carga; depois, o relógio vivo. Se nenhuma resposta acertou o relógio ainda, o `serverTime`
+ * da carga acerta (INV-1): sem isso, um primeiro fetch do cliente que falhe deixaria a tela no relógio do aparelho.
  */
 export function useServerNow(serverTime?: string): number {
+  useEffect(() => {
+    if (serverTime && !isServerClockSynced()) syncServerTime(serverTime);
+  }, [serverTime]);
   return useSyncExternalStore(subscribeServerClock, serverClockSnapshot, () => hydrationNow(serverTime));
 }
 
