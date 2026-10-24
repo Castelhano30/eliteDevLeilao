@@ -36,14 +36,17 @@
   summary: Proteger `publisher.publish(events)` com `try/catch` e log em `POST /lots/:id/bids`, e testar com um publisher que lança.
   evidence: `routes/lots.ts:118` publica depois do commit sem guarda; se o publisher lançar, o lance entrou e o cliente recebe 500. Hoje o publisher é `NoopPublisher`; decidir junto do publisher do Socket.IO (S04).
   alvo: S04 (obrigatório: entra com o `Publisher` do Socket.IO)
+  resolved: S04, `guardPublisher` envolve o publisher em `composeApp` (um ponto só protege `POST /lots/:id/bids`, o depósito e `POST /lots`); teste com publisher que lança: 201, lance no banco e erro logado; mutação feita, sem o guarda a resposta vira 500 (spec-s04-tempo-real.md).
 - source_spec: `_bmad-output/implementation-artifacts/spec-s03-lances-sala.md` (revisão da S03)
   summary: No reducer da Sala (`applyLotEvent`): detectar salto de `version` (refaz o GET), atualizar `status` e parar de recalcular `minimumBidCents` (pôr o campo no `BidPlacedPayload`).
   evidence: `lot-state.ts:49-70` soma `currentBidCents + minIncrementCents` e aceita evento com `version > atual + 1`. Sem efeito hoje (só a resposta do próprio lance usa o reducer); aparece com os eventos da S04.
   alvo: S04 (R-4.14 troca o reducer)
+  resolved: S04, `applyLotEvent` em `lib/realtime/lot-reducer.ts` pede o GET no salto de `version`, atualiza o `status` e usa o `minimumBidCents` do payload (spec-s04-tempo-real.md).
 - source_spec: `_bmad-output/implementation-artifacts/spec-s03-lances-sala.md` (revisão da S03)
   summary: Extrair em funções puras e testar as decisões inline de `BidPanel` (`hammered`, situação), `Sala.refetchInterval` e `BidForm` (`inFlight`).
   evidence: Nenhum teste de componente além de `ui.test.tsx`; inverter `Date.parse(endsAt) <= now` ou tirar o `inFlight.current` mantém tudo verde. Conferido à mão no Chrome (itens 51 e 52).
   alvo: S04 (junto do reducer e do `useLotRoom`)
+  resolved: S04, `isHammered`, `panelSituation`, `lotRefetchInterval` e `createSubmitGuard` em `lib/realtime/panel-decisions.ts`, com teste. A ligação dessas funções aos componentes (e o `inFlight` no `BidForm`) segue sem teste de componente: o web não tem ambiente de DOM.
 - source_spec: `_bmad-output/implementation-artifacts/spec-s03-lances-sala.md` (revisão da S03)
   summary: Limitar o histórico de `GET /lots/:id` e calcular o rank no banco (`groupBy`) em vez de em memória.
   evidence: `lot.service.ts` (`getLotState`) lê todos os `BID` do lote a cada GET público, e a Sala refaz o GET a cada 2-3 s perto do fim. Já é a pergunta 5 da fatia.
@@ -64,3 +67,19 @@
   summary: Decidir sobre o Prisma 7 (ou `overrides` do `deepmerge-ts`) por causa do `npm audit`.
   evidence: `npm audit --omit=dev` aponta 3 altas na cadeia `prisma` → `@prisma/config` → `deepmerge-ts` (esgotar a pilha ao mesclar objetos recursivos). É o CLI na hora do build, não o servidor; o Prisma 7 foi recusado no T13 porque tira `url`/`directUrl` do schema.
   alvo: S09 (checar de novo antes da entrega)
+- source_spec: `_bmad-output/implementation-artifacts/spec-s04-tempo-real.md`
+  summary: `visibilitychange` e `online` do navegador (§9.5): reconectar o socket e refazer o snapshot da página quando a aba volta a ficar visível ou a rede volta.
+  evidence: Cortado pela T12 ("se sobrar tempo"). Hoje o socket reconecta sozinho pelo backoff do Socket.IO; aba dormindo no celular pode demorar até o próximo ping para notar a queda.
+  alvo: S09 (se sobrar tempo)
+- source_spec: `_bmad-output/implementation-artifacts/spec-s04-tempo-real.md`
+  summary: Flip do Total e do Disponível na Carteira quando o valor muda por evento.
+  evidence: Cortado pela T12 ("se sobrar tempo"). O valor e a linha nova do extrato já chegam por `wallet:updated`; só falta a animação.
+  alvo: S09 (se sobrar tempo)
+- source_spec: `_bmad-output/implementation-artifacts/spec-s04-tempo-real.md`
+  summary: Limitar `lot:join` por socket (ou por IP).
+  evidence: Cada `lot:join` lê o lote e o histórico inteiro no banco; um cliente pode repetir à vontade. `GET /lots/:id` também não tem limite. Nenhuma fatia pede.
+  alvo: S09 (junto do limite de `GET /lots/:id` e do histórico paginado)
+- source_spec: `_bmad-output/implementation-artifacts/spec-s04-tempo-real.md`
+  summary: Teste de componente para `useLotRoom`, `useShowcaseLive`, `useWalletLive` e para a fiação da Sala com o banner.
+  evidence: O web não tem ambiente de DOM (Vitest em node): a lógica está em funções puras testadas e os hooks foram conferidos só no Chrome real (roteiro do item 62 do diário). Uma regressão na fiação não derrubaria nenhum teste automático.
+  alvo: S09 (se decidirem adicionar jsdom ou Playwright)

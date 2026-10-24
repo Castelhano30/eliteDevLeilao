@@ -2,7 +2,7 @@
 title: 'S04 — Tempo real (Socket.IO: salas, eventos pós-commit, relógio, reconexão)'
 type: 'feature'
 created: '2026-10-24'
-status: 'ready-for-dev'
+status: 'in-review'
 baseline_commit: 'e7749a847163c3e61ac13245a2668e80c0181b80'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -63,14 +63,14 @@ context:
 ## Tasks & Acceptance
 
 **Execution (ordem; um commit atômico por bloco; `git push` ao fim de cada etapa):**
-- [ ] `packages/shared` -- eventos, payloads, `minimumBidCents`, `computeMyStanding`, texto ambíguo; testes.
-- [ ] `apps/api` socket + publisher + composição -- `socket.ts`, `publisher.ts`, `app.ts`, `realtime.ts`, `server.ts`; `socket.test.ts` na nova assinatura; testes de `guardPublisher` e `SocketPublisher`.
-- [ ] `apps/api` services e rotas -- eventos de depósito e `POST /lots`, `bid:placed` sem `serverTime` próprio e com `minimumBidCents`; ajuste de seed e dos testes existentes.
-- [ ] `apps/api` integração do tempo real (§14, itens 1–9) -- `socket.io-client` em porta efêmera com Postgres real; AC-4.2, 4.3, 4.5 a 4.12, 4.18, 4.19, 4.28, 4.32; paridade `computeMyStanding` × `myRank` do servidor.
-- [ ] `apps/web` libs puras + testes -- relógio, reducer, `mergeSnapshot`, cache da Vitrine/Painel, status de conexão, decisões do painel (AC-4.13 a 4.15, 4.29 e os adiados do S03).
-- [ ] `apps/web` hooks, banner e telas -- Sala, painel de lance, Vitrine, Painel, Carteira/chip, `Providers`.
-- [ ] Documentação -- README, fatia (§16, §17), `deferred-work.md`, diário.
-- [ ] Verificação -- `lint`, `typecheck`, `test`, `build` com exit 0; Chrome real com 2+ clientes e queda de rede; deploy Railway, CI verde, smoke público.
+- [x] `packages/shared` -- eventos, payloads, `minimumBidCents`, `computeMyStanding`, texto ambíguo; testes.
+- [x] `apps/api` socket + publisher + composição -- `socket.ts`, `publisher.ts`, `app.ts`, `realtime.ts`, `server.ts`; `socket.test.ts` na nova assinatura; testes de `guardPublisher` e `SocketPublisher`.
+- [x] `apps/api` services e rotas -- eventos de depósito e `POST /lots`, `bid:placed` sem `serverTime` próprio e com `minimumBidCents`; ajuste de seed e dos testes existentes.
+- [x] `apps/api` integração do tempo real (§14, itens 1–9) -- `socket.io-client` em porta efêmera com Postgres real; AC-4.2, 4.3, 4.5 a 4.12, 4.18, 4.19, 4.28, 4.32; paridade `computeMyStanding` × `myRank` do servidor.
+- [x] `apps/web` libs puras + testes -- relógio, reducer, `mergeSnapshot`, cache da Vitrine/Painel, status de conexão, decisões do painel (AC-4.13 a 4.15, 4.29 e os adiados do S03).
+- [x] `apps/web` hooks, banner e telas -- Sala, painel de lance, Vitrine, Painel, Carteira/chip, `Providers`.
+- [x] Documentação -- README, fatia (§16, §17), `deferred-work.md`, diário.
+- [x] Verificação -- `lint`, `typecheck`, `test`, `build` com exit 0; Chrome real com 2+ clientes e queda de rede; deploy Railway, CI verde, smoke público.
 
 **Acceptance Criteria:** AC-4.2 a 4.3, 4.5 a 4.15, 4.18, 4.19, 4.28, 4.29, 4.32 [auto]; AC-4.1, 4.4, 4.16, 4.17, 4.20 a 4.27, 4.30, 4.31 [manual] (conferidos no Chrome local; o que não for possível fica como pendência do Felipe, sem marcar como feito); §17 adaptada ao Railway.
 
@@ -85,6 +85,12 @@ context:
 5. **Render/Vercel/Neon → Railway:** cold start e nota de hibernação viram "deploy reinicia a API e os sockets reconectam"; a DoD de dois navegadores roda no domínio público do Railway.
 
 ## Implementation Notes
+
+Implementado direto, sem subagente de implementação (o pedido não os autorizava). A camada de revisão (step-04) **não rodou**: ela exige revisores em paralelo; fica para o `bmad-code-review` se o Felipe pedir, como na S03. O que fiz no lugar: reli o diff inteiro, três mutações nos testes do web (o salto de `version`, o bloqueio por `reconnecting` e o descarte de cartão velho: todas derrubaram testes) e uma mutação na API (tirar o `guardPublisher`: os testes do AC-4.10 viraram 500). Um erro meu no caminho: um `git checkout` que usei para desfazer a mutação também descartou as edições ainda não commitadas de `app.ts`; refiz as cinco e conferi com typecheck e testes.
+
+Verificação, saída real e roteiros do navegador: itens 61 a 63 do `progresso.md`. Decisões do build: perguntas 4 a 12 da §16 da fatia.
+
+Não conferido: leitor de tela real; Firefox e Safari; Tab pelos controles novos; `visibilitychange` (não implementado, T12); a queda de rede no Railway com corte de verdade (só a emulação do Chrome); teste automático dos hooks (`useLotRoom` e cia. só foram exercitados no Chrome).
 
 ## Spec Change Log
 

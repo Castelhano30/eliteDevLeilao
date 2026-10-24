@@ -294,13 +294,22 @@ Perguntas abertas (sem bloquear a fatia):
 - Timeout de "Sem sinal…" de 3 s na primeira conexão e de 4 s para sumir o aviso de volta são sugestões minhas, não vêm das fontes.
 - Tolerância "até 2 s" nos AC manuais é tolerância de teste, não requisito do PRD.
 - Textos de §8 são todos "texto a revisar".
+4. **Nome do campo do `DomainEvent` (decidido no build).** A §7 escreve `{ room, event, payload }` e diz "definida na S00", mas a S00 (fatia e código) define `{ type, room, payload }`. Ficou `type`: renomear não muda comportamento e quebraria a S00. Sugestão adotada: manter `type`.
+5. **R-4.10 tem duas frases em tensão (decidido no build).** "O offset é recalculado só em respostas HTTP e acks" × "um evento só ajusta o offset se o `serverTime` for maior que o último aceito". Ficou a primeira, a mais segura: evento nunca mexe no offset (o atraso de rede de cada um daria salto no cronômetro); o `serverTime` guardado no estado da Sala só avança. A medição de menor latência assume o carimbo do servidor no meio da viagem e perde o posto depois de 60 s (número meu, não das fontes).
+6. **Texto da falha ambígua do lance (decidido no build).** S03: "Sem resposta do pátio. Seu lance pode ou não ter entrado…"; S04 §8 e AC-4.21: "Não deu para confirmar o lance. Confira o histórico antes de tentar de novo.". Vale a da S04 (posterior; o AC a nomeia); o teste da S03 acompanhou. Texto "a revisar".
+7. **Aviso de prorrogação (decidido no build).** A §9.1 diz que o parágrafo visível e a região oculta são `aria-live="polite"`; anunciar os dois faria o leitor de tela ler a mesma coisa duas vezes. Só a região oculta ("Prorrogado. Novo fim às hh:mm:ss.") anuncia; o parágrafo é para quem enxerga. Não conferido com leitor de tela real.
+8. **Render, Vercel e Neon viram Railway (decidido no build).** Cold start e "o plano gratuito pode hibernar" não existem: a API é uma instância só, sem hibernação. O que sobra do critério: um deploy da API reinicia o processo e derruba os sockets; o cliente reconecta sozinho, o banner aparece e some. A nota do README foi reescrita nesse sentido e o `.env.example` não precisou de nada (sem variável nova).
+9. **`lot:join` responde `INTERNAL` quando o servidor não consegue montar o snapshot.** O contrato só previa `NOT_FOUND`; sem uma resposta, o cliente esperaria o timeout de 8 s antes de tentar de novo. Aditivo: o cliente trata qualquer `ok: false` diferente de `NOT_FOUND` como "tente de novo em 3 s".
+10. **Depósito, `POST /lots` e lance passam a devolver `{ response, events }` do service.** A §15 já mandava o service devolver os eventos; o retorno antigo (só o corpo) virou `response`. A rota continua devolvendo só o corpo ao cliente.
+11. **Vitrine: agendado vira ao vivo, e ao vivo vira "apurando", pelo relógio do servidor, sem evento** (§9.2). O cartão apurando mostra o cronômetro e "Apurando…" (S02); o rótulo "Apurando o resultado…" da fatia fica para a S05, que mexe nesse cartão. A consulta da lista é refeita a cada 3 s enquanto houver cartão assim.
+12. **§9.5 (`visibilitychange`/`online`) e o flip da Carteira ficaram de fora** (T12, "se sobrar tempo"); estão no `deferred-work.md`.
 
 ## 17. Definition of Done
 
-- [ ] Eventos da §7 emitidos por lance, depósito e criação de lote; `lot:closed`/`lot:cancelled` definidos em `packages/shared` e tratados no cliente (emissão fica para S05/S06).
-- [ ] Testes de §14 passando no CI, incluindo o de reconexão.
-- [ ] ACs [manual] percorridos com 2+ navegadores no deploy público (Vercel + Render + Neon), inclusive a queda e volta da rede.
-- [ ] Nenhum `position: fixed` no ConnectionBanner; foco e teclado intactos; reduced-motion verificado.
-- [ ] Cold start do Render não deixa a Sala presa: banner aparece e some ao conectar.
-- [ ] `.env.example` e README com a nota: o plano gratuito pode hibernar e o socket demora a reconectar.
-- [ ] Deploy atualizado e smoke no link público (dois navegadores, um lance).
+- [x] Eventos da §7 emitidos por lance, depósito e criação de lote; `lot:closed`/`lot:cancelled` definidos em `packages/shared` e tratados no cliente (emissão fica para S05/S06).
+- [x] Testes de §14 passando, incluindo o de reconexão (API: `realtime.test.ts`, 20 casos com `socket.io-client` e Postgres reais; web: reducer, `mergeSnapshot`, cache da Vitrine/Painel, status de conexão, relógio e decisões do painel). CI: ver o diário (item 62).
+- [x] ACs [manual] percorridos com 2+ clientes no **Chrome real local** (API compilada + `next start` + banco descartável), inclusive a queda e a volta da rede: AC-4.1, 4.4, 4.16, 4.17, 4.20 a 4.27 (menos o leitor de tela), 4.30 e 4.31. **No link público do Railway** (item 63 do diário): um lance de Ana chegou ao navegador do líder ("Você foi superado"), ao do visitante e à Vitrine sem recarregar, e a queda e a volta da rede mostraram o banner. Dois aparelhos reais e o leitor de tela ficam com o Felipe.
+- [x] Nenhum `position: fixed` no `ConnectionBanner` (conferido pelo estilo calculado); reduced-motion conferido com controle (0 animações rodando contra 1 sem a preferência). Foco e teclado dos controles novos **não** foram percorridos com Tab nesta rodada.
+- [x] Queda do socket não deixa a Sala presa: o banner aparece e some ao reconectar (no Railway não há cold start, ver pergunta 8).
+- [x] README com a nota adaptada ao Railway (sem hibernação; deploy reinicia e o socket reconecta). `.env.example` sem mudança.
+- [x] Deploy atualizado no Railway (API `b322d25`, web `20dc0c8`, `SUCCESS`), CI verde e smoke no link público, 10/10 (item 63 do diário). Efeito em produção: 1 lance de Ana de R$ 66.000,00 no lote 001.
