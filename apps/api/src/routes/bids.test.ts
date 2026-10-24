@@ -613,6 +613,21 @@ describe.skipIf(!testDatabaseUrl)("lances (integração, DATABASE_URL_TEST)", ()
       expect(asBruno.lot.minimumBidCents).toBe(3_400_000);
     });
 
+    it("AC-3.44: o myPseudonym do GET é o pseudônimo gravado nos lances do próprio licitante", async () => {
+      await postBid(app, ana, lotId, 3_000_000);
+      await postBid(app, bruno, lotId, 3_100_000, 3_000_000);
+      await postBid(app, ana, lotId, 3_200_000, 3_100_000);
+      const pseudonymOf = (body: { bids: { seq: number; pseudonym: string }[] }, seq: number) =>
+        body.bids.find((bid) => bid.seq === seq)?.pseudonym;
+      const asAna = (await request(app).get(`/lots/${lotId}`).set("Authorization", ana.auth)).body;
+      const asBruno = (await request(app).get(`/lots/${lotId}`).set("Authorization", bruno.auth)).body;
+      // A Sala marca "VOCÊ" comparando os dois: o GET precisa calcular o mesmo valor que o placeBid gravou.
+      expect(asAna.lot.myPseudonym).toBe(pseudonymOf(asAna, 1));
+      expect(asAna.lot.myPseudonym).toBe(pseudonymOf(asAna, 3));
+      expect(asBruno.lot.myPseudonym).toBe(pseudonymOf(asBruno, 2));
+      expect(asBruno.lot.myPseudonym).not.toBe(asAna.lot.myPseudonym);
+    });
+
     it("quem ainda não deu lance tem pseudônimo, mas posição nula", async () => {
       await postBid(app, ana, lotId, 3_000_000);
       const asBruno = (await request(app).get(`/lots/${lotId}`).set("Authorization", bruno.auth)).body;
