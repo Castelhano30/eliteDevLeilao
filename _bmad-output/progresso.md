@@ -97,7 +97,7 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 
 ### Onde parei
 
-S01 fechada (item 36). Próximo: S02. Verificações do dia 1 da S02 já feitas (FIPE v2 e Wikipedia, ver o spec de build `implementation-artifacts/spec-s02-catalogo-lotes-vitrine.md`).
+S02 implementada, no ar e com smoke público (itens 37 a 42); faltam os ACs manuais do item 42. Próximo: S03.
 
 ## Registro de uso de IA
 
