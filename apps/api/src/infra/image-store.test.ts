@@ -63,6 +63,9 @@ describe("ip-policy (§5.3)", () => {
     "::ffff:a9fe:a9fe",
     "64:ff9b::7f00:1",
     "2002:7f00:1::",
+    "64:ff9b:1::a00:1",
+    "2001:0:4136:e378::1",
+    "::ffff:0:7f00:1",
     "nao-e-ip",
   ])("recusa %s", (address) => {
     expect(isBlockedAddress(address)).toBe(true);
@@ -94,6 +97,16 @@ describe("image-store", () => {
     for (const path of ["/page.html", "/logo.svg", "/big.png", "/stream.png", "/nada.png"]) {
       expect(await store.download(`${s.url}${path}`)).toBeNull();
     }
+  });
+
+  it("servidor que aceita e não responde: desiste no timeout", async () => {
+    const s = await startFakeServer(() => undefined);
+    servers.push(s);
+    const store = makeImageStore({ userAgent: UA, allowPrivate: true, allowedPorts: [s.port], timeoutMs: 150 });
+    const started = performance.now();
+    expect(await store.download(`${s.url}/a.png`)).toBeNull();
+    expect(performance.now() - started).toBeLessThan(2_000);
+    expect(s.hits).toHaveLength(1);
   });
 
   it("porta fora de 80/443 não conecta", async () => {
