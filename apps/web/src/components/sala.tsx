@@ -131,7 +131,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
           <p className="t-body">
             {hasBid ? null : "Nenhum lance ainda. O mínimo é o lance inicial."}
             <span className="t-mono mt-1 block">
-              Mínimo aceito {formatBRL(lot.minimumNextCents)} · incremento {formatBRL(lot.minIncrementCents)}
+              Mínimo aceito {formatBRL(lot.minimumBidCents)} · incremento {formatBRL(lot.minIncrementCents)}
             </span>
           </p>
         ) : null}

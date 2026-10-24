@@ -2,7 +2,8 @@
 title: 'S03 — Lances e Sala (transação do lance, saldo comprometido, painel de lance)'
 type: 'feature'
 created: '2026-10-24'
-status: 'ready-for-dev'
+status: 'in-progress'
+baseline_commit: '9af63121c26cd340af70436a57209720d28da5da'
 route: 'dispatch'
 review_loop_iteration: 0
 context:

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { BidDTO } from "./bids";
 
 export const LOT_STATUSES = ["CANCELLED", "SCHEDULED", "LIVE", "CLOSING", "SOLD", "UNSOLD"] as const;
 export type LotStatus = (typeof LOT_STATUSES)[number];
@@ -88,8 +89,11 @@ export interface LotStateLot {
   startingBidCents: number;
   minIncrementCents: number;
   currentBidCents: number | null;
-  minimumNextCents: number;
+  /** Mínimo aceito agora; o cliente usa este valor e não recalcula. */
+  minimumBidCents: number;
   bidCount: number;
+  /** Licitantes distintos com lance no lote. */
+  bidderCount: number;
   version: number;
   /** Alias de `version`, só leitura. */
   entryCount: number;
@@ -98,6 +102,11 @@ export interface LotStateLot {
   originalEndsAt: string;
   cancelledAt: string | null;
   settledAt: string | null;
+  /** Só para `BIDDER` logado; o pseudônimo vale mesmo sem lance dado. */
+  myPseudonym: string | null;
+  /** 1 + licitantes com lance maior que o meu; `null` sem lance meu. */
+  myRank: number | null;
+  myBestBidCents: number | null;
 }
 
 export interface LotStateCar {
@@ -116,8 +125,8 @@ export interface LotState {
   serverTime: string;
   lot: LotStateLot;
   car: LotStateCar;
-  /** Vazio até a S03. */
-  bids: unknown[];
+  /** Só `kind=BID`, do mais novo para o mais antigo. */
+  bids: BidDTO[];
 }
 
 export type StoredImageStatus = "STORED" | "NONE" | "FAILED";
