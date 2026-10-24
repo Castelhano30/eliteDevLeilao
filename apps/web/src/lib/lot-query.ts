@@ -3,6 +3,9 @@ import { apiGet } from "./api-client";
 
 export const lotKey = (id: string) => ["lot", id] as const;
 
+/** Lotes do leiloeiro (Painel); o tempo real atualiza as linhas pelo `showcase:lot`. */
+export const MY_LOTS_KEY = ["my-lots"] as const;
+
 export class LotNotFoundError extends Error {}
 
 /** `GET /lots/:id`. Com token, o servidor devolve também o pseudônimo e a posição de quem olha. */
