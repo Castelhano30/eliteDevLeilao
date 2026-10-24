@@ -6,7 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { AuthResponse, LoginInput, MeResponse, RegisterInput, UserDto } from "@lanceauto/shared";
 import { apiGet, apiPost, setUnauthenticatedHandler, type ApiResult } from "@/lib/api-client";
 import { reconnectSocket } from "@/lib/socket";
-import { clearToken, getToken, setToken, subscribeToken } from "@/lib/token";
+import { clearToken, getToken, setToken, subscribeForeignToken, subscribeToken } from "@/lib/token";
 
 export type AuthStatus = "loading" | "anon" | "auth";
 
@@ -47,7 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => true,
     () => false,
   );
-  const hasToken = useSyncExternalStore(subscribeToken, () => getToken() !== null, () => false);
+  // O próprio token (não só "tem ou não tem") é o snapshot: trocar de usuário em outra aba muda a identidade e re-renderiza.
+  const token = useSyncExternalStore(subscribeToken, getToken, () => null);
+  const hasToken = token !== null;
 
   const me = useQuery({ queryKey: ME_KEY, queryFn: fetchMe, enabled: hasToken, retry: 3 });
 
@@ -61,6 +63,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
     reconnectSocket();
   }, [queryClient]);
+
+  // Outra aba entrou, saiu ou trocou de usuário: o token é compartilhado, então esta aba descarta o que sabia do
+  // usuário anterior (senão mostraria um e agiria como outro) e reconecta o socket com o token novo.
+  useEffect(
+    () =>
+      subscribeForeignToken(() => {
+        queryClient.clear();
+        reconnectSocket();
+      }),
+    [queryClient],
+  );
 
   // "Sair": primeiro vai à vitrine, depois descarta a sessão. Se fosse na ordem inversa, a guarda da rota privada
   // veria o visitante e mandaria para /entrar antes de o push chegar.
