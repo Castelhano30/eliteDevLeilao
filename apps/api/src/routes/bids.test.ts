@@ -61,6 +61,8 @@ describe.skipIf(!testDatabaseUrl)("lances (integração, DATABASE_URL_TEST)", ()
     carla = await makeUser(app, "Carla", { depositCents: 6_000_000 });
     joao = await makeUser(app, "Joao", { role: "AUCTIONEER" });
     lotId = (await live()).id;
+    // Os depósitos do preparo também publicam (`wallet:updated`); os testes olham só o que sai dos lances.
+    publisher.batches.length = 0;
   });
 
   afterAll(async () => {
