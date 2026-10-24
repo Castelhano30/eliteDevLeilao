@@ -11,7 +11,10 @@ export function useServerNow(serverTime?: string): number {
   return useSyncExternalStore(subscribeServerClock, serverClockSnapshot, () => hydrationNow(serverTime));
 }
 
-/** Dispara `callback` uma vez quando `now` cruza `target` (só se o alvo estava no futuro quando começou a observar). */
+/**
+ * Dispara `callback` uma vez quando `now` cruza `target` (só se o alvo estava no futuro quando começou a observar).
+ * Se o alvo muda depois de já ter passado sem disparar (a lista andou no mesmo tique), dispara antes de trocar.
+ */
 export function useOnReach(target: number | null, now: number, callback: () => void): void {
   const state = useRef<{ target: number | null; armed: boolean; fired: boolean }>({ target: null, armed: false, fired: false });
   const saved = useRef(callback);
@@ -21,7 +24,9 @@ export function useOnReach(target: number | null, now: number, callback: () => v
   useEffect(() => {
     const s = state.current;
     if (s.target !== target) {
+      const missed = s.target !== null && s.armed && !s.fired && now >= s.target;
       state.current = { target, armed: target !== null && now > 0 && now < target, fired: false };
+      if (missed) saved.current();
       return;
     }
     if (target === null || now <= 0) return;

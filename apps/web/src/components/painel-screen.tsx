@@ -95,7 +95,7 @@ export function PainelScreen() {
   const ended = lots.filter((l) => l.status === "SOLD" || l.status === "UNSOLD");
 
   // Um GET quando o primeiro cronômetro do painel chega a zero.
-  const targets = [...live.filter((l) => l.status === "LIVE").map((l) => Date.parse(l.endsAt)), ...scheduled.map((l) => Date.parse(l.startsAt))].filter((t) => t > now);
+  const targets = [...live.filter((l) => l.status === "LIVE").map((l) => Date.parse(l.endsAt)), ...scheduled.map((l) => Date.parse(l.startsAt))].filter((t) => t + 1_000 > now);
   useOnReach(targets.length ? Math.min(...targets) + 1_000 : null, now, () => void query.refetch());
 
   const liveColumns: DataTableColumn<LotCardDto>[] = [

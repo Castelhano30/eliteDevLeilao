@@ -44,7 +44,8 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 function useRefetchAtNextDeadline(lots: LotCardDto[], now: number, refetch: () => void) {
   const targets = lots
     .map((lot) => (lot.status === "SCHEDULED" ? Date.parse(lot.startsAt) : lot.status === "LIVE" ? Date.parse(lot.endsAt) : Number.NaN))
-    .filter((t) => Number.isFinite(t) && t > now);
+    // O prazo fica na lista até o alvo (prazo + 1 s) passar, para o alvo não mudar antes de disparar.
+    .filter((t) => Number.isFinite(t) && t + 1_000 > now);
   const next = targets.length > 0 ? Math.min(...targets) + 1_000 : null;
   useOnReach(next, now, refetch);
 }
