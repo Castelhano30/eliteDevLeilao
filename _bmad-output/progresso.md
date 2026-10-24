@@ -122,6 +122,8 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 
 58. **Proposta de compactação UX/UI (24/10/2026).** A pedido de Felipe, Sally analisou o código do header, tema, saldo, autenticação, tokens, primitivos e telas existentes. Proposta em `_bmad-output/proposta-ux-compactacao.md`: escala menor, agrupamento responsivo do header, toggle claro/noite, perfil com dropdown e saldo ocultável com persistência. Print citado não disponível na conversa; achados são do código, sem validação visual no navegador nesta etapa. Nenhum código da aplicação alterado. Implementação e alterações visuais dependem da aprovação explícita de Felipe; medidas propostas não são ainda decisões aprovadas. Documentação registrada em etapa própria, sem antecipar S04 ou encerrar pendências da S03.
 
+59. **Implementação visual autorizada (24/10/2026).** Felipe aprovou integralmente a proposta do item 58 e pediu a entrega pronta. Spec de execução: `implementation-artifacts/spec-compactacao-interface.md`. Escopo preservado, sem nova aprovação intermediária: escala, header, tema, perfil e privacidade do saldo. Validação incluirá navegador, testes, build e deploy.
+
 ### Onde parei
 
 S03 implementada, verificada, revisada e no ar (itens 46 a 56); revisão geral S00–S03 feita e corrigida (item 57). Falta o Felipe conferir o leitor de tela (AC-3.62) e o roteiro com dois navegadores no link público. Próximo: S04 (tempo real: trocar o `Publisher`, salas Socket.IO, reconexão).
