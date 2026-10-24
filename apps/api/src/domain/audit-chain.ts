@@ -25,3 +25,29 @@ export function genesisHash(key: string, lot: GenesisInput): string {
 export function sealHash(key: string, lotId: string, entryCount: number, lastHash: string): string {
   return hmac(key, `v1|seal|${lotId}|${entryCount}|${lastHash}`);
 }
+
+export interface EntryHashInput {
+  lotId: string;
+  seq: number;
+  kind: "BID" | "CANCEL";
+  /** `null` na linha CANCEL: entra como texto vazio. */
+  pseudonym: string | null;
+  amountCents: bigint | number | null;
+  /** O `Date` gravado: entra em ISO UTC com ms. */
+  at: Date;
+  prevHash: string;
+}
+
+/** `HMAC(key, "v1|entry|{lotId}|{seq}|{kind}|{pseudonym}|{amountCents}|{at}|{prevHash}")`. Chave sempre primeiro (T5). */
+export function entryHash(key: string, entry: EntryHashInput): string {
+  const amount = entry.amountCents === null ? "" : entry.amountCents.toString();
+  return hmac(
+    key,
+    `v1|entry|${entry.lotId}|${entry.seq}|${entry.kind}|${entry.pseudonym ?? ""}|${amount}|${entry.at.toISOString()}|${entry.prevHash}`,
+  );
+}
+
+/** `HMAC(key, "v1|pseudo|{userId}|{lotId}")`: base do pseudônimo por lote. */
+export function pseudoHash(key: string, userId: string, lotId: string): string {
+  return hmac(key, `v1|pseudo|${userId}|${lotId}`);
+}
