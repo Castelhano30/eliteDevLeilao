@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BID_TEXT,
   belowMinimumMessage,
+  computeMyStanding,
   insufficientBalanceMessage,
   lotEndedMessage,
   lotNotStartedMessage,
@@ -41,6 +42,36 @@ describe("textos de recusa do lance", () => {
     expect(BID_TEXT.alreadyWinning).toBe("Você já está na frente. Cobrir o próprio lance só gasta saldo.");
     expect(BID_TEXT.lotCancelled).toBe("Este lote foi cancelado pelo leiloeiro.");
     expect(BID_TEXT.roleNotAllowed).toBe("Leiloeiro vende, não compra. Lance é coisa de licitante.");
+    expect(BID_TEXT.networkAmbiguous).toBe("Não deu para confirmar o lance. Confira o histórico antes de tentar de novo.");
+  });
+});
+
+describe("computeMyStanding", () => {
+  const bid = (seq: number, pseudonym: string, amountCents: number) => ({
+    seq,
+    kind: "BID" as const,
+    pseudonym,
+    amountCents,
+    at: "2026-10-24T12:00:00.000Z",
+  });
+  const bids = [
+    bid(5, "Licitante CCCC", 3_000_000),
+    bid(4, "Licitante AAAA", 2_500_000),
+    bid(3, "Licitante BBBB", 2_000_000),
+    bid(2, "Licitante AAAA", 1_500_000),
+    bid(1, "Licitante BBBB", 1_000_000),
+  ];
+
+  it("conta cada pseudônimo uma vez, pelo maior lance", () => {
+    expect(computeMyStanding(bids, "Licitante CCCC")).toEqual({ myRank: 1, myBestBidCents: 3_000_000 });
+    expect(computeMyStanding(bids, "Licitante AAAA")).toEqual({ myRank: 2, myBestBidCents: 2_500_000 });
+    expect(computeMyStanding(bids, "Licitante BBBB")).toEqual({ myRank: 3, myBestBidCents: 2_000_000 });
+  });
+
+  it("sem pseudônimo ou sem lance meu, null", () => {
+    expect(computeMyStanding(bids, null)).toBeNull();
+    expect(computeMyStanding(bids, "Licitante ZZZZ")).toBeNull();
+    expect(computeMyStanding([], "Licitante AAAA")).toBeNull();
   });
 });
 

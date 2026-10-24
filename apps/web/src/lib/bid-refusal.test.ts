@@ -44,7 +44,7 @@ describe("describeBidFailure", () => {
 
   it("falha de rede é ambígua: texto do cliente, refaz o GET e nunca reenvia", () => {
     const failure = describeBidFailure(null, null);
-    expect(failure.message).toBe("Sem resposta do pátio. Seu lance pode ou não ter entrado: confira o histórico antes de tentar de novo.");
+    expect(failure.message).toBe("Não deu para confirmar o lance. Confira o histórico antes de tentar de novo.");
     expect(failure.refetch).toBe(true);
   });
 

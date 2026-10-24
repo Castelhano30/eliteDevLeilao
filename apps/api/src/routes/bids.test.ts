@@ -778,7 +778,7 @@ describe.skipIf(!testDatabaseUrl)("lances (integração, DATABASE_URL_TEST)", ()
         ["wallet:updated", `user:${ana.id}`],
       ]);
       publisher.batches.length = 0;
-      await postBid(app, bruno, lotId, 3_100_000, 3_000_000);
+      const placedRes = await postBid(app, bruno, lotId, 3_100_000, 3_000_000);
       expect(publisher.events.map((e) => [e.type, e.room])).toEqual([
         ["bid:placed", `lot:${lotId}`],
         ["showcase:lot", "showcase"],
@@ -790,11 +790,13 @@ describe.skipIf(!testDatabaseUrl)("lances (integração, DATABASE_URL_TEST)", ()
         lotId,
         version: 2,
         currentBidCents: 3_100_000,
+        minimumBidCents: placedRes.body.lot.minimumBidCents,
         bidCount: 2,
         bidderCount: 2,
         extended: false,
-        serverTime: NOW,
       });
+      // O service não carimba `serverTime`: o Publisher o faz ao emitir (R-4.3).
+      expect(placed).not.toHaveProperty("serverTime");
       expect(publisher.events[1]!.payload).toMatchObject({ id: lotId, version: 2, currentBidCents: 3_100_000 });
       expect(publisher.events[3]!.payload).toEqual({ totalCents: 5_000_000, committedCents: 0, availableCents: 5_000_000 });
       const keys = collectKeys(publisher.events.map((event) => event.payload));

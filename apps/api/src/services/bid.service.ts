@@ -8,6 +8,7 @@ import {
   type PlaceBidInput,
   type PlaceBidResponse,
   type Role,
+  type WithoutServerTime,
 } from "@lanceauto/shared";
 import { entryHash, sealHash } from "../domain/audit-chain";
 import { minimumBid, nextEndsAt, validateBalance, validateBidPreWallet } from "../domain/bid-rules";
@@ -207,16 +208,18 @@ export function makeBidService({ db, clock, auditKey }: BidServiceDeps) {
           const bid = { seq, kind: "BID" as const, pseudonym, amountCents: input.amountCents, at: now.toISOString() };
           const wallet = toWalletDto(walletRow);
 
-          const payload: BidPlacedPayload = {
+          const minimumBidCents = minimumBid({ ...rules, currentBidCents: input.amountCents });
+          // Sem `serverTime`: quem carimba é o Publisher, ao emitir (R-4.3).
+          const payload: WithoutServerTime<BidPlacedPayload> = {
             lotId,
             version: seq,
             bid,
             currentBidCents: input.amountCents,
+            minimumBidCents,
             bidCount: card.bidCount,
             bidderCount,
             endsAt: card.endsAt,
             extended: ends.extended,
-            serverTime: now.toISOString(),
           };
           events.push({ type: EVENTS.BID_PLACED, room: lotRoom(lotId), payload });
           events.push({ type: EVENTS.SHOWCASE_LOT, room: SHOWCASE_ROOM, payload: card });
@@ -236,7 +239,7 @@ export function makeBidService({ db, clock, auditKey }: BidServiceDeps) {
                 id: lotId,
                 status: card.status,
                 currentBidCents: input.amountCents,
-                minimumBidCents: minimumBid({ ...rules, currentBidCents: input.amountCents }),
+                minimumBidCents,
                 bidCount: card.bidCount,
                 bidderCount,
                 version: seq,

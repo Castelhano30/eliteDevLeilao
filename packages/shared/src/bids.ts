@@ -16,7 +16,7 @@ export const BID_TEXT = {
   invalidExpected: "Informe o último lance que você viu, ou nulo se ainda não havia lances.",
   rateLimited: "Calma: lances demais em pouco tempo. Tente de novo em instantes.",
   emptyField: "Informe o valor do lance.",
-  networkAmbiguous: "Sem resposta do pátio. Seu lance pode ou não ter entrado: confira o histórico antes de tentar de novo.",
+  networkAmbiguous: "Não deu para confirmar o lance. Confira o histórico antes de tentar de novo.",
   sending: "Enviando…",
   noBidsYet: "Nenhum lance ainda. O mínimo é o lance inicial.",
 } as const;
@@ -101,6 +101,25 @@ export interface LotNotStartedDetails {
   startsAt: string;
 }
 
+/**
+ * Posição de quem tem o pseudônimo, pelo maior lance de cada pseudônimo no histórico (`myRank` = 1 + pseudônimos com
+ * maior lance acima do meu). Só aproximação entre snapshots: com colisão dos 4 hex o servidor, que conta por usuário,
+ * pode divergir, e o próximo snapshot substitui. `null` sem pseudônimo ou sem lance meu.
+ */
+export function computeMyStanding(
+  bids: readonly BidDTO[],
+  myPseudonym: string | null,
+): { myRank: number; myBestBidCents: number } | null {
+  if (myPseudonym === null) return null;
+  const best = new Map<string, number>();
+  for (const bid of bids) if (bid.amountCents > (best.get(bid.pseudonym) ?? 0)) best.set(bid.pseudonym, bid.amountCents);
+  const mine = best.get(myPseudonym);
+  if (mine === undefined) return null;
+  let above = 0;
+  for (const value of best.values()) if (value > mine) above += 1;
+  return { myRank: 1 + above, myBestBidCents: mine };
+}
+
 /** Resumo do lote devolvido pelo lance e usado pelo reducer da Sala. */
 export interface LotSummary {
   id: string;
@@ -128,12 +147,14 @@ export interface PlaceBidResponse {
   serverTime: string;
 }
 
-/** Payload de `bid:placed` (S04 entrega por Socket.IO; o service já o produz). */
+/** Payload de `bid:placed`: o service o produz sem `serverTime` e o `Publisher` carimba ao emitir (R-4.3). */
 export interface BidPlacedPayload {
   lotId: string;
   version: number;
   bid: BidDTO;
   currentBidCents: number;
+  /** Mínimo aceito depois deste lance; o cliente usa e não recalcula. */
+  minimumBidCents: number;
   bidCount: number;
   bidderCount: number;
   endsAt: string;
