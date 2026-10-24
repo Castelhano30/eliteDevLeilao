@@ -447,7 +447,7 @@ Datas relativas ao momento da execução (S7: o comando que recria o lote de dem
 - AC-2.18b [auto] Dado `imageCreditUrl` = `javascript:alert(1)` ou `data:text/html,…`, então 400 `fields.imageCreditUrl = "Use um endereço http ou https válido."`; `https://…` aceito. No web, `imageCreditUrl` com protocolo não http(s) vira texto, sem `<a>`.
 - AC-2.18c [auto] Dado `GET /lots`, `GET /my/lots` e `GET /lots/:id` de lotes com imagem, então as queries não leem `Item.imageData` (teste inspeciona o `select`/a consulta) e `imageUrl` é não nulo exatamente quando `imageMime` é não nulo.
 - AC-2.18d [auto] Dado `q=%`, `q=_` ou `q=\`, então 200 sem erro e sem tratar o termo como curinga (não casa todos os lotes).
-- AC-2.19 [auto] Dado `imageUrl` de 2,5 MB, de `text/html` ou de `image/svg+xml`, então lote criado, `imageStatus:"FAILED"`, `imageData` nulo; dado `ftp://…` ou texto solto → 400 `fields.imageUrl = "Use um endereço http ou https válido."`.
+- AC-2.19 [auto] Dado `imageUrl` de 2,5 MB (ver Q8), de `text/html` ou de `image/svg+xml`, então lote criado, `imageStatus:"FAILED"`, `imageData` nulo; dado `ftp://…` ou texto solto → 400 `fields.imageUrl = "Use um endereço http ou https válido."`.
 - AC-2.20 [auto] Dado `imageUrl` omitida, então `imageStatus:"NONE"` e `LotCard.imageUrl = null`.
 - AC-2.21 [auto] Dados 2 `POST /lots` simultâneos do mesmo leiloeiro, então 2 lotes com `number` distintos e crescentes.
 
@@ -500,7 +500,7 @@ Datas relativas ao momento da execução (S7: o comando que recria o lote de dem
 - Lote cujo `endsAt` passou e não foi liquidado (`CLOSING`) fica no grupo "Ao vivo" até a S05; entre S02 e S04 isso é esperado.
 - `GET /lots` em 200 linhas: o teto defensivo corta o resto; sem paginação (PRD não pede).
 - Título com HTML/script: renderizado como texto (React escapa); `searchText` guarda só texto normalizado.
-- Imagem sem `Content-Length` e com streaming infinito: leitura aborta em 2 MB ou 4 s.
+- Imagem sem `Content-Length` e com streaming infinito: leitura aborta em 2 MB (ver Q8) ou 4 s.
 - Servidor reiniciado (Render): cache em memória zera; a primeira chamada de catálogo volta a bater na FIPE (atenção ao limite de 500/dia sem token).
 - Cronômetro com relógio do aparelho defasado: sempre `Date.now()+offset`; troca de aba por horas: ao voltar o foco, refaz `GET` e ressincroniza.
 - `now == endsAt` exato: o cronômetro mostra 00:00/ENCERRADO e o status é `CLOSING`; `now == startsAt` exato: `LIVE`.
@@ -511,7 +511,7 @@ Vitest em `shared`/`api`; integração contra Postgres real (`DATABASE_URL_TEST`
 1. `lotStatus` (tabela do AC-2.22) e bordas de milissegundo.
 2. `cleanBrand`, `normalizeSearch`, `wikiTitleCandidates`, `parseBRL`, `parseReferenceMonth`, `brasiliaLocalToUtcIso` (inclui virada de dia e de mês).
 3. `genesisHash`/`sealHash`: vetores fixos com chave de teste (hex minúsculo, `at` com ms).
-4. Adaptador com cache: hit, vencido+falha serve cache, vencido+sucesso troca, vazio+falha 503, single-flight, 404 sem repetição, 429/5xx repete uma vez, timeout.
+4. Adaptador com cache: hit, vencido+falha serve cache, vencido+sucesso troca, vazio+falha 503, single-flight, 404 sem repetição, 429/5xx repete uma vez (ver Q9), timeout.
 5. `image-store`: IP privado direto (v4, v6, decimal/hex, mapeado hex, NAT64, 6to4), DNS que resolve a privado, redirecionamento para privado, >4 MB, MIME errado/SVG, porta fora de 80/443, sucesso (`allowPrivate: true`).
 6. Integração `POST /lots`: AC-2.9 a AC-2.21, incluindo ordem (data antes da FIPE).
 7. Integração `GET /lots` (AC-2.23 a AC-2.28) e `GET /my/lots` (AC-2.29), com a FIPE desligada.
