@@ -442,9 +442,18 @@ describe.skipIf(!testDatabaseUrl)("lotes (integração)", () => {
       expect(mine.status).toBe(200);
       expect(mine.body.totalReceivedCents).toBe(0);
       const ids = mine.body.lots.map((l: { id: string }) => l.id);
-      expect(ids).toHaveLength(8);
+      // Ao vivo (endsAt ↑), agendados (startsAt ↑), encerrados (endsAt ↓), cancelados no fim.
+      expect(ids).toEqual([
+        lots.closing.id,
+        lots.liveSoon.id,
+        lots.liveLate.id,
+        lots.scheduledSoon.id,
+        lots.scheduledLate.id,
+        lots.endedNew.id,
+        lots.endedOld.id,
+        lots.cancelled.id,
+      ]);
       expect(ids).not.toContain(own.id);
-      expect(ids[ids.length - 1]).toBe(lots.cancelled.id);
       const theirs = await request(app).get("/my/lots").set("Authorization", b.auth);
       expect(theirs.body.lots.map((l: { id: string }) => l.id)).toEqual([own.id]);
       const { token } = await registerUser(app);
