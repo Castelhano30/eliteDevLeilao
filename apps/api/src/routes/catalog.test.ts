@@ -74,6 +74,17 @@ describe.skipIf(!testDatabaseUrl)("catálogo (integração)", () => {
     expect(stale.body.items).toHaveLength(3);
   });
 
+  it("ids malformados em modelos e anos → 400 sem chamar a FIPE", async () => {
+    const { app } = appWith();
+    const models = await request(app).get("/catalog/brands/%2E%2E/models").set("Authorization", auctioneer);
+    expect(models.status).toBe(400);
+    expect(models.body.error.details.fields).toEqual({ brandId: "Escolha marca, modelo e ano." });
+    const years = await request(app).get("/catalog/brands/56/models/a%20b/years").set("Authorization", auctioneer);
+    expect(years.status).toBe(400);
+    expect(years.body.error.details.fields).toEqual({ modelId: "Escolha marca, modelo e ano." });
+    expect(fipe.hits).toHaveLength(0);
+  });
+
   it("AC-2.3: FIPE fora e cache vazio → 503 EXTERNAL_UNAVAILABLE {source:FIPE}", async () => {
     const { app } = appWith(await deadUrl());
     const started = performance.now();

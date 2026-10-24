@@ -9,6 +9,20 @@ import type { LotService } from "../services/lot.service";
 
 const param = (req: Request, name: string) => String(req.params[name] ?? "");
 
+/**
+ * Ids da FIPE: só letras, dígitos, `_` e `-` (até 40). Um `..` reescreveria o caminho na FIPE e gastaria cota.
+ * Inválido vira `VALIDATION` com a mensagem de §6.2.
+ */
+function catalogIds<K extends string>(ids: Record<K, string>): Record<K, string> {
+  const invalid = Object.fromEntries(
+    Object.entries<string>(ids)
+      .filter(([, value]) => !/^[\w-]{1,40}$/.test(value))
+      .map(([key]) => [key, LOT_TEXT.idsRequired]),
+  );
+  if (Object.keys(invalid).length > 0) throw new AppError("VALIDATION", { fields: invalid });
+  return ids;
+}
+
 /** `/catalog/*`: só leiloeiro, 120 req/min por usuário. */
 export function catalogRouter(auth: AuthMiddleware, catalog: CatalogService): Router {
   const router = Router();
@@ -23,20 +37,16 @@ export function catalogRouter(auth: AuthMiddleware, catalog: CatalogService): Ro
     res.json(await catalog.brands());
   });
   router.get("/catalog/brands/:brandId/models", async (req, res) => {
-    res.json(await catalog.models(param(req, "brandId")));
+    const { brandId } = catalogIds({ brandId: param(req, "brandId") });
+    res.json(await catalog.models(brandId));
   });
   router.get("/catalog/brands/:brandId/models/:modelId/years", async (req, res) => {
-    res.json(await catalog.years(param(req, "brandId"), param(req, "modelId")));
+    const { brandId, modelId } = catalogIds({ brandId: param(req, "brandId"), modelId: param(req, "modelId") });
+    res.json(await catalog.years(brandId, modelId));
   });
   router.get("/catalog/preview", async (req, res) => {
     const pick = (name: string) => (typeof req.query[name] === "string" ? (req.query[name] as string).trim() : "");
-    const ids = { brandId: pick("brandId"), modelId: pick("modelId"), yearId: pick("yearId") };
-    const missing = Object.fromEntries(
-      Object.entries(ids)
-        .filter(([, value]) => !/^[\w-]{1,40}$/.test(value))
-        .map(([key]) => [key, LOT_TEXT.idsRequired]),
-    );
-    if (Object.keys(missing).length > 0) throw new AppError("VALIDATION", { fields: missing });
+    const ids = catalogIds({ brandId: pick("brandId"), modelId: pick("modelId"), yearId: pick("yearId") });
     res.json(await catalog.preview(ids.brandId, ids.modelId, ids.yearId));
   });
 
