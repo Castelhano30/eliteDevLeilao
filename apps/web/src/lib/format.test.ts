@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeMovement, formatWhen, lotNumberLabel } from "./format";
+import { clockTime, describeMovement, formatWhen, lotNumberLabel } from "./format";
 
 describe("formatWhen", () => {
   it("converte UTC para Brasília (UTC−3)", () => {
@@ -37,5 +37,12 @@ describe("describeMovement", () => {
     expect(describeMovement({ kind: "HOLD", amountCents: 10_000 }).note).toBe("TOTAL NÃO MUDA");
     expect(describeMovement({ kind: "SALE_DEBIT", amountCents: 10_000 }).value).toBe("− R$ 100,00");
     expect(describeMovement({ kind: "SALE_CREDIT", amountCents: 10_000 }).value).toBe("+ R$ 100,00");
+  });
+});
+
+describe("clockTime", () => {
+  it("HH:mm:ss em Brasília", () => {
+    expect(clockTime("2026-10-23T12:05:09.000Z")).toBe("09:05:09");
+    expect(clockTime("2026-10-24T02:30:00.999Z")).toBe("23:30:00");
   });
 });

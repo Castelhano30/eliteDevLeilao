@@ -1,4 +1,4 @@
-import { formatBRL, LEDGER_LABEL, LEDGER_NOTE, type LedgerEntryDto, type LedgerKind } from "@lanceauto/shared";
+import { brasiliaParts, formatBRL, LEDGER_LABEL, LEDGER_NOTE, type LedgerEntryDto, type LedgerKind } from "@lanceauto/shared";
 
 const parts = new Intl.DateTimeFormat("pt-BR", {
   timeZone: "America/Sao_Paulo",
@@ -38,4 +38,11 @@ export function describeMovement(entry: Pick<LedgerEntryDto, "kind" | "amountCen
   };
   const note = kind === "HOLD" || kind === "RELEASE" || kind === "REFUND" ? LEDGER_NOTE[kind] : null;
   return { label: LEDGER_LABEL[kind], value: signed[kind] ?? money, note };
+}
+
+/** "HH:mm:ss" em horário de Brasília, a partir de uma data ISO UTC (horário do lance e do novo fim). */
+export function clockTime(iso: string): string {
+  const { hour, minute, second } = brasiliaParts(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(hour)}:${pad(minute)}:${pad(second)}`;
 }
