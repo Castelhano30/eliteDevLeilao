@@ -30,7 +30,8 @@ export function SeloProrrogacao({ size }: { size: "sala" | "cartao" }) {
         border: "3px solid var(--c-tinta)",
         fontSize: size === "sala" ? 22 : 18,
         padding: "2px 8px 0",
-        transform: "rotate(-6deg)",
+        // `rotate` (e não `transform`) para a inclinação somar ao `translateY` da animação, sem ser sobrescrita.
+        rotate: "-6deg",
         animation: "la-mais 0.6s both",
       }}
     >
