@@ -20,6 +20,7 @@ import { destinationAfterLogin } from "@/lib/sanitize-next";
 import { AccessTabs } from "./access-tabs";
 import { useAuth } from "./auth-provider";
 import { RoleTickets } from "./role-tickets";
+import { TestAccounts } from "./test-accounts";
 
 type Errors = Record<string, string>;
 type TabId = "criar" | "entrar";
@@ -51,6 +52,8 @@ export function AccessScreen() {
   const { user, status, login, register } = useAuth();
   const [tab, setTab] = useState<TabId>(params.get("aba") === "entrar" ? "entrar" : "criar");
   const [role, setRole] = useState<Role>("BIDDER");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const next = params.get("next");
 
   // Quem já está logado não tem o que fazer aqui.
@@ -74,19 +77,43 @@ export function AccessScreen() {
             Seu nome nunca aparece em público. Em cada lote você vira um Licitante diferente, tipo Licitante C3E8.
           </p>
         </section>
-        <AccessTabs
-          label="Acesso"
-          value={tab}
-          onChange={setTab}
-          tabs={[
-            {
-              id: "criar",
-              label: "Criar conta",
-              panel: <RegisterForm role={role} onRoleChange={setRole} onDone={finish} register={register} />,
-            },
-            { id: "entrar", label: "Entrar", panel: <LoginForm onDone={finish} login={login} /> },
-          ]}
-        />
+        <div>
+          <AccessTabs
+            label="Acesso"
+            value={tab}
+            onChange={setTab}
+            tabs={[
+              {
+                id: "criar",
+                label: "Criar conta",
+                panel: <RegisterForm role={role} onRoleChange={setRole} onDone={finish} register={register} />,
+              },
+              {
+                id: "entrar",
+                label: "Entrar",
+                panel: (
+                  <LoginForm
+                    email={loginEmail}
+                    password={loginPassword}
+                    onEmailChange={setLoginEmail}
+                    onPasswordChange={setLoginPassword}
+                    onDone={finish}
+                    login={login}
+                  />
+                ),
+              },
+            ]}
+          />
+          {tab === "entrar" ? (
+            <TestAccounts
+              email={loginEmail}
+              onPick={({ email, password }) => {
+                setLoginEmail(email);
+                setLoginPassword(password);
+              }}
+            />
+          ) : null}
+        </div>
       </div>
     </PageShell>
   );
@@ -180,9 +207,16 @@ function RegisterForm({
   );
 }
 
-function LoginForm({ onDone, login }: { onDone: (role: Role) => void; login: LoginFn }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+interface LoginFormProps {
+  email: string;
+  password: string;
+  onEmailChange: (email: string) => void;
+  onPasswordChange: (password: string) => void;
+  onDone: (role: Role) => void;
+  login: LoginFn;
+}
+
+function LoginForm({ email, password, onEmailChange, onPasswordChange, onDone, login }: LoginFormProps) {
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [credentialsRefused, setCredentialsRefused] = useState(false);
@@ -228,7 +262,7 @@ function LoginForm({ onDone, login }: { onDone: (role: Role) => void; login: Log
         type="email"
         autoComplete="email"
         value={email}
-        onChange={(event) => setEmail(event.target.value)}
+        onChange={(event) => onEmailChange(event.target.value)}
         error={errors.email}
         invalid={credentialsRefused}
       />
@@ -238,7 +272,7 @@ function LoginForm({ onDone, login }: { onDone: (role: Role) => void; login: Log
         type="password"
         autoComplete="current-password"
         value={password}
-        onChange={(event) => setPassword(event.target.value)}
+        onChange={(event) => onPasswordChange(event.target.value)}
         error={errors.password}
         invalid={credentialsRefused}
       />

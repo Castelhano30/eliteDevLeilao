@@ -159,3 +159,7 @@ S03 implementada, verificada, revisada e no ar (itens 46 a 56); revisão geral S
 ## 24/10/2026 — Compactação: organização do cabeçalho
 - Header reorganizado por largura e papel, sem duplicar controles. Navegação muda de posição no DOM junto do layout para manter Tab coerente com leitura visual. PublicHeader ajustado à mesma escala.
 - Links e estados de sessão preservados. Verificação completa de CLI, navegador e deploy segue na integração final.
+
+## 24/10/2026 — Login: contas de teste
+- Abaixo do cartão de acesso (aba Entrar) entram as 3 contas do seed; escolher uma preenche e-mail e senha do login. Estado do login subiu para o AccessScreen. A senha de teste não vai para o HTML inicial.
+- Typecheck, lint e 126+ testes do web verdes. Conferência visual no navegador pendente.
