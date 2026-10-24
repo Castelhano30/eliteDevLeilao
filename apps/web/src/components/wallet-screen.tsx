@@ -168,7 +168,7 @@ export function WalletScreen() {
         <div className="rounded-nenhum border-[3px] border-dashed border-tracejado bg-papel p-4">
           <p className="t-mono-rotulo mb-2">Comprometido</p>
           {leadingLots.length === 0 ? (
-            <p className="t-body">Nada travado. Você não lidera nenhum lote agora.</p>
+            <p className="t-body">Nada travado no momento.</p>
           ) : (
             <>
               <p className="t-body mb-2">Travado onde você lidera. Volta se alguém cobrir.</p>
