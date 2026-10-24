@@ -40,11 +40,11 @@ const config = {
         circulo: "50%",
       },
       boxShadow: {
-        cartao: "6px 6px 0 var(--c-sombra)",
-        botao: "5px 5px 0 var(--c-sombra)",
+        cartao: "3px 3px 0 var(--c-sombra)",
+        botao: "3px 3px 0 var(--c-sombra)",
         "botao-ativo": "2px 2px 0 var(--c-sombra)",
-        chip: "4px 4px 0 var(--c-sombra)",
-        painel: "8px 8px 0 var(--c-sombra)",
+        chip: "2px 2px 0 var(--c-sombra)",
+        painel: "4px 4px 0 var(--c-sombra)",
       },
       fontFamily: {
         display: ["var(--font-display)", "Impact", "sans-serif"],
@@ -58,7 +58,7 @@ const config = {
       },
       minHeight: {
         alvo: "44px",
-        botao: "52px",
+        botao: "44px",
       },
     },
   },

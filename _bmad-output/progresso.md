@@ -133,3 +133,7 @@ S03 implementada, verificada, revisada e no ar (itens 46 a 56); revisão geral S
 - PRD e pesquisa de APIs: Claude, com revisão e ajustes de Felipe
 - Design: Claude Design
 - Planejamento e implementação: BMad com Claude Code
+
+## 24/10/2026 — Compactação: escala compartilhada
+- Aplicada proposta aprovada aos tokens, sombras, botões, campos, logo e contêiner de página. Paleta, fontes e foco preservados; alvos mínimos de 44 px.
+- Guia local do Next sobre CSS e componentes cliente lido. Typecheck do web aprovado. Navegador e build completo serão conferidos após integração do header.

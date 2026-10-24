@@ -38,15 +38,15 @@ export function Field({ label, help, error, invalid, prefix, suffix, mask, descr
   const border = isInvalid ? "border-ferrugem" : "border-linha";
   const surface = disabled ? "bg-suave text-tinta2" : "bg-fundo text-tinta";
   const inputSize = composto
-    ? "min-h-14 min-w-0 flex-1 bg-transparent px-2 font-mono text-[28px] font-semibold"
-    : "min-h-[50px] w-full bg-transparent px-3 font-serif text-[19px]";
+    ? "min-h-12 min-w-0 flex-1 bg-transparent px-2 font-mono text-[24px] font-semibold"
+    : "min-h-11 w-full bg-transparent px-3 font-serif text-[16px]";
 
   return (
     <div className={className}>
       <label htmlFor={inputId} className="t-mono-rotulo mb-2 block">
         {label}
       </label>
-      <div className={`flex items-center rounded-nenhum border-[3px] ${border} ${surface} ${composto ? "px-3" : ""}`}>
+      <div className={`flex items-center rounded-nenhum border-2 ${border} ${surface} ${composto ? "px-3" : ""}`}>
         {prefix !== undefined ? <span className="font-mono text-[18px] font-semibold">{prefix}</span> : null}
         <input
           id={inputId}
@@ -57,7 +57,7 @@ export function Field({ label, help, error, invalid, prefix, suffix, mask, descr
           className={`${inputSize} rounded-nenhum placeholder:text-tinta2`}
           {...rest}
         />
-        {suffix !== undefined ? <span className="font-mono text-[28px] font-semibold">{suffix}</span> : null}
+        {suffix !== undefined ? <span className="font-mono text-[24px] font-semibold">{suffix}</span> : null}
       </div>
       {help ? (
         <p id={helpId} className="t-body-nota mt-2">
