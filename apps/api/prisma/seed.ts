@@ -3,7 +3,7 @@ import path from "node:path";
 import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import { SystemClock } from "../src/infra/clock";
-import { seedShowcaseLots, type FixtureCar } from "../src/seed/showcase";
+import { seedLiveBids, seedShowcaseLots, type FixtureCar } from "../src/seed/showcase";
 import { makeAuthService } from "../src/services/auth.service";
 import { makeWalletService } from "../src/services/wallet.service";
 
@@ -12,14 +12,19 @@ dotenv.config({ path: path.resolve(__dirname, "../../../.env"), quiet: true });
 const PASSWORD = "lance1234";
 const AUCTIONEER_EMAIL = "leiloeiro@lanceauto.test";
 
+const BRUNO_EMAIL = "bruno@lanceauto.test";
+const ANA_EMAIL = "ana@lanceauto.test";
+/** Ordem dos 5 lances do lote ao vivo: Bruno, Ana, Bruno, Ana, Bruno (o 2º licitante termina liderando). */
+const BID_ORDER = [BRUNO_EMAIL, ANA_EMAIL] as const;
+
 const USERS = [
   { name: "João Pátio", email: AUCTIONEER_EMAIL, role: "AUCTIONEER" as const, depositCents: 0 },
-  { name: "Ana Souza", email: "ana@lanceauto.test", role: "BIDDER" as const, depositCents: 50_000_000 },
-  { name: "Bruno Lima", email: "bruno@lanceauto.test", role: "BIDDER" as const, depositCents: 30_000_000 },
+  { name: "Ana Souza", email: ANA_EMAIL, role: "BIDDER" as const, depositCents: 50_000_000 },
+  { name: "Bruno Lima", email: BRUNO_EMAIL, role: "BIDDER" as const, depositCents: 30_000_000 },
 ];
 
 /**
- * Cria as contas de teste e os lotes de demonstração pelos services da aplicação, nunca por SQL direto.
+ * Cria as contas de teste, os lotes de demonstração e os 5 lances do lote ao vivo pelos services da aplicação, nunca por SQL direto.
  * Contas: confere cada uma pelo e-mail e cria só as que faltam. Lotes: só se ainda não houver nenhum
  * (seguro a cada deploy). `--demo` (`npm run seed:demo`) cria um lote ao vivo novo, sem rede.
  */
@@ -51,6 +56,8 @@ async function main() {
       { db, clock, auditKey, auctioneerId: auctioneer.id, cars, baseDir: __dirname, log: (message) => console.log(message) },
       { demo },
     );
+    // Roda em todo deploy: chega a um banco já populado (o lote 001 existe, sem lances) e não repete (guarda por bidCount).
+    await seedLiveBids({ db, clock, auditKey, bidderEmails: BID_ORDER, log: (message) => console.log(message) });
   } finally {
     await db.$disconnect();
   }

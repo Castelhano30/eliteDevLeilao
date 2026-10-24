@@ -5,6 +5,7 @@ import { cleanBrand, formatLotNumber, type CatalogOption } from "@lanceauto/shar
 import { toDate, type Clock } from "../infra/clock";
 import { carNotFound, type CatalogPort } from "../infra/fipe";
 import type { DownloadedImage } from "../infra/image-store";
+import { makeBidService } from "../services/bid.service";
 import { makeLotService } from "../services/lot.service";
 
 /** Um carro do `prisma/fipe-fixture.json`, no formato do detalhe normalizado da FIPE (S8: sem rede). */
@@ -141,4 +142,54 @@ export async function seedShowcaseLots(deps: SeedShowcaseDeps, { demo = false } 
     log(`Lote ${formatLotNumber(created.lot.number)} criado: ${plan.title} (${created.lot.status})`);
   }
   return numbers;
+}
+
+export interface SeedLiveBidsDeps {
+  db: PrismaClient;
+  clock: Clock;
+  auditKey: string;
+  /** E-mails na ordem dos lances: o primeiro abre, o último termina liderando. */
+  bidderEmails: readonly string[];
+  log?: (message: string) => void;
+}
+
+/** Quantos lances o seed dá no lote ao vivo: alternados entre os dois licitantes, o segundo termina na frente. */
+const SEED_BID_COUNT = 5;
+
+/**
+ * Dá 5 lances alternados no lote ao vivo do plano, pelo mesmo `placeBid` da API (a cadeia nasce válida).
+ * Idempotente: só age se o lote existir, estiver ao vivo e ainda não tiver lance, o que também o faz chegar a um banco
+ * já populado (o seed dos lotes só roda com o banco vazio). Recusa de lance aborta o seed com a mensagem do servidor.
+ */
+export async function seedLiveBids(deps: SeedLiveBidsDeps): Promise<number> {
+  const { db, clock, auditKey, bidderEmails, log = () => undefined } = deps;
+  const lot = await db.lot.findFirst({ where: { title: PLAN.live.title }, orderBy: { number: "asc" } });
+  if (!lot) {
+    log(`Sem o lote "${PLAN.live.title}": o seed não dá lances.`);
+    return 0;
+  }
+  if (lot.bidCount > 0) {
+    log(`O lote ${formatLotNumber(lot.number)} já tem lances: o seed não repete.`);
+    return 0;
+  }
+  const users = await db.user.findMany({ where: { email: { in: [...bidderEmails] } }, select: { id: true, email: true } });
+  const idByEmail = new Map(users.map((user) => [user.email, user.id]));
+  const bids = makeBidService({ db, clock, auditKey });
+  let expected: number | null = null;
+  let amount = Number(lot.startingBidCents);
+  for (let index = 0; index < SEED_BID_COUNT; index++) {
+    const email = bidderEmails[index % bidderEmails.length]!;
+    const userId = idByEmail.get(email);
+    if (!userId) throw new Error(`Seed de lances: a conta ${email} não existe.`);
+    try {
+      await bids.placeBid(userId, "BIDDER", lot.id, { amountCents: amount, expectedCurrentCents: expected });
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      throw new Error(`Seed de lances: ${email} deu ${amount} centavos no lote ${lot.number} e foi recusado (${reason}).`);
+    }
+    expected = amount;
+    amount += Number(lot.minIncrementCents);
+  }
+  log(`Lote ${formatLotNumber(lot.number)}: ${SEED_BID_COUNT} lances registrados pelo placeBid.`);
+  return SEED_BID_COUNT;
 }
