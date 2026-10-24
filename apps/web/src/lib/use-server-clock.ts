@@ -15,29 +15,40 @@ export function useServerNow(serverTime?: string): number {
   return useSyncExternalStore(subscribeServerClock, serverClockSnapshot, () => hydrationNow(serverTime));
 }
 
+export interface ReachState {
+  target: number | null;
+  armed: boolean;
+  fired: boolean;
+}
+
+export const INITIAL_REACH: ReachState = { target: null, armed: false, fired: false };
+
 /**
- * Dispara `callback` uma vez quando `now` cruza `target` (só se o alvo estava no futuro quando começou a observar).
- * Se o alvo muda depois de já ter passado sem disparar (a lista andou no mesmo tique), dispara antes de trocar.
+ * Passo puro do `useOnReach`: dado o estado anterior, o alvo e o agora, devolve o estado novo e se deve disparar.
+ * Só arma se o alvo estava no futuro quando passou a ser observado (alvo já vencido não dispara). Se o alvo muda
+ * depois de já ter passado sem disparar (a lista andou no mesmo tique), dispara antes de trocar e rearma no novo.
  */
+export function reachStep(prev: ReachState, target: number | null, now: number): { next: ReachState; fire: boolean } {
+  if (prev.target !== target) {
+    const missed = prev.target !== null && prev.armed && !prev.fired && now >= prev.target;
+    return { next: { target, armed: target !== null && now > 0 && now < target, fired: false }, fire: missed };
+  }
+  if (target === null || now <= 0) return { next: prev, fire: false };
+  const armed = prev.armed || now < target;
+  if (armed && !prev.fired && now >= target) return { next: { target, armed, fired: true }, fire: true };
+  return { next: armed === prev.armed ? prev : { ...prev, armed }, fire: false };
+}
+
+/** Dispara `callback` uma vez quando `now` cruza `target` (ver `reachStep`). */
 export function useOnReach(target: number | null, now: number, callback: () => void): void {
-  const state = useRef<{ target: number | null; armed: boolean; fired: boolean }>({ target: null, armed: false, fired: false });
+  const state = useRef<ReachState>(INITIAL_REACH);
   const saved = useRef(callback);
   useEffect(() => {
     saved.current = callback;
   });
   useEffect(() => {
-    const s = state.current;
-    if (s.target !== target) {
-      const missed = s.target !== null && s.armed && !s.fired && now >= s.target;
-      state.current = { target, armed: target !== null && now > 0 && now < target, fired: false };
-      if (missed) saved.current();
-      return;
-    }
-    if (target === null || now <= 0) return;
-    if (!s.armed && now < target) s.armed = true;
-    if (s.armed && !s.fired && now >= target) {
-      s.fired = true;
-      saved.current();
-    }
+    const step = reachStep(state.current, target, now);
+    state.current = step.next;
+    if (step.fire) saved.current();
   }, [target, now]);
 }
