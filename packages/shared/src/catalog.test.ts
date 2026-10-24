@@ -79,7 +79,7 @@ describe("wikiTitleCandidates (AC-2.7)", () => {
     expect(wikiTitleCandidates("Hyundai", "HB20 Comfort 1.0")).toEqual(["Hyundai HB20", "HB20"]);
     expect(wikiTitleCandidates("VW - VolksWagen", "T-Cross 200 TSI")).toEqual(["Volkswagen T-Cross", "T-Cross"]);
     expect(wikiTitleCandidates("Peugeot", "208 Active 1.6")).toEqual(["Peugeot 208", "208"]);
-    expect(wikiTitleCandidates("Fiat", "1.0 Flex")).toEqual(["Fiat"]);
+    expect(wikiTitleCandidates("Fiat", "1.0 Flex")).toEqual([]);
   });
 
   it("o candidato só-modelo exige um resumo que fale de veículo", () => {

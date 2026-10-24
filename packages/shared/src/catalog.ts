@@ -115,7 +115,8 @@ export function wikiTitleCandidates(brand: string, model: string): string[] {
     .map((part) => part.trim())
     .filter((part) => part.length > 0)
     .find((part, index) => !isEngineToken(part, index === 0));
-  if (!token) return [cleanName];
+  // Sem nome de modelo, o verbete da marca traria logo ou sede, não o carro: nenhum candidato (NOT_FOUND).
+  if (!token) return [];
   return [`${cleanName} ${token}`, token];
 }
 
