@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+# O CI só lê o repositório.
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -39,6 +43,8 @@ jobs:
       - run: npm run build -w packages/shared
       - run: npx prisma generate --schema apps/api/prisma/schema.prisma
       - run: npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+      # As migrações têm SQL escrito à mão: o banco migrado precisa bater com o schema.prisma (exit 2 se divergir).
+      - run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel apps/api/prisma/schema.prisma --exit-code
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
