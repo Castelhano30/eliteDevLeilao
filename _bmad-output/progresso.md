@@ -149,3 +149,7 @@ S03 implementada, verificada, revisada e no ar (itens 46 a 56); revisão geral S
 ## 24/10/2026 — Compactação: perfil
 - Criado dropdown de perfil com iniciais, nome, papel e logout existente. Abertura foca Sair, Escape devolve foco, Tab fecha sem aprisionar e clique externo respeita controles focáveis.
 - Typecheck web aprovado; interação real será exercitada pelo roteiro de navegador integrado.
+
+## 24/10/2026 — Compactação: privacidade do saldo
+- Saldo do header ganha botão de olho separado do link e preferência própria, preservada no logout. SSR e hidratação inicial mostram seis pontos antes de ler armazenamento. Valor oculto não é renderizado em texto nem nome acessível.
+- Testes cobrem HTML inicial com cache cheio, persistência, outra aba, logout, tema do sistema e storage bloqueado. Web: 124 testes passaram em 14 arquivos.
