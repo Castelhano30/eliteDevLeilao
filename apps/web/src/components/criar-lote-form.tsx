@@ -26,7 +26,7 @@ import { PageShell } from "@/components/ui/page-shell";
 import { apiGet, apiPost } from "@/lib/api-client";
 import { serverNow } from "@/lib/server-clock";
 import { MoneyField } from "./money-field";
-import { MY_LOTS_KEY } from "./painel-screen";
+import { MY_LOTS_KEY } from "@/lib/lot-query";
 
 /** Falha do catálogo: `fipe` = 503 ou sem resposta (a FIPE ou a rede caiu). */
 class CatalogError extends Error {

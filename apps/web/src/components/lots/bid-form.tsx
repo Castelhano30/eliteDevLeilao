@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { BID_TEXT, formatBRL, parseReais, type LotState, type PlaceBidResponse } from "@lanceauto/shared";
 import { WALLET_LEDGER_KEY, WALLET_SUMMARY_KEY } from "@/components/auth-provider";
 import { MoneyField } from "@/components/money-field";
@@ -9,29 +9,36 @@ import { Button } from "@/components/ui/button";
 import { RefusalMessage } from "@/components/ui/refusal-message";
 import { apiPost } from "@/lib/api-client";
 import { describeBidFailure, type BidFailure } from "@/lib/bid-refusal";
-import { applyBidResponse, applyShortcut, BID_SHORTCUTS, initialField, lockedFooter, syncField, type BidField, type Situation } from "@/lib/lot-state";
+import { applyShortcut, BID_SHORTCUTS, initialField, lockedFooter, syncField, type BidField, type Situation } from "@/lib/lot-state";
+import type { BidBlockReason } from "@/lib/realtime/connection-status";
+import { applyBidResponse } from "@/lib/realtime/lot-reducer";
+import { createSubmitGuard } from "@/lib/realtime/panel-decisions";
 import { lotKey } from "@/lib/lot-query";
 import { BID_MAX_DIGITS } from "@/lib/money-mask";
 
 const INPUT_ID = "lance-valor";
 const REFUSAL_ID = "lance-recusa";
+const BLOCK_ID = "lance-bloqueio";
+const BLOCK_TEXT = "Sem sinal com o pátio. O lance volta a ficar disponível quando a conexão voltar.";
 
 export interface BidFormProps {
   id: string;
   lot: LotState["lot"];
   situation: Situation;
+  /** Por que o envio está inerte (sem conexão ou com o estado desatualizado); `null` = liberado. */
+  blockReason: BidBlockReason | null;
 }
 
 /**
  * Formulário de lance (§9.3): campo em reais inteiros, atalhos que somam ao valor digitado, envio por botão ou Enter.
  * Sem atualização otimista (INV-1): a tela só muda com a resposta do servidor. Uma recusa por vez, colada ao botão.
  */
-export function BidForm({ id, lot, situation }: BidFormProps) {
+export function BidForm({ id, lot, situation, blockReason }: BidFormProps) {
   const queryClient = useQueryClient();
   const [field, setField] = useState<BidField>(() => initialField(lot.minimumBidCents));
   const [refusal, setRefusal] = useState<BidFailure | null>(null);
   const [sending, setSending] = useState(false);
-  const inFlight = useRef(false);
+  const [guard] = useState(createSubmitGuard);
 
   // Enquanto não editado, o campo acompanha o mínimo (ex.: depois do refetch de um OUTDATED).
   const synced = syncField(field, lot.minimumBidCents);
@@ -41,25 +48,27 @@ export function BidForm({ id, lot, situation }: BidFormProps) {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (inFlight.current) return;
+    // Botão inerte não envia, nem por Enter no campo; o valor digitado fica como está (AC-4.20).
+    if (blockReason !== null) return;
+    if (!guard.tryEnter()) return;
     const amountCents = parseReais(field.text);
     if (amountCents === null || amountCents <= 0) {
+      guard.leave();
       setRefusal({ message: BID_TEXT.emptyField, invalid: true, refetch: false });
       return;
     }
-    inFlight.current = true;
     setSending(true);
     setRefusal(null);
     const result = await apiPost<PlaceBidResponse>(`/lots/${encodeURIComponent(id)}/bids`, {
       amountCents,
       expectedCurrentCents: lot.currentBidCents,
     });
-    inFlight.current = false;
+    guard.leave();
     setSending(false);
 
     if (result.ok) {
       const response = result.data;
-      queryClient.setQueryData<LotState>(lotKey(id), (previous) => (previous ? applyBidResponse(previous, response) : previous));
+      queryClient.setQueryData<LotState>(lotKey(id), (previous) => (previous ? applyBidResponse(previous, response).state : previous));
       queryClient.setQueryData(WALLET_SUMMARY_KEY, response.wallet);
       void queryClient.invalidateQueries({ queryKey: WALLET_LEDGER_KEY });
       // Reconcilia o histórico de terceiros com o servidor.
@@ -99,8 +108,9 @@ export function BidForm({ id, lot, situation }: BidFormProps) {
         ))}
       </div>
       <Button
-        variant="primario"
+        variant={blockReason === null ? "primario" : "desabilitado"}
         type="submit"
+        aria-describedby={blockReason === "connection" ? BLOCK_ID : undefined}
         loading={sending}
         loadingText={BID_TEXT.sending}
         aria-busy={sending || undefined}
@@ -108,6 +118,11 @@ export function BidForm({ id, lot, situation }: BidFormProps) {
       >
         Dar lance
       </Button>
+      {blockReason === "connection" ? (
+        <p id={BLOCK_ID} className="t-body-nota">
+          {BLOCK_TEXT}
+        </p>
+      ) : null}
       {refusal ? (
         <div id={REFUSAL_ID}>
           <RefusalMessage action={refusal.action}>{refusal.message}</RefusalMessage>

@@ -7,14 +7,16 @@ import { useEffect, useState } from "react";
 import { brasiliaDayAndTime, formatBRL, formatBrasilia, formatLotNumber, type LotCard as LotCardDto, type MyLotsResponse } from "@lanceauto/shared";
 import { Cronometro } from "@/components/lots/cronometro";
 import { LotCard } from "@/components/lots/lot-card";
+import { ConnectionBanner } from "@/components/connection-banner";
 import { buttonClasses } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { PageShell } from "@/components/ui/page-shell";
 import { apiGet } from "@/lib/api-client";
+import { MY_LOTS_KEY } from "@/lib/lot-query";
+import { useConnectionBanner, useConnectionStatus } from "@/lib/realtime/connection-status";
+import { useShowcaseLive } from "@/lib/realtime/use-showcase-live";
 import { useOnReach, useServerNow } from "@/lib/use-server-clock";
-
-export const MY_LOTS_KEY = ["my-lots"] as const;
 
 async function fetchMyLots(signal?: AbortSignal): Promise<MyLotsResponse> {
   const result = await apiGet<MyLotsResponse>("/my/lots", { signal });
@@ -96,6 +98,10 @@ export function PainelScreen() {
   const data = query.data;
   const notice = useCreatedNotice(data?.lots);
   const now = useServerNow(data?.serverTime);
+  // Lance e prorrogação nos lotes do leiloeiro chegam sozinhos; lote que fecha ou cancela refaz o GET (§9.3).
+  useShowcaseLive(MY_LOTS_KEY);
+  const connection = useConnectionStatus();
+  const banner = useConnectionBanner(connection);
 
   const lots = data?.lots ?? [];
   const live = lots.filter((l) => l.status === "LIVE" || l.status === "CLOSING");
@@ -132,6 +138,7 @@ export function PainelScreen() {
 
   return (
     <PageShell>
+      <ConnectionBanner view={banner} lastSyncedAt={connection.lastSyncedAt} />
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <h1 className="t-display-titulo">Painel do pátio</h1>

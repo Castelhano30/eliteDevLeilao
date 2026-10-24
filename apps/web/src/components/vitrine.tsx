@@ -3,6 +3,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { formatBrasiliaClock, showcaseGroup, type LotCard as LotCardDto, type LotListResponse, type ShowcaseGroup } from "@lanceauto/shared";
+import { ConnectionBanner } from "@/components/connection-banner";
 import { Button } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { FilterTabs } from "@/components/ui/filter-tabs";
@@ -10,6 +11,10 @@ import { Canhoto } from "@/components/lots/canhoto";
 import { LotCard } from "@/components/lots/lot-card";
 import { apiGet } from "@/lib/api-client";
 import { lotCountLabel } from "@/lib/lots";
+import { useConnectionBanner, useConnectionStatus } from "@/lib/realtime/connection-status";
+import { cardStatusAt, needsClosingPoll } from "@/lib/realtime/showcase-cache";
+import { SHOWCASE_LISTS_KEY, useShowcaseLive } from "@/lib/realtime/use-showcase-live";
+import { serverNow } from "@/lib/server-clock";
 import { useOnReach, useServerNow } from "@/lib/use-server-clock";
 import { DEFAULT_FILTERS, lotsKey, lotsPath, type VitrineFilters, type VitrineTab } from "@/lib/vitrine-query";
 
@@ -69,12 +74,19 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
     placeholderData: keepPreviousData,
     retry: 1,
     // API caída (inclusive no SSR): tenta de novo sozinha até voltar, sem recarregar à mão (AC-2.35).
-    refetchInterval: (q) => (q.state.status === "error" ? 10_000 : false),
+    // Cartão apurando (fim passou e o servidor ainda não encerrou): olha a cada 3 s até o servidor decidir (§9.2).
+    refetchInterval: (q) => (q.state.status === "error" ? 10_000 : needsClosingPoll(q.state.data?.lots, serverNow()) ? 3_000 : false),
   });
+  // Sala showcase: lance, prorrogação e lote novo chegam sozinhos; reconectar refaz a consulta.
+  useShowcaseLive(SHOWCASE_LISTS_KEY);
+  const connection = useConnectionStatus();
+  const banner = useConnectionBanner(connection);
   const data = query.data;
   const serverTime = data?.serverTime ?? initialServerTime;
   const now = useServerNow(serverTime);
   useRefetchAtNextDeadline(data?.lots ?? [], now, () => void query.refetch());
+  // O agendado passa a ao vivo em startsAt pelo relógio do servidor, sem evento (AC-4.24); o GET confirma.
+  const shownLots = (data?.lots ?? []).map((lot) => ({ ...lot, status: cardStatusAt(lot, now) }));
 
   const filtered = filters.q.trim() !== "" || filters.brand !== "" || filters.status !== "ALL";
   const clear = () => {
@@ -106,6 +118,10 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
           </>
         ) : null}
       </p>
+
+      <div className="pt-6">
+        <ConnectionBanner view={banner} lastSyncedAt={connection.lastSyncedAt} />
+      </div>
 
       <section className="py-8" aria-labelledby={`${searchId}-hero`}>
         <h1 id={`${searchId}-hero`} className="t-display-hero">
@@ -196,7 +212,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
               </div>
             ) : (
               SECTIONS.map(({ group, title, subtitle }) => {
-                const lots = data.lots.filter((lot) => showcaseGroup(lot.status) === group);
+                const lots = shownLots.filter((lot) => showcaseGroup(lot.status) === group);
                 if (lots.length === 0) return null;
                 return (
                   <section key={group} aria-labelledby={`secao-${group}`} className="mb-8">

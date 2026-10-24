@@ -93,7 +93,8 @@ export function Cronometro({ status, startsAt, endsAt, originalEndsAt, size, lab
           {text}
         </span>
       </span>
-      {state.extended && !closed ? <SeloProrrogacao size={size} /> : null}
+      {/* `key`: cada novo fim remonta o selo e a animação `la-mais` roda de novo (R-4.11). */}
+      {state.extended && !closed ? <SeloProrrogacao key={endsAt} size={size} /> : null}
       <span className="sr-only" aria-live="polite">
         {announced ? "Últimos 2 minutos" : ""}
       </span>

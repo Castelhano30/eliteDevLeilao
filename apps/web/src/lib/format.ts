@@ -40,8 +40,8 @@ export function describeMovement(entry: Pick<LedgerEntryDto, "kind" | "amountCen
   return { label: LEDGER_LABEL[kind], value: signed[kind] ?? money, note };
 }
 
-/** "HH:mm:ss" em horário de Brasília, a partir de uma data ISO UTC (horário do lance e do novo fim). */
-export function clockTime(iso: string): string {
+/** "HH:mm:ss" em horário de Brasília, a partir de uma data ISO UTC ou de ms (lance, novo fim, última atualização). */
+export function clockTime(iso: string | number): string {
   const { hour, minute, second } = brasiliaParts(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${pad(hour)}:${pad(minute)}:${pad(second)}`;

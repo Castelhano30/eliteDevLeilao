@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRef, type ReactNode } from "react";
 import {
@@ -11,6 +11,7 @@ import {
   type LotState,
 } from "@lanceauto/shared";
 import { useAuth } from "@/components/auth-provider";
+import { ConnectionBanner } from "@/components/connection-banner";
 import { BidPanel } from "@/components/lots/bid-panel";
 import { CarPhoto } from "@/components/lots/car-photo";
 import { Cronometro } from "@/components/lots/cronometro";
@@ -21,7 +22,11 @@ import { LotTag } from "@/components/ui/lot-tag";
 import { Stamp } from "@/components/ui/stamp";
 import { bidCountLabel } from "@/lib/lots";
 import { fetchLot, lotKey, LotNotFoundError } from "@/lib/lot-query";
-import { INITIAL_OPENING_CHECKS, nextOpeningCheck } from "@/lib/lot-state";
+import { INITIAL_OPENING_CHECKS } from "@/lib/lot-state";
+import { bidBlockReason, useConnectionBanner, useConnectionStatus } from "@/lib/realtime/connection-status";
+import { mergeSnapshot } from "@/lib/realtime/lot-reducer";
+import { lotRefetchInterval } from "@/lib/realtime/panel-decisions";
+import { useLotRoom } from "@/lib/realtime/use-lot-room";
 import { serverNow } from "@/lib/server-clock";
 import { useOnReach, useServerNow } from "@/lib/use-server-clock";
 
@@ -49,28 +54,31 @@ function when(iso: string) {
  */
 export function Sala({ id, initial, notFound = false }: { id: string; initial?: LotState; notFound?: boolean }) {
   const { user, status: authStatus } = useAuth();
+  const queryClient = useQueryClient();
   const openingChecks = useRef(INITIAL_OPENING_CHECKS);
   const query = useQuery({
     queryKey: lotKey(id),
-    queryFn: ({ signal }) => fetchLot(id, signal),
+    // O snapshot do GET não passa por cima de um cache que um evento já levou além dele (R-4.8).
+    queryFn: async ({ signal }) => {
+      const snapshot = await fetchLot(id, signal);
+      return mergeSnapshot(queryClient.getQueryData<LotState>(lotKey(id)), snapshot);
+    },
     initialData: initial,
     enabled: !notFound,
     retry: (count, error) => !(error instanceof LotNotFoundError) && count < 1,
     refetchInterval: (q) => {
       const data = q.state.data;
       if (!data) return false;
-      const { status, startsAt, endsAt } = data.lot;
-      // Apurando, ou ao vivo com o relógio já em 00:00: olha de novo a cada 3 s até o servidor decidir.
-      if (status === "CLOSING" || (status === "LIVE" && serverNow() >= Date.parse(endsAt))) return 3_000;
-      // Agendado que já devia ter aberto: só renderiza o painel quando o servidor devolver AO VIVO (2 s, até 10 vezes).
-      if (status === "SCHEDULED" && serverNow() >= Date.parse(startsAt)) {
-        const step = nextOpeningCheck(openingChecks.current, q.state.dataUpdatedAt);
-        openingChecks.current = step.next;
-        return step.keepPolling ? 2_000 : false;
-      }
-      return false;
+      const step = lotRefetchInterval(data.lot, serverNow(), openingChecks.current, q.state.dataUpdatedAt);
+      openingChecks.current = step.checks;
+      return step.interval;
     },
   });
+  // Sala ao vivo: entra em lot:{id} (no mount e a cada connect), aplica os eventos e reconcilia pelo GET.
+  const room = useLotRoom(id, { enabled: !notFound });
+  const connection = useConnectionStatus();
+  const banner = useConnectionBanner(connection);
+  const blockReason = bidBlockReason({ status: connection.status, phase: connection.phase, stale: room.syncing });
   const state = query.data;
   const now = useServerNow(state?.serverTime);
   const lot = state?.lot;
@@ -136,6 +144,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
         state={state}
         viewer={user ? { role: user.role } : null}
         authLoading={authStatus === "loading" || authStatus === "error"}
+        blockReason={blockReason}
       />
     );
   } else {
@@ -153,6 +162,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
 
   return shell(
     <>
+      <ConnectionBanner view={banner} lastSyncedAt={connection.lastSyncedAt} />
       {query.isError ? (
         <FeedbackState variant="erro" onRetry={() => void query.refetch()} className="mb-6">
           Não consegui atualizar o lote. Os dados abaixo estão desatualizados.

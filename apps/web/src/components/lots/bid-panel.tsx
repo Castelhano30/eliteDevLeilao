@@ -6,7 +6,9 @@ import { Cronometro } from "@/components/lots/cronometro";
 import { PlacaLance } from "@/components/lots/placa-lance";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { clockTime } from "@/lib/format";
-import { deriveSituation, situationText, type Viewer } from "@/lib/lot-state";
+import { situationText, type Viewer } from "@/lib/lot-state";
+import type { BidBlockReason } from "@/lib/realtime/connection-status";
+import { isHammered, panelSituation } from "@/lib/realtime/panel-decisions";
 import { bidCountLabel } from "@/lib/lots";
 import { useServerNow } from "@/lib/use-server-clock";
 import { BidForm } from "./bid-form";
@@ -21,6 +23,8 @@ export interface BidPanelProps {
   viewer: Viewer;
   /** A sessão ainda está sendo lida: não decide entre formulário e convite. */
   authLoading: boolean;
+  /** Sem conexão ou com o estado desatualizado: o botão de lance fica inerte. */
+  blockReason: BidBlockReason | null;
 }
 
 /**
@@ -28,11 +32,11 @@ export interface BidPanelProps {
  * ou convite, e histórico. Só o `status` do servidor decide: o relógio local em 00:00 apenas bloqueia o envio
  * enquanto a Sala confere o resultado.
  */
-export function BidPanel({ id, state, viewer, authLoading }: BidPanelProps) {
+export function BidPanel({ id, state, viewer, authLoading, blockReason }: BidPanelProps) {
   const { lot } = state;
   const now = useServerNow(state.serverTime);
-  const hammered = lot.status === "CLOSING" || (lot.status === "LIVE" && now > 0 && Date.parse(lot.endsAt) <= now);
-  const situation = hammered ? { kind: "closing" as const } : deriveSituation(lot, viewer);
+  const hammered = isHammered(lot, now);
+  const situation = panelSituation(lot, viewer, now);
   const hasBid = lot.currentBidCents !== null;
   const extended = lot.status === "LIVE" && Date.parse(lot.endsAt) > Date.parse(lot.originalEndsAt);
 
@@ -65,7 +69,7 @@ export function BidPanel({ id, state, viewer, authLoading }: BidPanelProps) {
       </div>
     );
   } else if (situation && (situation.kind === "winning" || situation.kind === "outbid" || situation.kind === "none")) {
-    action = <BidForm id={id} lot={lot} situation={situation} />;
+    action = <BidForm id={id} lot={lot} situation={situation} blockReason={blockReason} />;
   }
 
   return (
@@ -85,6 +89,10 @@ export function BidPanel({ id, state, viewer, authLoading }: BidPanelProps) {
             no susto.
           </p>
         ) : null}
+        {/* Só esta região anuncia a prorrogação (a cada novo fim); o parágrafo acima é para quem enxerga. */}
+        <p className="sr-only" aria-live="polite">
+          {extended ? `Prorrogado. Novo fim às ${clockTime(lot.endsAt)}.` : ""}
+        </p>
       </div>
       <div className="space-y-2">
         <PlacaLance cents={lot.currentBidCents ?? lot.startingBidCents} label={hasBid ? "LANCE ATUAL" : "LANCE INICIAL"} />
