@@ -2,7 +2,7 @@
 title: 'Interface compacta e cabeçalho organizado'
 type: 'feature'
 created: '2026-10-24'
-status: 'in-progress'
+status: 'done'
 baseline_commit: '9d9cc10ec51468f441d6a0805b2285e97d5fa04c'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -50,13 +50,13 @@ context: []
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `globals.css`, `tailwind.config.mjs` e primitivos: reduzir títulos, controles, sombras e espaçamentos conforme proposta.
-- [ ] Telas e cards acima: ajustar medidas locais para escala consistente.
-- [ ] `lib/theme.ts`, `ui/theme-switch.tsx`, SVGs locais: toggle acessível com sistema, memória e sincronização.
-- [ ] `components/profile-menu.tsx`: botão/avatar, dropdown e foco, usando usuário/logout existentes.
-- [ ] `lib/balance-visibility.ts`, `balance-chip.tsx`: preferência, máscara e privacidade, link e olho irmãos.
-- [ ] `site-header.tsx`, CSS: agrupar e reorganizar sem duplicar controles; ajustar escala de `public-header.tsx`.
-- [ ] Testes de preferências e roteiro no navegador: matriz, reflow, fluxos existentes, deploy/smoke.
+- [x] `globals.css`, `tailwind.config.mjs` e primitivos: reduzir títulos, controles, sombras e espaçamentos conforme proposta.
+- [x] Telas e cards acima: ajustar medidas locais para escala consistente.
+- [x] `lib/theme.ts`, `ui/theme-switch.tsx`, SVGs locais: toggle acessível com sistema, memória e sincronização.
+- [x] `components/profile-menu.tsx`: botão/avatar, dropdown e foco, usando usuário/logout existentes.
+- [x] `lib/balance-visibility.ts`, `balance-chip.tsx`: preferência, máscara e privacidade, link e olho irmãos.
+- [x] `site-header.tsx`, CSS: agrupar e reorganizar sem duplicar controles; ajustar escala de `public-header.tsx`.
+- [x] Testes de preferências e roteiro no navegador: matriz, reflow, fluxos existentes, deploy/smoke.
 
 **Acceptance Criteria:**
 - Dado cada papel, quando abrir em 320/390/768/1024/1440 px, então header não sobrepõe nem cria rolagem horizontal; navegação preservada.
