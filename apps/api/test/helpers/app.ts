@@ -4,6 +4,7 @@ import { createApp, type AppDeps } from "../../src/app";
 import { signToken } from "../../src/auth/token";
 import { FakeClock } from "../../src/infra/clock";
 import { createLogger } from "../../src/infra/logger";
+import type { Publisher } from "../../src/infra/publisher";
 
 export const TEST_JWT_SECRET = "t".repeat(32);
 
@@ -24,9 +25,17 @@ export function makeTestApp(
   prisma: PrismaClient,
   overrides: Partial<typeof testEnv> = {},
   external: AppDeps["external"] = { timeoutMs: 300 },
+  publisher?: Publisher,
 ) {
   const clock = new FakeClock("2026-10-23T12:00:00.000Z");
-  const app = createApp({ env: { ...testEnv, ...overrides }, db: prisma, logger: createLogger("silent"), clock, external });
+  const app = createApp({
+    env: { ...testEnv, ...overrides },
+    db: prisma,
+    logger: createLogger("silent"),
+    clock,
+    external,
+    publisher,
+  });
   return { app, clock };
 }
 
