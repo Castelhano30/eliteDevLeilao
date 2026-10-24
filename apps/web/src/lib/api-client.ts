@@ -1,4 +1,5 @@
 import { errorEnvelopeSchema, type ErrorEnvelope } from "@lanceauto/shared";
+import { syncServerTime } from "./server-clock";
 import { getToken } from "./token";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -52,6 +53,9 @@ async function apiRequest<T>(
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     const parsed: unknown = await res.json().catch(() => null);
+    // Toda resposta com serverTime acerta o relógio da tela (INV-1).
+    const serverTime = (parsed as { serverTime?: unknown } | null)?.serverTime;
+    if (typeof serverTime === "string") syncServerTime(serverTime);
     if (res.ok) return { ok: true, status: res.status, data: parsed as T };
     const envelope = errorEnvelopeSchema.safeParse(parsed);
     const error = envelope.success ? envelope.data.error : null;

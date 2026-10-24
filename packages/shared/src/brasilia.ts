@@ -21,8 +21,8 @@ export function brasiliaLocalToUtcIso(local: string): string | null {
 }
 
 /** Partes da data em Brasília, para formatar sem depender do fuso do aparelho. */
-export function brasiliaParts(iso: string | Date) {
-  const ms = typeof iso === "string" ? Date.parse(iso) : iso.getTime();
+export function brasiliaParts(iso: string | Date | number) {
+  const ms = typeof iso === "string" ? Date.parse(iso) : typeof iso === "number" ? iso : iso.getTime();
   const local = new Date(ms + BRASILIA_OFFSET_MS);
   return {
     year: local.getUTCFullYear(),
@@ -59,7 +59,7 @@ export function brasiliaWeekday(iso: string): string {
 }
 
 /** "Qui 22/out · 18:47": relógio da barra "Pátio aberto". */
-export function formatBrasiliaClock(iso: string): string {
+export function formatBrasiliaClock(iso: string | number): string {
   const p = brasiliaParts(iso);
   return `${WEEKDAYS[p.weekday]} ${pad(p.day)}/${MONTHS[p.month - 1]} · ${pad(p.hour)}:${pad(p.minute)}`;
 }
