@@ -5,10 +5,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
 import type { AuthResponse, LoginInput, MeResponse, RegisterInput, UserDto } from "@lanceauto/shared";
 import { apiGet, apiPost, setUnauthenticatedHandler, type ApiResult } from "@/lib/api-client";
+import { deriveSessionStatus, type SessionStatus } from "@/lib/session";
 import { reconnectSocket } from "@/lib/socket";
 import { clearToken, getToken, setToken, subscribeForeignToken, subscribeToken } from "@/lib/token";
 
-export type AuthStatus = "loading" | "anon" | "auth";
+export type AuthStatus = SessionStatus;
 
 interface AuthContextValue {
   user: UserDto | null;
@@ -16,6 +17,8 @@ interface AuthContextValue {
   login(input: LoginInput): Promise<ApiResult<AuthResponse>>;
   register(input: RegisterInput): Promise<ApiResult<AuthResponse>>;
   logout(): void;
+  /** Refaz o `GET /me` quando a sessão ficou em `error` (API fora do ar). */
+  retrySession(): void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -52,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasToken = token !== null;
 
   const me = useQuery({ queryKey: ME_KEY, queryFn: fetchMe, enabled: hasToken, retry: 3 });
+  const refetchMe = me.refetch;
 
   // O chip de saldo lê ["wallet","summary"]; o GET /me o semeia (T7).
   useEffect(() => {
@@ -102,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<AuthContextValue>(() => {
-    const status: AuthStatus = !hydrated ? "loading" : !hasToken ? "anon" : me.data ? "auth" : "loading";
+    const status = deriveSessionStatus({ hydrated, hasToken, hasUser: Boolean(me.data), failed: me.isError });
     return {
       user: hasToken ? (me.data?.user ?? null) : null,
       status,
@@ -116,8 +120,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         leaving.current = true;
         router.push("/");
       },
+      retrySession: () => void refetchMe(),
     };
-  }, [hydrated, hasToken, me.data, startSession, endSession, router, pathname]);
+  }, [hydrated, hasToken, me.data, me.isError, refetchMe, startSession, endSession, router, pathname]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

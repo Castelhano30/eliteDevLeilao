@@ -39,7 +39,7 @@ export function SiteHeader() {
       >
         <Logo />
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          {status === "loading" ? null : user?.role === "BIDDER" ? (
+          {status === "loading" || status === "error" ? null : user?.role === "BIDDER" ? (
             <>
               <nav aria-label="Principal" className="flex flex-wrap items-center gap-x-6">
                 <NavLink href="/">Vitrine</NavLink>

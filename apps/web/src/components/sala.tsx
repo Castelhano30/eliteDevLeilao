@@ -135,7 +135,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
         id={id}
         state={state}
         viewer={user ? { role: user.role } : null}
-        authLoading={authStatus === "loading"}
+        authLoading={authStatus === "loading" || authStatus === "error"}
       />
     );
   } else {

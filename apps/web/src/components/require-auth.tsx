@@ -12,7 +12,7 @@ import { useAuth } from "./auth-provider";
  * Visitante vai a `/entrar?next=`; papel errado vai à home do próprio papel com `?aviso=papel`.
  */
 export function RequireAuth({ role, children }: { role?: Role; children: ReactNode }) {
-  const { user, status } = useAuth();
+  const { user, status, retrySession } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -23,6 +23,15 @@ export function RequireAuth({ role, children }: { role?: Role; children: ReactNo
     else if (wrongRole && user) router.replace(`${homeFor(user.role)}?aviso=papel`);
   }, [status, wrongRole, user, pathname, router]);
 
+  if (status === "error") {
+    return (
+      <PageShell>
+        <FeedbackState variant="erro" onRetry={retrySession}>
+          Não consegui carregar sua sessão.
+        </FeedbackState>
+      </PageShell>
+    );
+  }
   if (status !== "auth" || wrongRole) {
     return (
       <PageShell>
