@@ -153,3 +153,7 @@ S03 implementada, verificada, revisada e no ar (itens 46 a 56); revisão geral S
 ## 24/10/2026 — Compactação: privacidade do saldo
 - Saldo do header ganha botão de olho separado do link e preferência própria, preservada no logout. SSR e hidratação inicial mostram seis pontos antes de ler armazenamento. Valor oculto não é renderizado em texto nem nome acessível.
 - Testes cobrem HTML inicial com cache cheio, persistência, outra aba, logout, tema do sistema e storage bloqueado. Web: 124 testes passaram em 14 arquivos.
+
+## 24/10/2026 — Compactação: organização do cabeçalho
+- Header reorganizado por largura e papel, sem duplicar controles. Navegação muda de posição no DOM junto do layout para manter Tab coerente com leitura visual. PublicHeader ajustado à mesma escala.
+- Links e estados de sessão preservados. Verificação completa de CLI, navegador e deploy segue na integração final.

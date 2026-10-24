@@ -8,9 +8,9 @@ export interface PublicHeaderProps {
 /** Cabeçalho mínimo das páginas públicas (Comprovante e Auditoria): igual para quem está logado ou não. */
 export function PublicHeader({ legend }: PublicHeaderProps) {
   return (
-    <header className="border-b-4 border-linha bg-papel">
+    <header className="border-b-2 border-linha bg-papel">
       <div
-        className="mx-auto flex flex-wrap items-center justify-between gap-4 py-4"
+        className="mx-auto flex flex-wrap items-center justify-between gap-3 py-3"
         style={{ width: "min(100% - 2 * var(--gutter-lateral), 1320px)" }}
       >
         <Logo />
