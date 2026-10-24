@@ -77,11 +77,40 @@ context:
 
 ## Implementation Notes
 
-Implementado direto, sem subagente de implementação. Decisões novas do build estão nas perguntas 7 a 10 da §16 da fatia. A camada de revisão (step-04) não rodou: ela exige três revisores em paralelo e o pedido não os autorizava; fica para o Felipe pedir (`/code-review` ou `bmad-code-review`). Verificação e smoke no diário, itens 46 a 55.
+Implementado direto, sem subagente de implementação. Decisões novas do build estão nas perguntas 7 a 10 da §16 da fatia. A camada de revisão (step-04) não rodou no build, porque exige revisores em paralelo e o pedido não os autorizava; o Felipe a pediu depois (`bmad-code-review`), e a triagem está no "Review Triage Log". Verificação e smoke no diário, itens 46 a 55.
 
 ## Spec Change Log
 
 ## Review Triage Log
+
+Revisão de 24/10/2026, `9af6312..293a480`: quatro camadas em paralelo (cega, casos de borda, lacunas de verificação, auditor de aceitação), cada achado conferido no código antes do veredito. 24 achados: 5 corrigidos, 6 adiados, 13 descartados. Os ACs 3.62 e o roteiro com dois navegadores reais seguem com o Felipe.
+
+| # | Achado | Veredito | Rota | Evidência |
+|---|---|---|---|---|
+| 1 | Sala agendada gasta as 10 conferências em ~10 s | medium | patch (`e6277ed`) | `openingChecks` era incrementado dentro do `refetchInterval`, que o TanStack reavalia a cada `setOptions` (cada render; a Sala re-renderiza por segundo). Agora `nextOpeningCheck` só conta resposta nova. |
+| 2 | `myPseudonym` do GET nunca comparado ao gravado em `bids[]` | medium | patch (`79b75c2`) | bids.test.ts só tinha regex; trocar os argumentos de `pseudonymFor` no `getLotState` não derrubava nada (mutação feita: o teste novo falha). |
+| 3 | CHECKs de `Bid` e `Lot` sem teste | medium | patch (`4a303d7`) | Nenhum teste citava `Bid_shape_chk`, `lot_bid_count_nonneg`, `lot_entry_count_nonneg` nem `lot_current_bid_min`. |
+| 4 | Filtro e ordem do `leadingLots` sem teste | low | patch (`46f10f4`) | wallet.test.ts só afirmava `[]`; sem `cancelledAt: null` o teste novo falha (mutação feita). |
+| 5 | DoD §17 e diário dizem "dois navegadores" e "42 verificações" sem a ressalva | low | patch | Item 54 foi HTTP; item 55 deixa o roteiro com o Felipe. Linha 487 e item 52 reescritos. |
+| 6 | `publisher.publish` sem `try/catch` depois do commit | low (média na S04) | defer | Hoje o publisher é `NoopPublisher`; decidir junto do publisher do Socket.IO. |
+| 7 | `applyLotEvent`: recalcula o mínimo, não vê salto de `version`, não atualiza `status` | low | defer | O mínimo recalculado sai igual ao do servidor; o gap só existe com eventos reais (S04). |
+| 8 | `BidPanel`/`BidForm`/`Sala` com decisões inline sem teste | low | defer | Conferido no Chrome; extrair funções puras com o reducer da S04. |
+| 9 | `GET /lots/:id` sem limite de histórico, rank em memória | low | defer | Pergunta 5 da fatia; escala atual não sente. |
+| 10 | Testes de concorrência com `Math.random` sem semente | low | defer | Sem falha hoje; falha não reproduzível. |
+| 11 | `seedLiveBids` documenta "ao vivo" mas só checa existência e `bidCount == 0` | low | defer | Em produção o lote 001 já tem lances; falha do seed não derruba o deploy; S09 recria os lotes. |
+| 12 | `Button` do atalho dentro do `<form>` enviaria o lance | false | rejeitado | button.tsx:40 tem `type = "button"` por padrão. |
+| 13 | Seed que falha aborta o deploy | false | rejeitado | railway.json: `(npx tsx …/seed.ts \|\| echo seed-falhou-subindo-sem-ele)`. |
+| 14 | `ALREADY_WINNING` deveria refazer o GET | false | rejeitado | §9.3.8: "`ALREADY_WINNING` ⇒ nada"; bid-refusal.test.ts trava. |
+| 15 | Formulário some em 00:00 antes do GET | low | rejeitado | Pergunta 10 da §16, decisão registrada; AC-3.59 satisfeito. |
+| 16 | Rótulo do HOLD diferente da §9.4 | low | rejeitado | Pergunta 9 da §16, decisão registrada. |
+| 17 | `entryHash` não cobre `bidderId` | low | rejeitado | Campos prescritos na §4.5 e no T5; corrigir seria editar o spec. |
+| 18 | Colisão de 4 hex confunde "VOCÊ" e o rank no cliente | low | rejeitado | Colisão aceita na §4 e no README. |
+| 19 | `Bid.bidderId` com `SET NULL` contra o trigger; `P2003` → 401 inalcançável | low | rejeitado | `Wallet_userId_fkey` é `RESTRICT` e todo usuário tem carteira: o usuário não é apagado. |
+| 20 | 401 do POST sem o texto "Entre para dar lances." | low | rejeitado | `requireAuth` não aceita mensagem e a S01 limpa o token e redireciona; o texto não aparece. |
+| 21 | Rate limit sem fallback por IP | low | rejeitado | `requireAuth` vem antes; `req.user` sempre existe. |
+| 22 | `userRoom` de `../socket` e `parseBody` de `./auth` | low | rejeitado | Sem dano nomeado; a S04 reorganiza as salas. |
+| 23 | Laço redundante no AC-3.39; `RATE_LIMITED` e 401 sem caso próprio no `describeBidFailure` | low | rejeitado | Cosmético; o `default` mostra a mensagem do servidor e o 401 é da S01. |
+| 24 | A camada de revisão (step-04) não rodou | info | resolvido | Esta revisão. |
 
 ## Design Notes
 

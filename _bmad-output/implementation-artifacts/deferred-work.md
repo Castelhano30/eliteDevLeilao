@@ -28,3 +28,21 @@
   summary: Fazer o join com `Lot` no extrato para preencher `LedgerEntryDto.lotNumber`.
   evidence: O slice-01 (linhas 113 e 348) atribuiu o join à S02, mas `apps/api/src/services/mappers.ts:29` ainda devolve `lotNumber: null`; a S03 cria HOLD/RELEASE com `lotId` e o extrato mostraria "lote null".
   resolved: S03, `lotNumber` por `lot.findMany({id in})` em `wallet.service` (commit 87ec1d0, spec-s03-lances-sala.md).
+- source_spec: `_bmad-output/implementation-artifacts/spec-s03-lances-sala.md` (revisão da S03)
+  summary: Proteger `publisher.publish(events)` com `try/catch` e log em `POST /lots/:id/bids`, e testar com um publisher que lança.
+  evidence: `routes/lots.ts:118` publica depois do commit sem guarda; se o publisher lançar, o lance entrou e o cliente recebe 500. Hoje o publisher é `NoopPublisher`; decidir junto do publisher do Socket.IO (S04).
+- source_spec: `_bmad-output/implementation-artifacts/spec-s03-lances-sala.md` (revisão da S03)
+  summary: No reducer da Sala (`applyLotEvent`): detectar salto de `version` (refaz o GET), atualizar `status` e parar de recalcular `minimumBidCents` (pôr o campo no `BidPlacedPayload`).
+  evidence: `lot-state.ts:49-70` soma `currentBidCents + minIncrementCents` e aceita evento com `version > atual + 1`. Sem efeito hoje (só a resposta do próprio lance usa o reducer); aparece com os eventos da S04.
+- source_spec: `_bmad-output/implementation-artifacts/spec-s03-lances-sala.md` (revisão da S03)
+  summary: Extrair em funções puras e testar as decisões inline de `BidPanel` (`hammered`, situação), `Sala.refetchInterval` e `BidForm` (`inFlight`).
+  evidence: Nenhum teste de componente além de `ui.test.tsx`; inverter `Date.parse(endsAt) <= now` ou tirar o `inFlight.current` mantém tudo verde. Conferido à mão no Chrome (itens 51 e 52).
+- source_spec: `_bmad-output/implementation-artifacts/spec-s03-lances-sala.md` (revisão da S03)
+  summary: Limitar o histórico de `GET /lots/:id` e calcular o rank no banco (`groupBy`) em vez de em memória.
+  evidence: `lot.service.ts` (`getLotState`) lê todos os `BID` do lote a cada GET público, e a Sala refaz o GET a cada 2-3 s perto do fim. Já é a pergunta 5 da fatia.
+- source_spec: `_bmad-output/implementation-artifacts/spec-s03-lances-sala.md` (revisão da S03)
+  summary: Semear o embaralhamento de `round()` nos testes de concorrência (AC-3.39/3.40) e imprimir a semente na falha; tornar o AC-3.43 determinístico.
+  evidence: `bids.test.ts` usa `Math.random` sem semente e o AC-3.43 depende de corrida de tempo; uma falha não se reproduz.
+- source_spec: `_bmad-output/implementation-artifacts/spec-s03-lances-sala.md` (revisão da S03)
+  summary: `seedLiveBids` checar `cancelledAt` e `endsAt` antes de dar os lances (e pular com log), ou corrigir o docstring que diz "ao vivo".
+  evidence: `seed/showcase.ts:160-166` só checa que o lote existe e tem `bidCount == 0`; lote cancelado ou encerrado sem lance faz o `placeBid` recusar e o seed lançar. Em produção o lote 001 já tem lances e o `startCommand` ignora falha do seed; o seed final da S09 recria os lotes.
