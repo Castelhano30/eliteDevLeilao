@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseReais } from "@lanceauto/shared";
-import { maskReais } from "./money-mask";
+import { BID_MAX_DIGITS, DEPOSIT_MAX_DIGITS, maskReais } from "./money-mask";
 
 describe("maskReais", () => {
   it("aplica o ponto de milhar enquanto digita", () => {
@@ -37,5 +37,31 @@ describe("maskReais", () => {
     // apagar o primeiro dígito com cursor no começo
     expect(maskReais("000", 0)).toEqual({ value: "", caret: 0 });
     expect(maskReais("12345", 1)).toEqual({ value: "12.345", caret: 1 });
+  });
+});
+
+describe("maskReais com limite de dígitos por parâmetro", () => {
+  it("lance aceita 13 dígitos e corta o excedente", () => {
+    expect(maskReais("12345678901234567", undefined, BID_MAX_DIGITS).value).toBe("1.234.567.890.123");
+    expect(maskReais("9999999999999", undefined, BID_MAX_DIGITS).value).toBe("9.999.999.999.999");
+  });
+
+  it("depósito continua em 9 dígitos por padrão", () => {
+    expect(maskReais("12345678901234567").value).toBe("123.456.789");
+    expect(maskReais("12345678901234567", undefined, DEPOSIT_MAX_DIGITS).value).toBe("123.456.789");
+  });
+
+  it("13 dígitos em reais ainda cabem em centavos seguros", () => {
+    const cents = parseReais(maskReais("9999999999999", undefined, BID_MAX_DIGITS).value);
+    expect(cents).toBe(999_999_999_999_900);
+    expect(Number.isSafeInteger(cents!)).toBe(true);
+  });
+
+  it("colar 'R$ 12.500,00' vira só dígitos (o ,00 colado entra como dígitos)", () => {
+    expect(maskReais("R$ 12.500,00", undefined, BID_MAX_DIGITS).value).toBe("1.250.000");
+  });
+
+  it("digitar 1234567 mostra 1.234.567 com o cursor no fim", () => {
+    expect(maskReais("1234567", 7, BID_MAX_DIGITS)).toEqual({ value: "1.234.567", caret: 9 });
   });
 });

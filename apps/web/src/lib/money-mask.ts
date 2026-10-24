@@ -1,5 +1,7 @@
-/** Mais de 9 dígitos já passa de R$ 10.000.000 e arriscaria `number` fora do intervalo seguro. */
-export const MAX_DIGITS = 9;
+/** Depósito: 9 dígitos já passam de R$ 10.000.000, o teto por depósito. */
+export const DEPOSIT_MAX_DIGITS = 9;
+/** Lance: 13 dígitos em reais ainda cabem em `Number.MAX_SAFE_INTEGER` quando viram centavos. */
+export const BID_MAX_DIGITS = 13;
 
 export interface MaskedValue {
   value: string;
@@ -12,12 +14,12 @@ function group(digits: string): string {
 }
 
 /**
- * Máscara de reais inteiros: mantém só dígitos, corta em 9, remove zeros à esquerda e reaplica o ponto de milhar.
- * O cursor acompanha o mesmo número de dígitos que havia antes dele.
+ * Máscara de reais inteiros: mantém só dígitos, corta em `maxDigits`, remove zeros à esquerda e reaplica o ponto de
+ * milhar. O cursor acompanha o mesmo número de dígitos que havia antes dele.
  */
-export function maskReais(raw: string, caret: number = raw.length): MaskedValue {
+export function maskReais(raw: string, caret: number = raw.length, maxDigits: number = DEPOSIT_MAX_DIGITS): MaskedValue {
   const before = raw.slice(0, caret).replace(/\D/g, "");
-  const digits = raw.replace(/\D/g, "").replace(/^0+/, "").slice(0, MAX_DIGITS);
+  const digits = raw.replace(/\D/g, "").replace(/^0+/, "").slice(0, maxDigits);
   const kept = Math.min(before.replace(/^0+/, "").length, digits.length);
   const value = group(digits);
   if (kept === 0) return { value, caret: 0 };

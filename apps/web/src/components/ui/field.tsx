@@ -14,17 +14,19 @@ export interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
   prefix?: ReactNode;
   /** Campo composto: sufixo fixo (ex. ",00"). */
   suffix?: ReactNode;
+  /** Ids de fora do campo que também o descrevem (ex.: a recusa colada ao botão). */
+  describedBy?: string;
   /** Transforma o texto digitado antes de chegar ao `onChange`. */
   mask?: (raw: string) => string;
 }
 
 /** Campo com rótulo sempre visível. Com prefixo/sufixo vira o campo de valor (lance e depósito). */
-export function Field({ label, help, error, invalid, prefix, suffix, mask, id, className = "", onChange, disabled, ...rest }: FieldProps) {
+export function Field({ label, help, error, invalid, prefix, suffix, mask, describedBy: extraDescribedBy, id, className = "", onChange, disabled, ...rest }: FieldProps) {
   const auto = useId();
   const inputId = id ?? auto;
   const helpId = help ? `${inputId}-ajuda` : undefined;
   const errorId = error ? `${inputId}-erro` : undefined;
-  const describedBy = [helpId, errorId].filter(Boolean).join(" ") || undefined;
+  const describedBy = [helpId, errorId, extraDescribedBy].filter(Boolean).join(" ") || undefined;
   const composto = prefix !== undefined || suffix !== undefined;
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
