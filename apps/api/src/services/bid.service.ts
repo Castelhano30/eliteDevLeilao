@@ -16,7 +16,7 @@ import { pseudonymFor } from "../domain/pseudonym";
 import { rankFrom } from "../domain/rank";
 import { AppError } from "../errors";
 import type { Clock } from "../infra/clock";
-import { userRoom } from "../socket";
+import { lotRoom, SHOWCASE_ROOM, userRoom } from "../socket";
 import { LOT_SELECT, toLotCard } from "./lot-mappers";
 import { toNumber, toWalletDto } from "./mappers";
 
@@ -53,9 +53,6 @@ interface LockedWallet {
   totalCents: bigint;
   committedCents: bigint;
 }
-
-const lotRoom = (lotId: string) => `lot:${lotId}`;
-const SHOWCASE_ROOM = "showcase";
 
 const TX_OPTIONS = { maxWait: 10_000, timeout: 10_000 } as const;
 

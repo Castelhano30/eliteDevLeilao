@@ -1,11 +1,9 @@
-import { createServer } from "node:http";
 import path from "node:path";
 import dotenv from "dotenv";
-import { createApp } from "./app";
 import { EnvError, parseEnv, type Env } from "./env";
 import { createLogger } from "./infra/logger";
 import { createPrisma } from "./infra/prisma";
-import { attachSocket } from "./socket";
+import { createRealtimeServer } from "./realtime";
 
 // O .env fica na raiz do monorepo (src/ e dist/ estão no mesmo nível, então o caminho vale para os dois).
 dotenv.config({ path: path.resolve(__dirname, "../../../.env"), quiet: true });
@@ -26,9 +24,7 @@ function main() {
   const env = loadEnv();
   const logger = createLogger(env.NODE_ENV === "production" ? "info" : "debug");
   const prisma = createPrisma(env.DATABASE_URL);
-  const app = createApp({ env, db: prisma, logger });
-  const httpServer = createServer(app);
-  const io = attachSocket(httpServer, env.WEB_ORIGIN, env.JWT_SECRET);
+  const { httpServer, io } = createRealtimeServer({ env, db: prisma, logger });
 
   httpServer.listen(env.PORT, () => logger.info({ port: env.PORT }, "API no ar"));
 

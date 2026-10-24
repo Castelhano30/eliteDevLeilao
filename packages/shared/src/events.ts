@@ -49,8 +49,11 @@ export type ShowcaseLotPayload = LotCard & { serverTime: string };
 
 export type WalletUpdatedPayload = WalletDto & { serverTime: string };
 
-/** Resposta de `lot:join`: o snapshot de quem entrou, ou `NOT_FOUND` (lote inexistente ou `lotId` inválido). */
-export type LotJoinAck = { ok: true; lot: LotState } | { ok: false; error: { code: "NOT_FOUND" } };
+/**
+ * Resposta de `lot:join`: o snapshot de quem entrou, `NOT_FOUND` (lote inexistente ou `lotId` inválido) ou
+ * `INTERNAL` (o servidor não conseguiu montar o snapshot; o cliente tenta de novo).
+ */
+export type LotJoinAck = { ok: true; lot: LotState } | { ok: false; error: { code: "NOT_FOUND" | "INTERNAL" } };
 
 /** Os eventos de uma sala de lote, como o reducer da Sala os recebe. */
 export type LotEvent =

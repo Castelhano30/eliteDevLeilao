@@ -7,7 +7,7 @@ import type { Logger } from "./infra/logger";
 import type { PrismaClient } from "@prisma/client";
 import { makeAuth } from "./middleware/auth";
 import { SystemClock, type Clock } from "./infra/clock";
-import { NoopPublisher, type Publisher } from "./infra/publisher";
+import { guardPublisher, NoopPublisher, type Publisher } from "./infra/publisher";
 import { ExternalCache } from "./infra/external-cache";
 import { makeFipeCatalog, type CatalogPort } from "./infra/fipe";
 import { makeImageStore, type ImageDownloader, type ImageStoreOptions } from "./infra/image-store";
@@ -20,7 +20,7 @@ import { catalogRouter, lotsRouter } from "./routes/lots";
 import { makeAuthService } from "./services/auth.service";
 import { makeBidService } from "./services/bid.service";
 import { makeCatalogService } from "./services/catalog.service";
-import { makeLotService } from "./services/lot.service";
+import { makeLotService, type LotService } from "./services/lot.service";
 import { makeWalletService } from "./services/wallet.service";
 
 export interface AppDeps {
@@ -39,7 +39,7 @@ export interface AppDeps {
   db: PrismaClient;
   logger: Logger;
   clock?: Clock;
-  /** Entrega os eventos de domínio depois do commit; a S04 troca pelo Socket.IO. */
+  /** Entrega os eventos de domínio depois do commit. Ausente, descarta; em produção é o do Socket.IO (`realtime.ts`). */
   publisher?: Publisher;
   /** Portas externas; ausentes, saem dos adaptadores reais apontados pelo env. Os testes injetam. */
   external?: {
@@ -53,15 +53,22 @@ export interface AppDeps {
   };
 }
 
-export function createApp({
+export function createApp(deps: AppDeps): Express {
+  return composeApp(deps).app;
+}
+
+/** O app e os services que o servidor de tempo real também usa (o snapshot do `lot:join`). */
+export function composeApp({
   env,
   db,
   logger,
   clock = new SystemClock(),
-  publisher = new NoopPublisher(),
+  publisher: rawPublisher = new NoopPublisher(),
   external = {},
-}: AppDeps): Express {
+}: AppDeps): { app: Express; lots: LotService } {
   const app = express();
+  // Publicar nunca derruba uma requisição já confirmada (R-4.2): um ponto só protege todas as rotas.
+  const publisher = guardPublisher(rawPublisher, logger);
 
   // Atrás do proxy do Railway o IP real vem de X-Forwarded-For; sem isso o rate limit por IP vira global.
   if (env.NODE_ENV === "production") app.set("trust proxy", 1);
@@ -101,11 +108,11 @@ export function createApp({
 
   app.use(healthRouter(db));
   app.use(authRouter(authService, env.AUTH_RATE_LIMIT_MAX));
-  app.use(accountRouter(auth, authService, walletService));
+  app.use(accountRouter(auth, authService, walletService, publisher));
   app.use(catalogRouter(auth, catalogService));
   app.use(lotsRouter(auth, lotService, bidService, clock, publisher));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
-  return app;
+  return { app, lots: lotService };
 }
