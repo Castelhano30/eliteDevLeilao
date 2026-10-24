@@ -15,3 +15,12 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-s02-catalogo-lotes-vitrine.md`
   summary: Tirar da produção o lote 003 criado pelo smoke da S02.
   evidence: Aparece em Agendados e abre sozinho em 28/10; o cancelamento só existe na S06 e o seed final (S09) recria os lotes.
+- source_spec: `_bmad-output/specs/spec-lanceauto/slice-03-lances-sala.md` (revisão geral antes da S03, grupo 1)
+  summary: Gravar `Wallet.updatedAt` explicitamente (`clock.now()`) nos `INSERT`/`UPDATE` crus da S03.
+  evidence: `Wallet.updatedAt` é NOT NULL sem `DEFAULT` na migração `contas_e_carteira`; só o `@updatedAt` do Prisma Client o preenche, então um `UPDATE` cru não o renova e um `INSERT` cru falha.
+- source_spec: `_bmad-output/specs/spec-lanceauto/slice-03-lances-sala.md` (revisão geral antes da S03, grupo 1)
+  summary: Acrescentar CHECKs em `Lot` na migração da S03: `bidCount >= 0`, `entryCount >= 0` e `currentBidCents IS NULL OR currentBidCents >= startingBidCents`.
+  evidence: A migração `lots_and_items` só cobre lance inicial, incremento e datas; nada impede o contador ou o lance atual de ficar inválido quando a S03 passar a escrevê-los.
+- source_spec: `_bmad-output/specs/spec-lanceauto/slice-03-lances-sala.md` (revisão geral antes da S03, grupo 1)
+  summary: Fazer o join com `Lot` no extrato para preencher `LedgerEntryDto.lotNumber`.
+  evidence: O slice-01 (linhas 113 e 348) atribuiu o join à S02, mas `apps/api/src/services/mappers.ts:29` ainda devolve `lotNumber: null`; a S03 cria HOLD/RELEASE com `lotId` e o extrato mostraria "lote null".
