@@ -87,7 +87,7 @@ Links públicos:
 
 ### Configuração dos serviços
 
-Cada serviço lê o próprio arquivo, apontado no painel em "Config file path": [apps/api/railway.json](apps/api/railway.json) na API e [apps/web/railway.json](apps/web/railway.json) no web. Os campos Build Command e Start Command do painel ficam vazios; quando preenchidos, o painel passa por cima do arquivo.
+Build e start ficam gravados no próprio serviço do Railway (painel, campos Custom Build Command e Custom Start Command), com os valores abaixo. O Railway descontinuou a configuração por arquivo ("Config as Code"), então os [apps/api/railway.json](apps/api/railway.json) e [apps/web/railway.json](apps/web/railway.json) não são lidos: servem só de registro dos mesmos comandos e precisam ser mantidos iguais ao painel.
 
 **API**
 
