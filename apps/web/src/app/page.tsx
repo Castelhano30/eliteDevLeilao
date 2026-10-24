@@ -12,11 +12,13 @@ export const dynamic = "force-dynamic";
  */
 export default async function VitrinePage() {
   const queryClient = new QueryClient();
-  const result = await serverGet<LotListResponse>("/lots");
-  if (result?.status === 200 && result.data) queryClient.setQueryData(lotsKey(DEFAULT_FILTERS), result.data);
+  const result = await serverGet<LotListResponse | null>("/lots");
+  // 200 com corpo que não é JSON vira null: a página sai sem dados e o cliente tenta de novo.
+  const data = result?.status === 200 && result.data && Array.isArray(result.data.lots) ? result.data : null;
+  if (data) queryClient.setQueryData(lotsKey(DEFAULT_FILTERS), data);
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <Vitrine initialServerTime={result?.status === 200 ? result.data.serverTime : undefined} />
+      <Vitrine initialServerTime={data?.serverTime} />
     </HydrationBoundary>
   );
 }
