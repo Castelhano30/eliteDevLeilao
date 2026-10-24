@@ -24,6 +24,10 @@ for (const [network, prefix] of [
   ["fe80::", 10],
   ["ff00::", 8],
   ["64:ff9b::", 96],
+  // NAT64 local (RFC 8215), Teredo e IPv4 traduzido (::ffff:0:a.b.c.d)
+  ["64:ff9b:1::", 48],
+  ["2001::", 32],
+  ["::ffff:0:0:0", 96],
   ["2002::", 16],
 ] as const) {
   blocked.addSubnet(network, prefix, "ipv6");
