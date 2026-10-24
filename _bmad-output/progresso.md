@@ -141,3 +141,7 @@ S03 implementada, verificada, revisada e no ar (itens 46 a 56); revisão geral S
 ## 24/10/2026 — Compactação: telas e cards
 - Ajustadas medidas locais de Vitrine, Sala, Carteira, Painel, acesso, formulário de lote e componentes de lotes. Fotos de cards com 176 px reservados; campos e painéis menores, sem alterar regras ou consultas.
 - Carteira empilha resumo até desktop e valores extensos podem quebrar; typecheck web aprovado. Validação visual integrada pendente.
+
+## 24/10/2026 — Compactação: tema e ícones
+- Toggle binário acessível substitui o seletor; acompanha sistema sem escolha explícita, persiste claro/noite, sincroniza entre abas e usa memória quando gravação é bloqueada. SVGs locais sem dependência nova.
+- Preferências exercitadas por testes; typecheck web aprovado. Escala de placas e botão de lance complementada no commit anterior.

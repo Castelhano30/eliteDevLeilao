@@ -167,3 +167,28 @@ label:has(input:focus-visible) {
 dialog::backdrop {
   background: rgba(30, 28, 25, 0.65);
 }
+
+/* O estado visual acompanha o script inicial, antes da hidratação do toggle. */
+.site-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-block: 12px; }
+.site-logo { flex: 1 1 auto; min-width: 0; }
+.site-theme { flex: 0 0 auto; }
+.site-account { flex: 1 1 100%; }
+.site-nav { flex: 1 1 100%; }
+.balance-control { max-width: 100%; }
+.balance-value { min-width: 14ch; max-width: 100%; overflow-wrap: anywhere; }
+@media (min-width: 768px) {
+  .site-account { flex: 0 1 auto; max-width: calc(100% - 300px); }
+}
+@media (min-width: 1200px) {
+  .site-logo { flex: 0 0 auto; }
+  .site-nav { flex: 1 1 260px; }
+  .site-account { max-width: 40%; }
+}
+
+.theme-sun { background: var(--c-ocre); color: var(--c-sobre-ocre); }
+[data-theme="noite"] .theme-sun { background: transparent; color: inherit; }
+[data-theme="noite"] .theme-moon { background: var(--c-ocre); color: var(--c-sobre-ocre); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="claro"]) .theme-sun { background: transparent; color: inherit; }
+  :root:not([data-theme="claro"]) .theme-moon { background: var(--c-ocre); color: var(--c-sobre-ocre); }
+}

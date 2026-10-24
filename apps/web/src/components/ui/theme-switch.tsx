@@ -1,49 +1,22 @@
 "use client";
 
-import { useId, useSyncExternalStore } from "react";
-import { applyThemeChoice, readThemeChoice, type ThemeChoice } from "@/lib/theme";
+import { useSyncExternalStore } from "react";
+import { applyThemeChoice, readDarkTheme, subscribeTheme } from "@/lib/theme";
+import { HeaderIcon } from "./header-icon";
 
-const OPTIONS: { value: ThemeChoice; label: string }[] = [
-  { value: "sistema", label: "Sistema" },
-  { value: "claro", label: "Claro" },
-  { value: "noite", label: "Noite" },
-];
-
-const listeners = new Set<() => void>();
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-/** Select nativo "Tema". Sistema é o padrão e remove a escolha gravada. */
 export function ThemeSwitch() {
-  const id = useId();
-  // No servidor e na hidratação vale "sistema"; depois o cliente lê o que está gravado.
-  const choice = useSyncExternalStore(subscribe, readThemeChoice, (): ThemeChoice => "sistema");
-
+  const dark = useSyncExternalStore(subscribeTheme, readDarkTheme, () => false);
   return (
-    <div className="flex items-center gap-2">
-      <label htmlFor={id} className="t-mono-rotulo">
-        Tema
-      </label>
-      <select
-        id={id}
-        value={choice}
-        onChange={(event) => {
-          applyThemeChoice(event.target.value as ThemeChoice);
-          listeners.forEach((listener) => listener());
-        }}
-        className="min-h-12 rounded-nenhum border-[3px] border-linha bg-fundo px-3 font-serif text-[19px] text-tinta"
-      >
-        {OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
+    <button
+      type="button"
+      role="switch"
+      aria-label="Tema escuro"
+      aria-checked={dark}
+      onClick={() => applyThemeChoice(dark ? "claro" : "noite")}
+      className="theme-toggle inline-flex min-h-alvo min-w-[44px] items-center justify-center gap-1 rounded-full border border-linha bg-fundo px-2 hover:bg-suave"
+    >
+      <span className="theme-sun rounded-full p-1"><HeaderIcon name="sun" /></span>
+      <span className="theme-moon rounded-full p-1"><HeaderIcon name="moon" /></span>
+    </button>
   );
 }
