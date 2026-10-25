@@ -29,6 +29,15 @@ describe("chooseOffset (R-4.10)", () => {
     expect(next).toMatchObject({ rtt: 800, at: later });
   });
 
+  it("relógio do aparelho atrasado de uma hora: a medição velha não fica valendo por mais uma hora", () => {
+    const old = chooseOffset(null, server, { sentAt: 10_000_000, receivedAt: 10_000_010 });
+    // 5 s depois no servidor, mas o aparelho voltou 1 h no meio: o `at` novo fica antes do velho.
+    const back = 10_000_010 - 3_600_000 + 5_000;
+    const next = chooseOffset(old, server + 5_000, { sentAt: back - 800, receivedAt: back });
+    expect(next).toMatchObject({ rtt: 800, at: back });
+    expect(next.offset).toBe(server + 5_000 - (back - 400));
+  });
+
   it("relógio do aparelho que andou para trás não gera latência negativa", () => {
     expect(chooseOffset(null, server, { sentAt: 2_000, receivedAt: 1_000 }).rtt).toBe(0);
   });

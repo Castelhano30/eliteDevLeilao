@@ -30,12 +30,13 @@ export const OFFSET_TTL_MS = 60_000;
 /**
  * R-4.10: o offset vem da medição de **menor latência** observada, assumindo que o servidor carimbou no meio da
  * viagem. O atraso de cada resposta, sozinho, não pode dar saltos no cronômetro. Medição mais velha que
- * `OFFSET_TTL_MS` cede o lugar à nova, mesmo mais lenta.
+ * `OFFSET_TTL_MS` cede o lugar à nova, mesmo mais lenta; a distância vale nos dois sentidos, porque o relógio do
+ * aparelho também pode ser atrasado (ajuste manual ou de fuso) e aí a medição velha estaria "no futuro".
  */
 export function chooseOffset(current: OffsetEstimate | null, serverMs: number, sample: ClockSample): OffsetEstimate {
   const rtt = Math.max(0, sample.receivedAt - sample.sentAt);
   const candidate: OffsetEstimate = { offset: serverMs - (sample.sentAt + rtt / 2), rtt, at: sample.receivedAt };
-  if (current === null || candidate.rtt <= current.rtt || candidate.at - current.at > OFFSET_TTL_MS) return candidate;
+  if (current === null || candidate.rtt <= current.rtt || Math.abs(candidate.at - current.at) > OFFSET_TTL_MS) return candidate;
   return current;
 }
 
