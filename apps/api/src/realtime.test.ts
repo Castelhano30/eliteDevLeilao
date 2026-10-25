@@ -6,6 +6,7 @@ import { createApp } from "./app";
 import { FakeClock } from "./infra/clock";
 import { createLogger } from "./infra/logger";
 import { fipeUnavailable, type CatalogPort } from "./infra/fipe";
+import type { ImageSuggestionPort } from "./infra/wikipedia";
 import { FORBIDDEN_KEYS, collectKeys, makeUser, postBid, type TestUser } from "../test/helpers/bids";
 import { TEST_JWT_SECRET, testEnv } from "../test/helpers/app";
 import { createTestPrisma, testDatabaseUrl, truncateAll } from "../test/helpers/db";
@@ -55,6 +56,16 @@ function forbiddenCatalog(calls: string[]): CatalogPort {
   };
 }
 
+/** O mesmo para a Wikipedia: o adaptador real, apontado para uma porta morta, falharia calado e sem registro. */
+function forbiddenImages(calls: string[]): ImageSuggestionPort {
+  return {
+    suggest: async () => {
+      calls.push("wikipedia");
+      return { status: "NOT_FOUND" };
+    },
+  };
+}
+
 describe.skipIf(!testDatabaseUrl)("tempo real (integração, socket.io-client + DATABASE_URL_TEST)", () => {
   const prisma = testDatabaseUrl ? createTestPrisma() : (undefined as never);
   let rt: RealtimeHarness;
@@ -80,7 +91,7 @@ describe.skipIf(!testDatabaseUrl)("tempo real (integração, socket.io-client + 
   beforeEach(async () => {
     await truncateAll(prisma);
     externalCalls = [];
-    rt = await startRealtime(prisma, { timeoutMs: 300, catalog: forbiddenCatalog(externalCalls) });
+    rt = await startRealtime(prisma, { timeoutMs: 300, catalog: forbiddenCatalog(externalCalls), images: forbiddenImages(externalCalls) });
     ana = await makeUser(rt.app, "Ana", { depositCents: 5_000_000 });
     bruno = await makeUser(rt.app, "Bruno", { depositCents: 4_000_000 });
     carla = await makeUser(rt.app, "Carla", { depositCents: 6_000_000 });
