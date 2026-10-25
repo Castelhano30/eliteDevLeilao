@@ -15,6 +15,7 @@ import { lotKey } from "../lot-query";
 import { clockMark, syncServerTime } from "../server-clock";
 import { getSocket } from "../socket";
 import { markSynced } from "./connection-status";
+import { createGapResync } from "./gap-resync";
 import { applyLotEvent } from "./lot-reducer";
 
 const ACK_TIMEOUT_MS = 8_000;
@@ -28,14 +29,15 @@ const RETRY_MS = 3_000;
  * - Depois do ack, `GET /lots/:id`. Só então a conexão vale como `live` (R-4.8): entrar na sala primeiro evita
  *   buraco entre o snapshot e os eventos. O snapshot não passa por cima de um cache mais novo (`mergeSnapshot`, no
  *   `queryFn` da Sala).
- * - Evento de outro lote é ignorado; salto de `version` refaz o `GET` e deixa o botão de lance inerte até aplicar.
+ * - Evento de outro lote é ignorado; salto de `version` refaz o `GET` e deixa o botão de lance inerte até aplicar
+ *   (`createGapResync`).
  * - `lot:leave` ao sair. Falha de ack ou de `GET` tenta de novo em 3 s enquanto conectado.
  *
- * Devolve `syncing`: há um refetch por salto em andamento (a Sala trata como desatualizada).
+ * Devolve `syncing`: há um salto de `version` ainda sem `GET` aplicado (a Sala trata como desatualizada).
  */
 export function useLotRoom(lotId: string, { enabled = true }: { enabled?: boolean } = {}): { syncing: boolean } {
   const queryClient = useQueryClient();
-  const [pending, setPending] = useState(0);
+  const [stale, setStale] = useState(false);
 
   useEffect(() => {
     if (!enabled) return;
@@ -49,6 +51,7 @@ export function useLotRoom(lotId: string, { enabled = true }: { enabled?: boolea
       await queryClient.refetchQueries({ queryKey: key, exact: true });
       return queryClient.getQueryState(key)?.status === "success";
     };
+    const gap = createGapResync({ refetch: refetchSnapshot, onStale: setStale, canRetry: () => socket.connected });
 
     const scheduleRetry = () => {
       clearTimeout(retry);
@@ -68,8 +71,9 @@ export function useLotRoom(lotId: string, { enabled = true }: { enabled?: boolea
         syncServerTime(ack.lot.serverTime, { sentAt, receivedAt: clockMark() });
         void refetchSnapshot().then((ok) => {
           if (disposed) return;
-          if (ok) markSynced();
-          else scheduleRetry();
+          if (!ok) return scheduleRetry();
+          markSynced();
+          gap.settle();
         });
       });
     }
@@ -82,10 +86,7 @@ export function useLotRoom(lotId: string, { enabled = true }: { enabled?: boolea
       if (result.action === "applied") {
         queryClient.setQueryData(key, result.state);
       } else if (result.action === "refetch") {
-        setPending((n) => n + 1);
-        void refetchSnapshot().finally(() => {
-          if (!disposed) setPending((n) => Math.max(0, n - 1));
-        });
+        gap.request();
       }
     };
     const onBid = (payload: BidPlacedPayload) => handle({ type: EVENTS.BID_PLACED, payload });
@@ -101,6 +102,7 @@ export function useLotRoom(lotId: string, { enabled = true }: { enabled?: boolea
     return () => {
       disposed = true;
       clearTimeout(retry);
+      gap.dispose();
       socket.off(EVENTS.BID_PLACED, onBid);
       socket.off(EVENTS.LOT_CLOSED, onClosed);
       socket.off(EVENTS.LOT_CANCELLED, onCancelled);
@@ -109,5 +111,5 @@ export function useLotRoom(lotId: string, { enabled = true }: { enabled?: boolea
     };
   }, [lotId, enabled, queryClient]);
 
-  return { syncing: pending > 0 };
+  return { syncing: stale };
 }
