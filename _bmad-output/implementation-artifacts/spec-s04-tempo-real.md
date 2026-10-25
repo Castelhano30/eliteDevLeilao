@@ -2,10 +2,10 @@
 title: 'S04 — Tempo real (Socket.IO: salas, eventos pós-commit, relógio, reconexão)'
 type: 'feature'
 created: '2026-10-24'
-status: 'in-review'
+status: 'done'
 baseline_commit: 'e7749a847163c3e61ac13245a2668e80c0181b80'
 route: 'dispatch'
-review_loop_iteration: 0
+review_loop_iteration: 1
 context:
   - '{project-root}/_bmad-output/specs/spec-lanceauto/SPEC.md'
   - '{project-root}/_bmad-output/specs/spec-lanceauto/slice-04-tempo-real.md'
@@ -95,3 +95,44 @@ Não conferido: leitor de tela real; Firefox e Safari; Tab pelos controles novos
 ## Spec Change Log
 
 ## Review Triage Log
+
+### Revisão de 25/10/2026 (`bmad-code-review`, diff `e7749a8..4732436`)
+
+Quatro revisores em paralelo (Blind Hunter, Edge Case Hunter, Verification Gap, Acceptance Auditor). Cada achado foi conferido no código antes do veredito. Nenhuma violação de INV/T: Socket.IO só transmite; eventos saem depois do commit e nunca em recusa; sem atualização otimista; nada de `Date` fora de `infra/clock.ts` na API; payloads sem `userId`, nome, e-mail ou token; `web` não importa `api`; ordem de locks e `Bid` append-only intocados. Resultado: 11 corrigidos, 3 adiados, 15 descartados.
+
+### Review Findings
+
+- [x] [Review][Patch] Bloqueio "desatualizado" se soltava com o `GET` do salto falho e sem nova tentativa; trocar de lote com o `GET` em voo deixava o botão inerte para sempre (§9.1, R-4.9 b) [apps/web/src/lib/realtime/use-lot-room.ts] — `6fac29d`, `createGapResync` + 5 testes; a mutação "solta na falha" derruba 2.
+- [x] [Review][Patch] `GET` do join que volta depois da queda marcava a conexão como sincronizada; na volta a página ficava `live` antes do novo join [apps/web/src/lib/realtime/connection-status.ts] — `749f529`; a mutação derruba 2 testes.
+- [x] [Review][Patch] Login e logout (`disconnect()` do próprio cliente) apareciam como queda: "Sem sinal" e "De volta ao pátio" por 4 s e lance travado [apps/web/src/lib/realtime/connection-status.ts] — `28ad7cf`; a mutação derruba 1 teste.
+- [x] [Review][Patch] Medição de offset velha não expirava quando o relógio do aparelho voltava (R-4.10) [apps/web/src/lib/server-clock.ts] — `b5dc0c5`; a mutação derruba 1 teste.
+- [x] [Review][Patch] AC-4.28 só vigiava a FIPE; a Wikipedia falhava calada numa porta morta [apps/api/src/realtime.test.ts] — `cd54c9f`; uma chamada indevida no `getLotState` agora derruba o teste.
+- [x] [Review][Patch] Teste do AC-4.10 prometia `POST /lots` e só chamava o depósito [apps/api/src/realtime.test.ts] — `004a62b`; sem o guarda no `lotsRouter`, cai.
+- [x] [Review][Patch] Nenhum teste de isolamento entre salas de lote [apps/api/src/realtime.test.ts] — `692826f`; um publisher que emite para todos derruba o teste.
+- [x] [Review][Patch] Recuo quebrado no depósito do seed [apps/api/prisma/seed.ts] — `d1abc87`.
+- [x] [Review][Patch] `FORBIDDEN_KEYS` sem `auctioneerId` e `token` (T9) [apps/api/test/helpers/bids.ts] — `ccc05cd`.
+- [x] [Review][Patch] Testes do `apiClient` com `Date.now` congelado não provavam a medição de menor latência [apps/web/src/lib/api-client.test.ts] — `3e7aada`; voltar a `syncServerTime(serverTime)` derruba o teste.
+- [x] [Review][Patch] DoD da fatia com dois itens `[x]` que o próprio texto diz pendentes (leitor de tela, dois aparelhos, Tab) [_bmad-output/specs/spec-lanceauto/slice-04-tempo-real.md] — `650c0c0`, reabertos como pendência do Felipe.
+- [x] [Review][Defer] `live` vale para o app todo, não por página: vindo da Vitrine, a Sala libera o lance antes do próprio join + `GET` (§10) [apps/web/src/lib/realtime/connection-status.ts] — deferred: janela curta, servidor valida; zerar ao montar traria banner a cada navegação; sugestão marcada no `deferred-work.md` (alvo S05).
+- [x] [Review][Defer] AC-4.18 e AC-4.19 provados só pela metade: o fluxo de reconexão do cliente (`useLotRoom`, `queryFn` da Sala) e a fiação do `BidForm` não têm teste [apps/web/src/lib/realtime/use-lot-room.ts] — deferred: sem DOM no Vitest do web; já era adiado; a parte estática cabe em `renderToStaticMarkup` (alvo S09).
+- [x] [Review][Defer] Vitrine consulta a cada 3 s sem teto enquanto houver cartão "apurando", e sem a S05 o lote vencido fica apurando para sempre [apps/web/src/components/vitrine.tsx] — deferred: é o que a §9.2 pede; a S05 tira o cartão de lá (alvo S05).
+
+**Descartados:**
+
+- `false`: texto "Sem sinal…" sob o botão nos 3 s iniciais. A tabela da §9 diz que `connecting` tem "Botão de lance desabilitado com o texto de bloqueio".
+- `false`: Painel sem consulta de 3 s. A §9.3 da fatia não pede (a fatia vence a frase do Code Map).
+- `false`: `NOT_FOUND` do join tirando a sala de um join posterior. Id inexistente não passa a existir (o servidor gera os ids); o join seguinte também dá `NOT_FOUND`.
+- `low`/contrato: falta `showcase:leave`. O contrato da §7 só tem `showcase:join`; o handler sai no unmount, o custo é só banda.
+- Spec: o snapshot do ack é descartado e o cliente refaz o `GET`. A §9.1 manda join e depois `GET`; o custo da leitura dupla já está no adiado do limite de `lot:join`.
+- `low`: ao montar, a Vitrine cancela o fetch inicial com o `refetchQueries` do join. É inofensivo.
+- `low`: bloqueio `stale` sem texto. A §9 diz "trata como `reconnecting` sem banner"; o texto de bloqueio fala de sinal, o que seria errado aqui, e um texto novo seria contrato. Só acontece em salto de `version`.
+- `low`: contagens da Vitrine atrás do `cardStatusAt`. O `useRefetchAtNextDeadline` refaz o `GET` 1 s depois do `startsAt`.
+- `low`: fases de 3 s e 10 s recomeçam a cada página montada. Só acontece com o WebSocket bloqueado e com navegação; o conserto exige um estado de tempo no módulo.
+- Pré-existente (S00): eventos sem zod e `DomainEvent.payload: unknown`. Mudar isso seria mudança de contrato.
+- `low`/contrato: `wallet:updated` sem ordem. Não há `version` no contrato; a corrida entre socket e HTTP de operações diferentes é improvável, e o próximo evento ou consulta corrige.
+- `low`: o `INTERNAL` do join mantém o socket na sala. É inofensivo, porque o cliente tenta o join de novo em 3 s.
+- `low`: `applyBidResponse` perde o `myRank` do servidor quando o evento chega antes. O `BidForm` invalida o lote depois do 201, e o `GET` traz o valor do servidor.
+- Spec: INV-1 × "evento não mexe no offset". É uma decisão registrada (pergunta 5 da §16).
+- `low`: a prova pós-commit do AC-4.2 é fraca. A garantia é estrutural (o service só devolve os eventos depois da transação) e não há teste confiável que a quebre.
+
+**Fechamento:** `lint`, `typecheck`, `test` (shared 77, api 278, web 195) e `build` com exit 0; deploy do `833468c` no Railway (web e API `SUCCESS`), `/health` ok e smoke público 11/11 (lance sem recarregar, "Você foi superado", queda e volta, logout sem banner). Status `in-review` → `done`: nenhum achado bloqueante sobrou.
