@@ -47,7 +47,7 @@ async function main() {
       }
       const { user: created } = await auth.register({ ...user, password: PASSWORD });
       // O seed não publica nada: ninguém está ouvindo, e os eventos do depósito são descartados.
-    if (depositCents > 0) await wallet.deposit(created.id, depositCents);
+      if (depositCents > 0) await wallet.deposit(created.id, depositCents);
       console.log(`Criado: ${user.email} (${user.role})`);
     }
 
