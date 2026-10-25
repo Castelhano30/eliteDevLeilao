@@ -83,3 +83,15 @@
   summary: Teste de componente para `useLotRoom`, `useShowcaseLive`, `useWalletLive` e para a fiação da Sala com o banner.
   evidence: O web não tem ambiente de DOM (Vitest em node): a lógica está em funções puras testadas e os hooks foram conferidos só no Chrome real (roteiro do item 62 do diário). Uma regressão na fiação não derrubaria nenhum teste automático.
   alvo: S09 (se decidirem adicionar jsdom ou Playwright)
+- source_spec: `_bmad-output/implementation-artifacts/spec-s04-tempo-real.md` (revisão da S04)
+  summary: Fazer o `live` valer por página: a Sala só libera o lance depois do próprio `lot:join` + `GET`, não pelo `markSynced` que a Vitrine ou o Painel deram antes.
+  evidence: `connection-status.ts` guarda um `synced` só para o app todo. Vindo da Vitrine com o socket conectado, a Sala abre `live` (botão liberado) antes do join dela; se o join dela falhar com `INTERNAL` em sequência, segue `live` fora de `lot:{id}`. A §10 diz "`live` só depois do join + snapshot HTTP aplicado". Janela curta e o servidor valida com `expectedCurrentCents`. Zerar o `synced` ao montar faria a Sala mostrar "Sem sinal" e "De volta" a cada navegação, por isso não entrou na revisão. **Sugestão:** `useLotRoom` devolve `syncing = true` enquanto o socket está conectado e esta montagem ainda não fez join + `GET` (bloqueio `stale`, sem banner nem texto de conexão).
+  alvo: S05 (mexe na Sala)
+- source_spec: `_bmad-output/implementation-artifacts/spec-s04-tempo-real.md` (revisão da S04)
+  summary: AC-4.18 e AC-4.19 só estão provados pela metade: falta o fluxo de reconexão do cliente (`useLotRoom` → `lot:join` → `GET` → `mergeSnapshot` no `queryFn` da Sala).
+  evidence: O teste da API compara o ack com o `GET` e o do web chama `mergeSnapshot` à mão; trocar o `queryFn` da Sala por `fetchLot` direto, ou tirar o `if (blockReason !== null) return` do `BidForm`, não derruba nenhum teste. A parte de apresentação já dá para testar sem DOM com `renderToStaticMarkup`, como o `balance-chip.test.tsx` faz (texto de bloqueio e `aria-describedby` do `BidForm`, o `ConnectionBanner`). Complementa a entrada dos testes de componente acima.
+  alvo: S09 (com jsdom ou Playwright; a parte estática pode entrar antes)
+- source_spec: `_bmad-output/implementation-artifacts/spec-s04-tempo-real.md` (revisão da S04)
+  summary: A Vitrine refaz `GET /lots` a cada 3 s, sem teto, enquanto houver cartão "apurando".
+  evidence: É o que a §9.2 pede, mas sem a rotina de fechamento (S05) um lote vencido fica `CLOSING` para sempre, e cada visitante da Vitrine aberta faz uma consulta a cada 3 s. A conferência de abertura tem teto (`OPENING_CHECKS`); esta não.
+  alvo: S05 (o `showcase:lot` do fechamento tira o cartão de "apurando"; conferir que o polling para em produção)
