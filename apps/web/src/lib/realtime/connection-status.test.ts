@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import type { Socket } from "socket.io-client";
 import {
   CONNECTING_BANNER_MS,
   CONNECTING_UNBLOCK_MS,
@@ -6,7 +7,11 @@ import {
   bannerTarget,
   bidBlockReason,
   connectingPhase,
+  connectionFacts,
   deriveConnectionStatus,
+  markSynced,
+  resetConnectionStatus,
+  trackSocketConnection,
   type BannerView,
   type ConnectingPhase,
   type ConnectionStatus,
@@ -89,5 +94,60 @@ describe("banner de conexão", () => {
   it("'De volta' espera o timer (4 s) e some; nova queda no meio volta a 'sem sinal'", () => {
     expect(run(["offline", "none", "none"])).toEqual(["offline", "back", "back"]);
     expect(run(["offline", "none", "offline"])).toEqual(["offline", "back", "offline"]);
+  });
+});
+
+/** Socket de mentira: só `connected`, `on`/`off` e um `fire` para disparar os eventos do cliente. */
+function fakeSocket() {
+  const handlers = new Map<string, ((...args: unknown[]) => void)[]>();
+  const fake = {
+    connected: false,
+    on(event: string, fn: (...args: unknown[]) => void) {
+      handlers.set(event, [...(handlers.get(event) ?? []), fn]);
+      return fake;
+    },
+    off(event: string, fn: (...args: unknown[]) => void) {
+      handlers.set(event, (handlers.get(event) ?? []).filter((h) => h !== fn));
+      return fake;
+    },
+    fire(event: string, ...args: unknown[]) {
+      for (const fn of handlers.get(event) ?? []) fn(...args);
+    },
+  };
+  return fake;
+}
+
+describe("store da conexão (trackSocketConnection + markSynced)", () => {
+  afterEach(() => resetConnectionStatus());
+
+  const track = () => {
+    const socket = fakeSocket();
+    const stop = trackSocketConnection(socket as unknown as Socket);
+    return { socket, stop };
+  };
+  const status = () => deriveConnectionStatus(connectionFacts());
+
+  it("o snapshot da página só vale com o socket conectado", () => {
+    const { socket, stop } = track();
+    markSynced();
+    expect(status()).toBe("connecting");
+    socket.fire("connect");
+    markSynced();
+    expect(status()).toBe("live");
+    stop();
+  });
+
+  it("GET que volta depois da queda não marca a conexão como sincronizada", () => {
+    const { socket, stop } = track();
+    socket.fire("connect");
+    markSynced();
+    socket.fire("disconnect", "transport close");
+    // O GET do join anterior chega agora, com o socket fora: a sala se perdeu com a queda.
+    markSynced();
+    socket.fire("connect");
+    expect(status()).toBe("reconnecting");
+    markSynced();
+    expect(status()).toBe("live");
+    stop();
   });
 });

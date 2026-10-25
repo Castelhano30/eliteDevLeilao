@@ -92,8 +92,12 @@ function update(patch: Partial<Snapshot>) {
   for (const listener of listeners) listener();
 }
 
-/** A página (Sala, Vitrine, Painel) aplicou o snapshot depois de entrar na sala: a conexão passa a valer. */
+/**
+ * A página (Sala, Vitrine, Painel) aplicou o snapshot depois de entrar na sala: a conexão passa a valer. Se o socket
+ * caiu enquanto o `GET` voava, não vale: a sala se perdeu com a queda e o `connect` seguinte refaz o join.
+ */
 export function markSynced(): void {
+  if (!snapshot.connected) return;
   update({ synced: true, everLive: true, lastSyncedAt: serverNow() });
 }
 
@@ -108,6 +112,11 @@ export function trackSocketConnection(socket: Socket): () => void {
     socket.off("connect", onConnect);
     socket.off("disconnect", onDisconnect);
   };
+}
+
+/** Só para testes. */
+export function connectionFacts(): ConnectionFacts {
+  return snapshot;
 }
 
 /** Só para testes. */
