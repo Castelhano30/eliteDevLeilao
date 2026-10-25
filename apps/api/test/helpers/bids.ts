@@ -49,8 +49,8 @@ export class RecordingPublisher implements Publisher {
   }
 }
 
-/** Chaves que nunca podem aparecer numa resposta pública (INV-13). */
-export const FORBIDDEN_KEYS = ["userId", "bidderId", "leaderId", "email", "name", "passwordHash"];
+/** Chaves que nunca podem aparecer numa resposta pública (INV-13) nem num evento (o token do comprovante, T9). */
+export const FORBIDDEN_KEYS = ["userId", "bidderId", "leaderId", "auctioneerId", "email", "name", "passwordHash", "token"];
 
 export function collectKeys(value: unknown, keys = new Set<string>()): Set<string> {
   if (Array.isArray(value)) for (const item of value) collectKeys(item, keys);
