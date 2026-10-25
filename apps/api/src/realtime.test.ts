@@ -326,6 +326,20 @@ describe.skipIf(!testDatabaseUrl)("tempo real (integração, socket.io-client + 
       await tick();
       expect(seen).toEqual([]);
     });
+
+    it("quem está em lot:A não recebe o bid:placed de lot:B", async () => {
+      const other = (await live()).id;
+      const visitor = await rt.open();
+      const seen = record(visitor, ["bid:placed"]);
+      await joinLot(visitor, lotId);
+      await postBid(rt.app, ana, other, 2_500_000);
+      await tick();
+      expect(seen).toEqual([]);
+
+      await postBid(rt.app, bruno, lotId, 2_500_000);
+      await tick();
+      expect(named(seen, "bid:placed").map((event) => event.payload.lotId)).toEqual([lotId]);
+    });
   });
 
   describe("Vitrine", () => {
