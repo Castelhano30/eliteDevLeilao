@@ -516,10 +516,33 @@ describe.skipIf(!testDatabaseUrl)("tempo real (integração, socket.io-client + 
             throw new Error("socket caiu");
           },
         },
+        external: {
+          timeoutMs: 300,
+          catalog: UNO_CATALOG,
+          images: { suggest: async () => ({ status: "NOT_FOUND" }) },
+          imageStore: { download: async () => null },
+        },
       });
-      const res = await request(app).post("/wallet/deposits").set("Authorization", ana.auth).send({ amountCents: 100_000 });
-      expect(res.status).toBe(201);
-      expect(res.body).not.toHaveProperty("events");
+      const deposit = await request(app).post("/wallet/deposits").set("Authorization", ana.auth).send({ amountCents: 100_000 });
+      expect(deposit.status).toBe(201);
+      expect(deposit.body).not.toHaveProperty("events");
+
+      const created = await request(app)
+        .post("/lots")
+        .set("Authorization", joao.auth)
+        .send({
+          brandId: "1",
+          modelId: "2",
+          yearId: "2010-1",
+          title: "Uno do guarda",
+          startingBidCents: 2_000_000,
+          minIncrementCents: 100_000,
+          startsAt: iso(NOW_MS + HOUR),
+          endsAt: iso(NOW_MS + 2 * HOUR),
+        });
+      expect(created.status).toBe(201);
+      expect(created.body).not.toHaveProperty("events");
+      expect(await prisma.lot.count({ where: { id: created.body.lot.id } })).toBe(1);
     });
   });
 });
