@@ -150,4 +150,21 @@ describe("store da conexão (trackSocketConnection + markSynced)", () => {
     expect(status()).toBe("live");
     stop();
   });
+
+  it("login e logout (disconnect do próprio cliente) não contam como queda: sem banner, lance travado até sincronizar", () => {
+    const { socket, stop } = track();
+    socket.fire("connect");
+    markSynced();
+    socket.fire("disconnect", "io client disconnect");
+    expect(status()).toBe("connecting");
+    expect(bannerTarget(status(), "quiet")).toBe("none");
+    expect(bidBlockReason({ status: status(), phase: "quiet", stale: false })).toBe("connection");
+    socket.fire("connect");
+    markSynced();
+    expect(status()).toBe("live");
+    // Uma queda de verdade, depois disso, volta a avisar.
+    socket.fire("disconnect", "transport close");
+    expect(status()).toBe("reconnecting");
+    stop();
+  });
 });

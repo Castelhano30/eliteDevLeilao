@@ -101,11 +101,19 @@ export function markSynced(): void {
   update({ synced: true, everLive: true, lastSyncedAt: serverNow() });
 }
 
-/** Alimenta o store com o socket compartilhado; devolve a limpeza. A queda invalida o snapshot da página. */
+/** Motivo do `disconnect()` chamado pelo próprio cliente (no login, logout e cadastro, para trocar o token, §9.4). */
+const CLIENT_DISCONNECT = "io client disconnect";
+
+/**
+ * Alimenta o store com o socket compartilhado; devolve a limpeza. A queda invalida o snapshot da página. A troca de
+ * token não é queda (`reconnecting` é "caiu depois de estar live", §9): volta a `connecting`, sem "Sem sinal" nem
+ * "De volta ao pátio".
+ */
 export function trackSocketConnection(socket: Socket): () => void {
   update({ connected: socket.connected });
   const onConnect = () => update({ connected: true });
-  const onDisconnect = () => update({ connected: false, synced: false });
+  const onDisconnect = (reason?: string) =>
+    update({ connected: false, synced: false, ...(reason === CLIENT_DISCONNECT ? { everLive: false } : {}) });
   socket.on("connect", onConnect);
   socket.on("disconnect", onDisconnect);
   return () => {
@@ -144,6 +152,8 @@ export function useConnectionStatus(): ConnectionView {
   const facts = useSyncExternalStore(subscribe, () => snapshot, () => INITIAL);
   const status = deriveConnectionStatus(facts);
   const [reached, setReached] = useState<ConnectingPhase>("quiet");
+  // Fora de `connecting` a contagem zera, para a próxima (troca de token) começar quieta (derivado no render, idempotente).
+  if (status !== "connecting" && reached !== "quiet") setReached("quiet");
 
   // Os timers só correm enquanto conecta pela primeira vez; fora disso a fase é sempre quieta (derivada, sem setState em efeito).
   useEffect(() => {
