@@ -244,6 +244,66 @@ describe.skipIf(!testDatabaseUrl)("tempo real (integração, socket.io-client + 
     });
   });
 
+  describe("lot:cancelled (S06)", () => {
+    const cancelOnce = (lot: string, confirmEntryCount: number) =>
+      request(rt.app).post(`/lots/${lot}/cancel`).set("Authorization", joao.auth).send({ confirmEntryCount });
+
+    it("S06 §7: sala do lote, Vitrine e carteira do líder recebem cada um o seu evento, com serverTime e sem dados pessoais", async () => {
+      await postBid(rt.app, ana, lotId, 2_500_000);
+      await postBid(rt.app, bruno, lotId, 2_600_000, 2_500_000);
+      const inLot = await rt.open();
+      const inShowcase = await rt.open();
+      const leaderTab = await rt.open(tokenOf(bruno));
+      const loserTab = await rt.open(tokenOf(ana));
+      await joinLot(inLot, lotId);
+      inShowcase.emit("showcase:join");
+      await tick();
+      const seenLot = record(inLot, ALL_EVENTS);
+      const seenShowcase = record(inShowcase, ALL_EVENTS);
+      const seenLeader = record(leaderTab, ALL_EVENTS);
+      const seenLoser = record(loserTab, ALL_EVENTS);
+
+      expect((await cancelOnce(lotId, 2)).status).toBe(200);
+      await tick();
+
+      const cancelled = named(seenLot, "lot:cancelled");
+      expect(cancelled).toHaveLength(1);
+      expect(cancelled[0]!.payload).toEqual({ lotId, version: 3, serverTime: expect.stringMatching(ISO_UTC_MS) });
+      expect(seenLot.map((event) => event.name)).toEqual(["lot:cancelled"]);
+
+      const card = named(seenShowcase, "showcase:lot");
+      expect(card).toHaveLength(1);
+      expect(card[0]!.payload).toMatchObject({ id: lotId, status: "CANCELLED", version: 3, serverTime: expect.stringMatching(ISO_UTC_MS) });
+      expect(seenShowcase.map((event) => event.name)).toEqual(["showcase:lot"]);
+
+      expect(seenLeader.map((event) => event.payload)).toEqual([
+        expect.objectContaining({ totalCents: 4_000_000, committedCents: 0, availableCents: 4_000_000 }),
+      ]);
+      expect(seenLoser).toEqual([]);
+
+      for (const seen of [seenLot, seenShowcase]) {
+        const keys = collectKeys(seen.map((event) => event.payload));
+        for (const key of FORBIDDEN_KEYS) expect(keys.has(key), key).toBe(false);
+      }
+    });
+
+    it("cancelamento recusado (contagem velha) não publica nada, para ninguém", async () => {
+      await postBid(rt.app, ana, lotId, 2_500_000);
+      const inLot = await rt.open();
+      const leaderTab = await rt.open(tokenOf(ana));
+      await joinLot(inLot, lotId);
+      await tick();
+      const seenLot = record(inLot, ALL_EVENTS);
+      const seenLeader = record(leaderTab, ALL_EVENTS);
+
+      expect((await cancelOnce(lotId, 0)).status).toBe(409);
+      await tick();
+
+      expect(seenLot).toEqual([]);
+      expect(seenLeader).toEqual([]);
+    });
+  });
+
   describe("conexão e visitante", () => {
     it("AC-4.7: token inválido ou expirado conecta como visitante, recebe o público e nunca user:*", async () => {
       const expired = jwt.sign({ role: "BIDDER" }, TEST_JWT_SECRET, { algorithm: "HS256", subject: ana.id, expiresIn: -10 });
