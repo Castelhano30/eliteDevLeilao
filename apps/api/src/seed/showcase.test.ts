@@ -2,12 +2,12 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { makeTestApp, registerUser, testEnv } from "../../test/helpers/app";
+import { makeTestApp, registerUser, testEnv, tokenFor } from "../../test/helpers/app";
 import { createTestPrisma, testDatabaseUrl, truncateAll } from "../../test/helpers/db";
 import { genesisHash, sealHash } from "../domain/audit-chain";
 import { FakeClock } from "../infra/clock";
 import { assertLotInvariants, makeUser } from "../../test/helpers/bids";
-import { makeFixtureCatalog, seedClosedLots, seedLiveBids, seedShowcaseLots, type FixtureCar } from "./showcase";
+import { makeFixtureCatalog, seedCancelledLot, seedClosedLots, seedLiveBids, seedShowcaseLots, type FixtureCar } from "./showcase";
 
 const baseDir = path.resolve(__dirname, "../../prisma");
 const cars = JSON.parse(readFileSync(path.join(baseDir, "fipe-fixture.json"), "utf8")) as FixtureCar[];
@@ -97,6 +97,21 @@ describe.skipIf(!testDatabaseUrl)("seed dos lotes (integração, sem rede)", () 
       expect(await seedLiveBids(deps)).toBe(5);
       expect(await seedLiveBids(deps)).toBe(0);
       expect(await prisma.bid.count()).toBe(5);
+    });
+
+    it("pula o lote cancelado ou encerrado sem lance, com log, em vez de falhar", async () => {
+      const { deps } = await setup();
+      const lot = await prisma.lot.findFirstOrThrow({ where: { title: "Fiat Uno Mille Way 2010" } });
+      const logs: string[] = [];
+      await prisma.lot.update({ where: { id: lot.id }, data: { cancelledAt: deps.clock.now() } });
+      expect(await seedLiveBids({ ...deps, log: (message) => void logs.push(message) })).toBe(0);
+      expect(logs.join(" ")).toMatch(/cancelado/);
+
+      await prisma.lot.update({ where: { id: lot.id }, data: { cancelledAt: null, endsAt: new Date(deps.clock.now().getTime() - 1000) } });
+      logs.length = 0;
+      expect(await seedLiveBids({ ...deps, log: (message) => void logs.push(message) })).toBe(0);
+      expect(logs.join(" ")).toMatch(/encerrou/);
+      expect(await prisma.bid.count()).toBe(0);
     });
 
     it("sem o lote, não faz nada", async () => {
@@ -244,6 +259,156 @@ describe.skipIf(!testDatabaseUrl)("seed dos lotes (integração, sem rede)", () 
           winnerEmail: "ana@lanceauto.test",
         }),
       ).rejects.toThrow(/lance de 5000000 centavos no lote \d+ foi recusado .*Saldo insuficiente/);
+    });
+  });
+
+  describe("seedCancelledLot (S06 §11)", () => {
+    async function setup() {
+      const { app, clock } = makeTestApp(prisma);
+      const { user } = await registerUser(app, { role: "AUCTIONEER", email: "leiloeiro@lanceauto.test" });
+      const ana = await makeUser(app, "Ana", { depositCents: 50_000_000 });
+      const bruno = await makeUser(app, "Bruno", { depositCents: 30_000_000 });
+      const logs: string[] = [];
+      const deps = {
+        db: prisma,
+        clock,
+        auditKey: testEnv.AUDIT_HMAC_KEY,
+        auctioneerId: user.id,
+        cars,
+        baseDir,
+        firstBidderEmail: "bruno@lanceauto.test",
+        leaderEmail: "ana@lanceauto.test",
+        log: (message: string) => void logs.push(message),
+      };
+      return { app, ana, bruno, auctioneerId: user.id, deps, logs };
+    }
+
+    /** Depois de qualquer seed: o comprometido de cada carteira é a soma dos lances dos lotes AO VIVO que ela lidera. */
+    async function expectBalanceInvariant() {
+      const live = await prisma.lot.findMany({ where: { cancelledAt: null, settledAt: null, leaderId: { not: null } } });
+      for (const wallet of await prisma.wallet.findMany()) {
+        const led = live.filter((lot) => lot.leaderId === wallet.userId).reduce((sum, lot) => sum + (lot.currentBidCents ?? 0n), 0n);
+        expect(wallet.committedCents).toBe(led);
+      }
+    }
+
+    it("cria o lote pelos services: dois lances, cancelamento com estorno ao líder, linha CANCEL e cadeia válida", async () => {
+      const { app, ana, bruno, auctioneerId, deps, logs } = await setup();
+      const result = await seedCancelledLot(deps);
+      expect(result).toEqual({ created: 1 });
+
+      const lot = await prisma.lot.findFirstOrThrow({ where: { title: "Chevrolet Onix 2020" } });
+      const realNow = deps.clock.now().getTime();
+      const start = realNow - 2 * 3_600_000;
+      expect(lot).toMatchObject({ bidCount: 2, entryCount: 3, leaderId: ana.id, currentBidCents: 2_050_000n });
+      expect(lot.startsAt.getTime()).toBe(start);
+      expect(lot.endsAt.getTime()).toBe(start + 10 * 24 * 3_600_000);
+      expect(lot.cancelledAt?.getTime()).toBe(start + 60 * 60_000);
+      const bids = await prisma.bid.findMany({ where: { lotId: lot.id }, orderBy: { seq: "asc" } });
+      expect(
+        bids.map((bid) => [
+          bid.seq,
+          bid.kind,
+          bid.bidderId === bruno.id ? "Bruno" : bid.bidderId === ana.id ? "Ana" : null,
+          bid.amountCents === null ? null : Number(bid.amountCents),
+          bid.at.getTime() - start,
+        ]),
+      ).toEqual([
+        [1, "BID", "Bruno", 2_000_000, 20 * 60_000],
+        [2, "BID", "Ana", 2_050_000, 30 * 60_000],
+        [3, "CANCEL", null, null, 60 * 60_000],
+      ]);
+      const ledger = await prisma.ledgerEntry.findMany({ where: { lotId: lot.id }, orderBy: { seq: "asc" } });
+      expect(ledger.map((entry) => [entry.kind, entry.userId === ana.id ? "Ana" : "Bruno", Number(entry.amountCents)])).toEqual([
+        ["HOLD", "Bruno", 2_000_000],
+        ["RELEASE", "Bruno", 2_000_000],
+        ["HOLD", "Ana", 2_050_000],
+        ["REFUND", "Ana", 2_050_000],
+      ]);
+      await assertLotInvariants(prisma, lot.id);
+      await expectBalanceInvariant();
+      for (const user of [ana, bruno]) {
+        expect((await prisma.wallet.findUniqueOrThrow({ where: { userId: user.id } })).committedCents).toBe(0n);
+      }
+
+      // Fora da Vitrine; no Painel do leiloeiro aparece cancelado, com o estorno.
+      expect((await request(app).get("/lots")).body.lots).toHaveLength(0);
+      const mine = await request(app).get("/my/lots").set("Authorization", `Bearer ${tokenFor(auctioneerId, "AUCTIONEER")}`);
+      expect(mine.body.lots).toHaveLength(1);
+      expect(mine.body.lots[0]).toMatchObject({ status: "CANCELLED", refundedCents: 2_050_000, bidCount: 2 });
+      expect(logs.join(" ")).toMatch(/cancelado/);
+    });
+
+    it("é idempotente: a segunda rodada não cria nem cancela de novo", async () => {
+      const { deps, logs } = await setup();
+      await seedCancelledLot(deps);
+      const before = { lots: await prisma.lot.count(), bids: await prisma.bid.count(), ledger: await prisma.ledgerEntry.count() };
+
+      expect(await seedCancelledLot(deps)).toEqual({ created: 0 });
+      expect(await prisma.lot.count()).toBe(before.lots);
+      expect(await prisma.bid.count()).toBe(before.bids);
+      expect(await prisma.ledgerEntry.count()).toBe(before.ledger);
+      expect(logs.filter((message) => message.includes("já existe"))).toHaveLength(1);
+    });
+
+    it("retoma o lote criado com um lance e ainda não cancelado", async () => {
+      const { deps } = await setup();
+      const { makeLotService } = await import("../services/lot.service");
+      const { makeBidService } = await import("../services/bid.service");
+      const { toDate } = await import("../infra/clock");
+      const start = deps.clock.now().getTime() - 2 * 3_600_000;
+      const fake = new FakeClock(toDate(start));
+      const car = cars.find((item) => item.key === "onix-2020")!;
+      const lots = makeLotService({
+        db: prisma,
+        clock: fake,
+        auditKey: testEnv.AUDIT_HMAC_KEY,
+        catalog: makeFixtureCatalog(cars, fake),
+        images: { suggest: async () => ({ status: "NOT_FOUND" }) },
+        imageStore: { download: async () => null },
+      });
+      const { response } = await lots.createLot(
+        deps.auctioneerId,
+        {
+          brandId: car.brandId,
+          modelId: car.modelId,
+          yearId: car.yearId,
+          title: "Chevrolet Onix 2020",
+          startingBidCents: 2_000_000,
+          minIncrementCents: 50_000,
+          startsAt: toDate(start).toISOString(),
+          endsAt: toDate(start + 10 * 24 * 3_600_000).toISOString(),
+        },
+        { allowPast: true },
+      );
+      const bruno = await prisma.user.findUniqueOrThrow({ where: { email: deps.firstBidderEmail } });
+      fake.set(toDate(start + 20 * 60_000));
+      await makeBidService({ db: prisma, clock: fake, auditKey: testEnv.AUDIT_HMAC_KEY }).placeBid(bruno.id, "BIDDER", response.lot.id, {
+        amountCents: 2_000_000,
+        expectedCurrentCents: null,
+      });
+
+      expect(await seedCancelledLot(deps)).toEqual({ created: 0 });
+      const lot = await prisma.lot.findUniqueOrThrow({ where: { id: response.lot.id } });
+      expect(lot).toMatchObject({ bidCount: 2, entryCount: 3 });
+      expect(lot.cancelledAt).not.toBeNull();
+      await assertLotInvariants(prisma, lot.id);
+      await expectBalanceInvariant();
+    });
+
+    it("falha com mensagem clara se uma das contas não existir", async () => {
+      const { deps } = await setup();
+      await expect(seedCancelledLot({ ...deps, leaderEmail: "ninguem@lanceauto.test" })).rejects.toThrow(
+        /a conta ninguem@lanceauto.test não existe/,
+      );
+    });
+
+    it("falha com mensagem clara se um lance for recusado (saldo insuficiente)", async () => {
+      const { app, deps } = await setup();
+      const poor = await makeUser(app, "Pobre", { depositCents: 1_000_000 });
+      await expect(seedCancelledLot({ ...deps, firstBidderEmail: poor.email })).rejects.toThrow(
+        /lance de 2000000 centavos no lote \d+ foi recusado .*Saldo insuficiente/,
+      );
     });
   });
 });

@@ -3,7 +3,7 @@ import path from "node:path";
 import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import { SystemClock } from "../src/infra/clock";
-import { seedClosedLots, seedLiveBids, seedShowcaseLots, type FixtureCar } from "../src/seed/showcase";
+import { seedCancelledLot, seedClosedLots, seedLiveBids, seedShowcaseLots, type FixtureCar } from "../src/seed/showcase";
 import { makeAuthService } from "../src/services/auth.service";
 import { makeWalletService } from "../src/services/wallet.service";
 
@@ -24,7 +24,7 @@ const USERS = [
 ];
 
 /**
- * Cria as contas de teste, os lotes de demonstração, os 5 lances do lote ao vivo e os dois lotes encerrados pelos services da aplicação, nunca por SQL direto.
+ * Cria as contas de teste, os lotes de demonstração, os 5 lances do lote ao vivo, os dois lotes encerrados e o lote cancelado pelos services da aplicação, nunca por SQL direto.
  * Contas: confere cada uma pelo e-mail e cria só as que faltam. Lotes: só se ainda não houver nenhum
  * (seguro a cada deploy). `--demo` (`npm run seed:demo`) cria um lote ao vivo novo, sem rede.
  */
@@ -69,6 +69,18 @@ async function main() {
       baseDir: __dirname,
       rivalEmail: BRUNO_EMAIL,
       winnerEmail: ANA_EMAIL,
+      log: (message) => console.log(message),
+    });
+    // Lote cancelado de demonstração (dois lances, estorno ao líder e linha CANCEL), pelos mesmos services. Idempotente.
+    await seedCancelledLot({
+      db,
+      clock,
+      auditKey,
+      auctioneerId: auctioneer.id,
+      cars,
+      baseDir: __dirname,
+      firstBidderEmail: BRUNO_EMAIL,
+      leaderEmail: ANA_EMAIL,
       log: (message) => console.log(message),
     });
   } finally {
