@@ -165,7 +165,9 @@ export interface MyLotUpsert {
 export function upsertMyLot(data: MyLotsResponse, card: LotCard): MyLotUpsert {
   const current = data.lots.find((lot) => lot.id === card.id);
   if (!current || card.version < current.version || olderThanFinal(current, card)) return { data, refetch: false };
-  const final = card.status === "SOLD" || card.status === "UNSOLD" || card.status === "CANCELLED";
+  // Cancelado: a linha só muda de seção quando o `GET` trouxer `cancelledAt` e o estorno (INV-1, S06 §7).
+  if (card.status === "CANCELLED") return { data, refetch: current.status !== "CANCELLED" };
+  const final = card.status === "SOLD" || card.status === "UNSOLD";
   return {
     // O cartão do evento não traz o resultado: a linha guarda o que já tinha e o `GET` seguinte o traz (R-5.8).
     data: { ...data, lots: data.lots.map((lot) => (lot.id === card.id ? { ...card, resultado: lot.resultado, refundedCents: lot.refundedCents } : lot)) },

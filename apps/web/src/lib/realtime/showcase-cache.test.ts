@@ -236,6 +236,19 @@ describe("upsertMyLot (Painel, §9.3)", () => {
     expect(upsertMyLot(data, card({ id: "a", version: 2 }))).toEqual({ data, refetch: false });
   });
 
+  it("S06: cartão CANCELLED não mexe na linha (estorno e horário vêm do GET) e só pede o GET uma vez", () => {
+    const data = mine();
+    const cancelled = card({ id: "a", version: 4, status: "CANCELLED", cancelledAt: "2026-10-24T15:00:00.000Z" });
+    const result = upsertMyLot(data, cancelled);
+    expect(result.data).toBe(data);
+    expect(result.refetch).toBe(true);
+
+    const confirmed: MyLotsResponse = { ...data, lots: [{ ...row({ id: "a", version: 4, status: "CANCELLED" }), refundedCents: 2_050_000 }] };
+    const again = upsertMyLot(confirmed, cancelled);
+    expect(again.data).toBe(confirmed);
+    expect(again.refetch).toBe(false);
+  });
+
   it("lote próprio que chega a SOLD, UNSOLD ou CANCELLED pede GET /my/lots; repetir o estado final não", () => {
     for (const status of ["SOLD", "UNSOLD", "CANCELLED"] as const) {
       expect(upsertMyLot(mine(), card({ id: "a", version: 3, status })).refetch).toBe(true);
