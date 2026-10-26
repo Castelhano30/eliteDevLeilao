@@ -31,6 +31,8 @@ export function Stamp({ variant, animate = false, rotate: resting, className = "
         outline: spec.dashed ? undefined : `2px solid ${spec.color}`,
         outlineOffset: spec.dashed ? undefined : "3px",
         transform: `rotate(${rotate}deg)`,
+        // O carimbo "bate" até a inclinação de repouso (keyframe `la-bate`).
+        ["--rot" as string]: `${rotate}deg`,
         animation: animate ? "la-bate 0.6s cubic-bezier(0.2, 0.8, 0.3, 1) both" : undefined,
       }}
     >

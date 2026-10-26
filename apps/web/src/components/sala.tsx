@@ -2,19 +2,22 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRef, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import {
   LOT_TEXT,
   brasiliaDayAndTime,
+  cancelledAtLabel,
   formatBRL,
   formatReferenceMonth,
   type LotState,
 } from "@lanceauto/shared";
 import { useAuth } from "@/components/auth-provider";
 import { ConnectionBanner } from "@/components/connection-banner";
+import { BidHistory } from "@/components/lots/bid-history";
 import { BidPanel } from "@/components/lots/bid-panel";
 import { CarPhoto } from "@/components/lots/car-photo";
 import { Cronometro } from "@/components/lots/cronometro";
+import { FaixaStatus } from "@/components/lots/faixa-status";
 import { buttonClasses } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { LotTag } from "@/components/ui/lot-tag";
@@ -80,6 +83,9 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
   const state = query.data;
   const now = useServerNow(state?.serverTime);
   const lot = state?.lot;
+  // O carimbo do cancelado só "bate" (e o aviso só é anunciado) se esta sessão viu o lote ainda ativo (estado derivado).
+  const [sawActive, setSawActive] = useState(false);
+  if (lot && !sawActive && lot.status !== "CANCELLED") setSawActive(true);
   // Cruzou o início ou o fim: pede o estado ao servidor (o relógio do aparelho não decide nada).
   const boundary = lot ? (lot.status === "SCHEDULED" ? Date.parse(lot.startsAt) : lot.status === "LIVE" ? Date.parse(lot.endsAt) : null) : null;
   useOnReach(boundary === null ? null : boundary + 500, now, () => void query.refetch());
@@ -117,11 +123,18 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
 
   let panel: ReactNode;
   if (status === "CANCELLED") {
+    // Sem formulário nem CTA de lance para ninguém; o histórico fica (lê só o banco) e a linha CANCEL é da Auditoria (S08).
     panel = (
       <div className="space-y-5">
-        <Stamp variant="cancelado" />
+        <Cronometro size="sala" status={status} startsAt={lot.startsAt} endsAt={lot.endsAt} originalEndsAt={lot.originalEndsAt} serverTime={state.serverTime} />
+        <div>
+          <Stamp variant="cancelado" animate={sawActive} rotate={-4} />
+        </div>
+        <FaixaStatus title="Lote cancelado" />
         <p className="t-body-lead">{LOT_TEXT.cancelledBody}</p>
+        {lot.cancelledAt ? <p className="t-mono">{cancelledAtLabel(lot.cancelledAt)}</p> : null}
         <BackToShowcase />
+        <BidHistory bids={state.bids} myPseudonym={lot.myPseudonym} />
       </div>
     );
   } else if (status === "SCHEDULED") {
@@ -151,6 +164,10 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
   return shell(
     <>
       <ConnectionBanner view={banner} lastSyncedAt={connection.lastSyncedAt} />
+      {/* Região viva sempre montada: o cancelamento visto ao vivo é anunciado, a Sala aberta já cancelada não repete. */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {status === "CANCELLED" && sawActive ? LOT_TEXT.cancelledBody : ""}
+      </p>
       {query.isError ? (
         <FeedbackState variant="erro" onRetry={() => void query.refetch()} className="mb-6">
           Não consegui atualizar o lote. Os dados abaixo estão desatualizados.
