@@ -11,6 +11,8 @@ export interface CancelDialogState {
 }
 
 export type CancelDialogAction =
+  /** Abre o diálogo para outro lote (ou o mesmo, de novo): volta ao estado inicial com a contagem do Painel. */
+  | { type: "open"; bidCount: number }
   | { type: "submit" }
   /** `showcase:lot` ou nova leitura do Painel trouxe uma contagem. */
   | { type: "bids"; bidCount: number }
@@ -25,6 +27,8 @@ export function initialCancelDialog(bidCount: number): CancelDialogState {
 
 export function cancelDialogReducer(state: CancelDialogState, action: CancelDialogAction): CancelDialogState {
   switch (action.type) {
+    case "open":
+      return initialCancelDialog(action.bidCount);
     case "submit":
       // Envio duplo (duplo clique, Enter repetido) é ignorado.
       return state.status === "submitting" ? state : { status: "submitting", bidCount: state.bidCount, message: null };

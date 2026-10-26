@@ -9,6 +9,11 @@ describe("estado do diálogo de cancelamento (S06 §10)", () => {
     expect(open(2)).toEqual({ status: "idle", bidCount: 2, message: null });
   });
 
+  it("abrir de novo zera mensagem e estado, com a contagem atual do Painel", () => {
+    const stale = cancelDialogReducer(cancelDialogReducer(open(2), { type: "submit" }), { type: "changed", entryCount: 3 });
+    expect(cancelDialogReducer(stale, { type: "open", bidCount: 5 })).toEqual({ status: "idle", bidCount: 5, message: null });
+  });
+
   it("idle → submitting → changed (LOT_CHANGED atualiza a contagem e mostra a mensagem) → submitting", () => {
     let state = cancelDialogReducer(open(2), { type: "submit" });
     expect(state.status).toBe("submitting");
