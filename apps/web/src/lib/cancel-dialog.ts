@@ -1,4 +1,4 @@
-import { CANCEL_TEXT, lotChangedMessage, type ErrorEnvelope } from "@lanceauto/shared";
+import { CANCEL_TEXT, lotChangedMessage, newBidMessage, type ErrorEnvelope } from "@lanceauto/shared";
 
 /** Estados do diálogo de cancelamento (S06 §10). `changed`: o servidor viu outra contagem e pede nova confirmação. */
 export type CancelDialogStatus = "idle" | "submitting" | "changed" | "error";
@@ -31,7 +31,8 @@ export function cancelDialogReducer(state: CancelDialogState, action: CancelDial
     case "bids":
       // A contagem só sobe (evento atrasado não a devolve) e não muda sob os pés de quem acabou de confirmar.
       if (state.status === "submitting" || action.bidCount <= state.bidCount) return state;
-      return { ...state, bidCount: action.bidCount };
+      // Em idle, o aviso polite diz que entrou lance; em changed/error a mensagem de recusa continua a que está.
+      return { ...state, bidCount: action.bidCount, message: state.status === "idle" ? newBidMessage(action.bidCount) : state.message };
     case "changed":
       return { status: "changed", bidCount: action.entryCount, message: lotChangedMessage(action.entryCount) };
     case "failed":

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { brasiliaParts } from "./brasilia";
 import { formatLotNumber } from "./catalog";
 import { formatBRL } from "./money";
 
@@ -58,4 +59,17 @@ export function lotChangedMessage(entryCount: number): string {
 export function cancelDoneMessage(lotNumber: number, refundedCents: number | null): string {
   const base = `Lote ${formatLotNumber(lotNumber)} cancelado.`;
   return refundedCents === null ? base : `${base} Estorno de ${formatBRL(refundedCents)} devolvido a quem liderava.`;
+}
+
+/** Aviso com o diálogo aberto quando entra lance novo: a contagem do título já acompanha (texto a revisar, S06 §9.1). */
+export function newBidMessage(bidCount: number): string {
+  return `Chegou lance novo: agora ${bidCount === 1 ? "é 1 lance" : `são ${bidCount} lances`}.`;
+}
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** "Cancelado em 26/10 às 20:36:12" (Brasília, com segundos), da Sala cancelada (S06 §9.2). */
+export function cancelledAtLabel(iso: string): string {
+  const p = brasiliaParts(iso);
+  return `Cancelado em ${pad(p.day)}/${pad(p.month)} às ${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}`;
 }

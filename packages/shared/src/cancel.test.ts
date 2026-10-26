@@ -5,7 +5,9 @@ import {
   cancelDialogTitle,
   cancelDoneMessage,
   cancelLotSchema,
+  cancelledAtLabel,
   lotChangedMessage,
+  newBidMessage,
   pluralBids,
 } from "./cancel";
 
@@ -59,6 +61,16 @@ describe("plural e textos do cancelamento", () => {
   it("confirmação do Painel: com e sem estorno", () => {
     expect(cancelDoneMessage(19, null)).toBe("Lote 019 cancelado.");
     expect(cancelDoneMessage(19, 2_050_000)).toBe("Lote 019 cancelado. Estorno de R$ 20.500,00 devolvido a quem liderava.");
+  });
+
+  it("aviso de lance novo concorda com o número", () => {
+    expect(newBidMessage(3)).toBe("Chegou lance novo: agora são 3 lances.");
+    expect(newBidMessage(1)).toBe("Chegou lance novo: agora é 1 lance.");
+  });
+
+  it("cancelledAtLabel: dd/mm às HH:mm:ss em Brasília (UTC−3), virando o dia", () => {
+    expect(cancelledAtLabel("2026-10-26T20:36:12.967Z")).toBe("Cancelado em 26/10 às 17:36:12");
+    expect(cancelledAtLabel("2026-10-27T02:05:09.000Z")).toBe("Cancelado em 26/10 às 23:05:09");
   });
 
   it("mensagens fixas da §8", () => {

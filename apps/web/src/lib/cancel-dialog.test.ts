@@ -30,9 +30,13 @@ describe("estado do diálogo de cancelamento (S06 §10)", () => {
   it("a contagem acompanha os eventos do mesmo lote, para cima, enquanto o diálogo não está enviando", () => {
     let state = cancelDialogReducer(open(2), { type: "bids", bidCount: 3 });
     expect(state.bidCount).toBe(3);
+    expect(state.message).toBe("Chegou lance novo: agora são 3 lances.");
     // evento atrasado não volta a contagem
     state = cancelDialogReducer(state, { type: "bids", bidCount: 2 });
     expect(state.bidCount).toBe(3);
+    // em changed a mensagem de recusa não é trocada pelo aviso de lance novo
+    const changed = cancelDialogReducer(cancelDialogReducer(open(2), { type: "submit" }), { type: "changed", entryCount: 3 });
+    expect(cancelDialogReducer(changed, { type: "bids", bidCount: 4 })).toEqual({ ...changed, bidCount: 4 });
     // durante o envio a contagem enviada não muda sob os pés do usuário
     const sending = cancelDialogReducer(state, { type: "submit" });
     expect(cancelDialogReducer(sending, { type: "bids", bidCount: 9 }).bidCount).toBe(3);
