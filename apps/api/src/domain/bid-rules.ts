@@ -18,6 +18,8 @@ export interface BidLot {
   startsAt: Date;
   endsAt: Date;
   cancelledAt: Date | null;
+  /** Liquidado: o lote não aceita mais lance, mesmo que o relógio acuse `now < endsAt` (R-5.11). */
+  settledAt: Date | null;
   startingBidCents: number;
   minIncrementCents: number;
   currentBidCents: number | null;
@@ -59,7 +61,7 @@ export function validateBidPreWallet(input: BidInput): { ok: true; minimumCents:
     const startsAt = lot.startsAt.toISOString();
     return { ok: false, code: "LOT_NOT_STARTED", message: lotNotStartedMessage(startsAt), details: { startsAt } };
   }
-  if (nowMs >= lot.endsAt.getTime()) {
+  if (nowMs >= lot.endsAt.getTime() || lot.settledAt !== null) {
     return { ok: false, code: "LOT_ENDED", message: lotEndedMessage(lot.endsAt.toISOString()) };
   }
 

@@ -39,6 +39,7 @@ interface LockedLot {
   endsAt: Date;
   originalEndsAt: Date;
   cancelledAt: Date | null;
+  settledAt: Date | null;
   startingBidCents: bigint;
   minIncrementCents: bigint;
   currentBidCents: bigint | null;
@@ -67,7 +68,7 @@ export function makeBidService({ db, clock, auditKey }: BidServiceDeps) {
       try {
         return await db.$transaction(async (tx) => {
           const locked = await tx.$queryRaw<LockedLot[]>`
-            SELECT "id", "startsAt", "endsAt", "originalEndsAt", "cancelledAt", "startingBidCents", "minIncrementCents",
+            SELECT "id", "startsAt", "endsAt", "originalEndsAt", "cancelledAt", "settledAt", "startingBidCents", "minIncrementCents",
                    "currentBidCents", "leaderId", "bidCount", "entryCount", "lastHash"
             FROM "Lot" WHERE "id" = ${lotId} FOR UPDATE`;
           const lot = locked[0];
@@ -80,6 +81,7 @@ export function makeBidService({ db, clock, auditKey }: BidServiceDeps) {
             startsAt: lot.startsAt,
             endsAt: lot.endsAt,
             cancelledAt: lot.cancelledAt,
+            settledAt: lot.settledAt,
             startingBidCents: toNumber(lot.startingBidCents),
             minIncrementCents: toNumber(lot.minIncrementCents),
             currentBidCents,

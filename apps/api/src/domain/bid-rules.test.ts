@@ -8,6 +8,7 @@ const lot = (over: Partial<BidLot> = {}): BidLot => ({
   startsAt: at("2026-10-24T14:00:00.000Z"),
   endsAt: at("2026-10-24T20:00:00.000Z"),
   cancelledAt: null,
+  settledAt: null,
   startingBidCents: 2_500_000,
   minIncrementCents: 100_000,
   currentBidCents: null,
@@ -45,6 +46,15 @@ describe("validateBidPreWallet", () => {
       ok: false,
       code: "LOT_NOT_STARTED",
       details: { startsAt: "2026-10-24T14:00:00.000Z" },
+    });
+  });
+
+  it("liquidado recusa com LOT_ENDED mesmo com o relógio antes do fim (R-5.11)", () => {
+    const settledAt = at("2026-10-24T14:50:00.000Z");
+    expect(validateBidPreWallet(input({}, { settledAt }))).toMatchObject({
+      ok: false,
+      code: "LOT_ENDED",
+      message: "Martelo batido às 17:00. Este lote não aceita mais lances.",
     });
   });
 
