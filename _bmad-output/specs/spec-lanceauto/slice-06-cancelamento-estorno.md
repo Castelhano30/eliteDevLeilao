@@ -350,10 +350,22 @@ Conflitos resolvidos (precedência progresso.md > PRD > arquitetura > EXPERIENCE
 7. **Texto de `LOT_CANCELLED` na recusa de lance**: o PRD diz "Este lote foi cancelado pelo leiloeiro."; o EXPERIENCE e a primeira versão da S03/S06 usavam o texto longo ("O leiloeiro cancelou este lote. Nada foi vendido e todo saldo travado voltou."). Vence o PRD: o `RefusalMessage` usa o texto do PRD; o texto longo fica só no aviso da Sala cancelada (§9.2). A S03 deve alinhar a tabela de mensagens e o AC-3.4 ao texto do PRD.
 8. **Textos do extrato (`REFUND`/`RELEASE`)**: a versão anterior desta fatia reescrevia os rótulos já fixados nos AC da S01/S03. Vencem os textos da S01/S03, como constantes únicas em `packages/shared`; a S06 não os altera.
 
-Perguntas abertas:
-1. Confirmar que o cancelamento de lote SEM lances também gera a linha CANCEL na cadeia (sugestão: sim, como especificado). Alternativa: só gravar `cancelledAt` e a Auditoria mostrar o cancelamento a partir da coluna.
-2. Textos marcados "(texto a revisar)" em §8 foram escritos aqui por falta de texto nas fontes; revisar o tom antes do polimento.
-3. Sala cancelada: faltou desenho; o carimbo −4° e o aviso são derivados do DESIGN ("carimbo em tinta2, aviso e histórico, sem CTA de lance"), sem mock.
+Decisões do build (26/10/2026, sem subagente):
+1. **Railway no lugar de Neon/Render/Vercel:** onde a fatia diz Neon/Render/Vercel, leia Railway (a mesma adaptação da S05). Esta fatia **não tem migração**; a DoD "migração aplicada" vale como "sem migração, confirmado" (`migrate deploy` no start da API do Railway disse "No pending migrations to apply").
+2. **`DomainEvent` é `{ type, room, payload }`** (a fatia escreve `event` em alguns pontos). `lot:cancelled` leva `{ lotId, version, serverTime }`: o service o produz sem `serverTime` e o `Publisher` carimba.
+3. **Texto de `LOT_CANCELLED` na recusa de lance (item 7 acima):** o código (`BID_TEXT.lotCancelled` e a mensagem padrão da API) e a S03 (tabela de mensagens, AC-3.4 e §16) **já usavam o texto do PRD** quando a S06 começou; conferi por busca nos documentos e não havia texto antigo para trocar. O texto longo continua só como aviso da Sala cancelada (`LOT_TEXT.cancelledBody`).
+4. **Onde vive o service:** `services/cancel.service.ts` (`makeCancelService`, `cancelLot(userId, lotId, confirmEntryCount)`), não dentro do `lot.service.ts`. A resposta é `LotState` montado na própria transação (`summarizeBids`, extraído do `getLotState`), sem `myPseudonym`, posição nem dado do líder.
+5. **Contratos que já existiam** e só foram conferidos: `LotState.lot.cancelledAt`, `LotCard.cancelledAt`, `LedgerEntryDto.lotNumber`, `BID_TEXT.lotCancelled`, `entryHash` com `CANCEL`. **O que entrou:** `MyLotCard.refundedCents` (`bidCount > 0` → `currentBidCents`, sem coluna nova: todo lote com lance tem líder), `cancelLotSchema` e `CANCEL_TEXT` com plural e concordância ("Agora é 1 lance", "Agora não há lances.").
+6. **Painel e INV-1:** o `showcase:lot` CANCELLED de lote próprio **não** altera a linha (o cartão não traz estorno nem horário): só pede `GET /my/lots`, e a linha vai para "Cancelados" com os dados da resposta. O aviso opcional "Chegou lance novo: agora são {N}." **entrou** (o mínimo obrigatório, `LOT_CHANGED`, continua sendo a garantia).
+7. **Falha de rede ambígua:** o diálogo não reenvia sozinho; na tentativa seguinte refaz `GET /my/lots` antes e trata lote já cancelado como sucesso, sem novo `POST`. Se o cancelamento aconteceu e a resposta se perdeu **mas o `showcase:lot` chegou**, o Painel descobre pelo evento e fecha o diálogo com "Este lote já foi cancelado." (é o comportamento da §9.1 para evento de cancelamento do mesmo lote com o diálogo aberto).
+8. **Sala cancelada:** além do carimbo, aviso e horário, mantém o histórico de lances e o cronômetro "ENCERRADO 00:00"; a região viva `aria-live` fica sempre montada e só anuncia o cancelamento visto ao vivo. O carimbo "bate" até a inclinação de repouso por uma variável CSS (`--rot`), então o Cancelado para em −4° e o reduced-motion já o mostra em −4°. `Dialog` ganhou `dismissible` e `describedBy`; os botões dos diálogos passaram a ter altura mínima de 52 px.
+9. **Seed:** "Chevrolet Onix 2020", `seedCancelledLot`, idempotente por título e com retomada de lote parcial. Em produção o primeiro deploy com o seed criou o **lote 010** cancelado de demonstração (efeito registrado no diário, item 77). O `seedLiveBids` passou a pular lote cancelado ou vencido.
+10. **Revisão em paralelo (step-04):** não rodou; fica para o `bmad-code-review` se o Felipe pedir.
+
+Perguntas abertas, com a sugestão adotada:
+1. **Linha CANCEL em lote sem lances:** sim, sempre (como especificado). Regra única, histórico completo e a Auditoria abre para qualquer lote. É a mesma Q3 do SPEC.
+2. **Textos "(texto a revisar)" da §8:** mantidos como escritos, com duas concordâncias a mais ("Agora é 1 lance", "Agora não há lances.") e o aviso "Chegou lance novo…". A revisão de voz fica para a S09.
+3. **Sala cancelada sem desenho:** carimbo −4° e aviso derivados do DESIGN, sem mock, conferidos no Chrome real nos dois temas e a 390 px. Sem links para a Auditoria até a S08.
 
 ## 17. Definition of Done
 
