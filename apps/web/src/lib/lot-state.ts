@@ -31,18 +31,22 @@ export interface OpeningChecks {
 export const INITIAL_OPENING_CHECKS: OpeningChecks = { seenAt: null, count: 0 };
 
 /**
- * Passo puro da conferência de abertura. O TanStack reavalia o `refetchInterval` a cada render, então contar
+ * Passo puro da conferência de abertura (e, com `limit`, de qualquer polling com teto, como o da Vitrine apurando). O TanStack reavalia o `refetchInterval` a cada render, então contar
  * avaliações gastaria as tentativas em segundos: só conta quando chega uma resposta nova (`dataUpdatedAt` mudou).
  * A carga que já estava na tela não conta como conferência.
  */
-export function nextOpeningCheck(prev: OpeningChecks, dataUpdatedAt: number): { next: OpeningChecks; keepPolling: boolean } {
+export function nextOpeningCheck(
+  prev: OpeningChecks,
+  dataUpdatedAt: number,
+  limit: number = OPENING_CHECKS,
+): { next: OpeningChecks; keepPolling: boolean } {
   const next: OpeningChecks =
     prev.seenAt === null
       ? { seenAt: dataUpdatedAt, count: 0 }
       : prev.seenAt === dataUpdatedAt
         ? prev
         : { seenAt: dataUpdatedAt, count: prev.count + 1 };
-  return { next, keepPolling: next.count < OPENING_CHECKS };
+  return { next, keepPolling: next.count < limit };
 }
 
 // ---------------------------------------------------------------- viewer × estado (§9.2)
@@ -96,7 +100,7 @@ export function situationText(situation: Situation): BandText {
     case "auctioneer":
       return { title: "Leiloeiros não podem dar lances", sub: "Você vê a Sala como espectador." };
     case "closing":
-      return { title: "Martelo batido. Apurando o resultado…", sub: "" };
+      return { title: "Martelo batido", sub: "Apurando o resultado…" };
   }
 }
 

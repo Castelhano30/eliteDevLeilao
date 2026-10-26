@@ -65,7 +65,7 @@ describe("deriveSituation (viewer × estado)", () => {
 
   it("apurando vale para todos; agendado, cancelado e encerrado não têm faixa", () => {
     expect(deriveSituation({ ...live, status: "CLOSING", myRank: 1, myBestBidCents: 1 }, { role: "BIDDER" })).toEqual({ kind: "closing" });
-    expect(situationText({ kind: "closing" }).title).toBe("Martelo batido. Apurando o resultado…");
+    expect(situationText({ kind: "closing" })).toEqual({ title: "Martelo batido", sub: "Apurando o resultado…" });
     for (const status of ["SCHEDULED", "CANCELLED", "SOLD", "UNSOLD"] as const) {
       expect(deriveSituation({ ...live, status, myRank: null, myBestBidCents: null }, null)).toBeNull();
     }
@@ -118,6 +118,14 @@ describe("nextOpeningCheck", () => {
     let current = nextOpeningCheck(INITIAL_OPENING_CHECKS, 1_000).next;
     for (let render = 0; render < 50; render++) current = nextOpeningCheck(current, 1_000).next;
     expect(current.count).toBe(0);
+  });
+
+  it("com limite próprio, para na resposta que o atinge", () => {
+    let step = nextOpeningCheck(INITIAL_OPENING_CHECKS, 0, 3);
+    for (let check = 1; check <= 3; check++) {
+      step = nextOpeningCheck(step.next, check * 3_000, 3);
+      expect(step.keepPolling).toBe(check < 3);
+    }
   });
 
   it("cada resposta nova do servidor conta uma e, na décima, para de insistir", () => {

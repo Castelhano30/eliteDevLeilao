@@ -78,6 +78,14 @@ export function applyLotEvent(state: LotState, event: LotEvent): LotReduction {
 }
 
 /**
+ * O `lot:closed` não leva `result` nem token: depois de aplicado, o cliente refaz o `GET /lots/:id` para obtê-los
+ * (S05 §7). Evento descartado ou que já pediu o `GET` por salto de versão não repete o pedido.
+ */
+export function needsResultSnapshot(event: LotEvent, action: LotAction): boolean {
+  return event.type === EVENTS.LOT_CLOSED && action === "applied";
+}
+
+/**
  * Resposta do próprio `POST` de lance, pelo mesmo reducer. Aplicada, fica com a posição que o servidor calculou
  * (a de `computeMyStanding` é só aproximação). `ignored` quando um evento ou um `GET` já trouxe essa versão.
  */

@@ -7,7 +7,7 @@ import {
   type LotEvent,
   type PlaceBidResponse,
 } from "@lanceauto/shared";
-import { applyBidResponse, applyLotEvent, mergeSnapshot } from "./lot-reducer";
+import { applyBidResponse, applyLotEvent, mergeSnapshot, needsResultSnapshot } from "./lot-reducer";
 import { bid, lotState } from "./fixtures";
 
 const placed = (over: Partial<BidPlacedPayload> = {}): LotEvent => ({
@@ -156,6 +156,14 @@ describe("applyLotEvent · lot:closed (AC-4.14)", () => {
 
   it("versão atrás do estado é descartada", () => {
     expect(applyLotEvent(atFive(), closed({ version: 4 })).action).toBe("ignored");
+  });
+});
+
+describe("needsResultSnapshot (lot:closed não traz result nem token)", () => {
+  it("aplicar o lot:closed pede o GET que traz o resultado; os outros eventos não", () => {
+    expect(needsResultSnapshot(closed(), "applied")).toBe(true);
+    expect(needsResultSnapshot(closed(), "ignored")).toBe(false);
+    expect(needsResultSnapshot(closed({ version: 9 }), "refetch")).toBe(false);
   });
 });
 
