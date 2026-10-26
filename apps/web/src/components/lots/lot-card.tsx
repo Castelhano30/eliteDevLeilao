@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useId, type ReactNode } from "react";
-import { brasiliaDayAndTime, brasiliaWeekday, formatBRL, type LotCard as LotCardDto } from "@lanceauto/shared";
+import { brasiliaDayAndTime, brasiliaWeekday, formatBRL, type LotCard as LotCardDto, type MyLotResult } from "@lanceauto/shared";
 import { LotTag } from "@/components/ui/lot-tag";
 import { Stamp } from "@/components/ui/stamp";
+import { bidsText, endedCardLines } from "@/lib/ended-card";
 import { lotCardHref, opensLabel } from "@/lib/lots";
 import { CarPhoto } from "./car-photo";
 import { Cronometro } from "./cronometro";
@@ -16,17 +17,14 @@ export interface LotCardProps {
   preview?: boolean;
   /** Na prévia sem carro: texto em vez do rodapé. */
   emptyNote?: string;
+  /** Painel do leiloeiro: resultado do lote encerrado (quem levou, valor e FIPE) no lugar do rodapé genérico. */
+  resultado?: MyLotResult | null;
 }
 
 const ROTATE = { LIVE: -4, CLOSING: -4, SCHEDULED: 3, SOLD: -2, UNSOLD: -2, CANCELLED: -2 } as const;
 
-function bidsLabel(n: number) {
-  if (n === 0) return "Nenhum lance";
-  return n === 1 ? "1 lance" : `${n} lances`;
-}
-
 /** Cartão do lote (§10.1). O cartão inteiro é o link; o nome acessível é o título. */
-export function LotCard({ card, serverTime, preview = false, emptyNote }: LotCardProps) {
+export function LotCard({ card, serverTime, preview = false, emptyNote, resultado }: LotCardProps) {
   const titleId = useId();
   const { status } = card;
   const live = status === "LIVE" || status === "CLOSING";
@@ -43,7 +41,7 @@ export function LotCard({ card, serverTime, preview = false, emptyNote }: LotCar
         <div>
           <p className="t-mono-rotulo">{card.currentBidCents === null ? "LANCE INICIAL" : "LANCE ATUAL"}</p>
           <p className="font-mono text-[20px] break-all font-semibold">{formatBRL(card.currentBidCents ?? card.startingBidCents)}</p>
-          <p className="t-mono mt-1 text-tinta2">{status === "CLOSING" ? "Apurando…" : bidsLabel(card.bidCount)}</p>
+          <p className="t-mono mt-1 text-tinta2">{status === "CLOSING" ? "Apurando o resultado…" : bidsText(card.bidCount)}</p>
         </div>
         <Cronometro
           size="cartao"
@@ -74,16 +72,28 @@ export function LotCard({ card, serverTime, preview = false, emptyNote }: LotCar
       </div>
     );
   } else {
+    const lines = endedCardLines(resultado, card.bidCount);
     footer = (
       <div>
         <p className="t-mono-rotulo">RESULTADO</p>
-        <p className="t-mono mt-1">
-          {status === "SOLD" && card.currentBidCents !== null
-            ? `${formatBRL(card.currentBidCents)} · ${bidsLabel(card.bidCount)}`
-            : status === "SOLD"
-              ? "Arrematado"
-              : "Sem lances"}
-        </p>
+        {lines?.kind === "sold" ? (
+          <>
+            <p className="t-mono mt-1">{lines.headline}</p>
+            <p className="font-mono text-[22px] font-semibold">{lines.value}</p>
+            <p className="t-mono text-tinta2">{lines.bids}</p>
+            {lines.fipe ? <p className="t-mono mt-1 text-tinta2">{lines.fipe}</p> : null}
+          </>
+        ) : lines ? (
+          <p className="t-mono mt-1">{lines.headline}</p>
+        ) : (
+          <p className="t-mono mt-1">
+            {status === "SOLD" && card.currentBidCents !== null
+              ? `${formatBRL(card.currentBidCents)} · ${bidsText(card.bidCount)}`
+              : status === "SOLD"
+                ? "Arrematado"
+                : "Sem lances"}
+          </p>
+        )}
       </div>
     );
   }

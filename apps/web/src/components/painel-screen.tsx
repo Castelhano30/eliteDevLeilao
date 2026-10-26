@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { brasiliaDayAndTime, formatBRL, formatBrasilia, formatLotNumber, type LotCard as LotCardDto, type MyLotsResponse } from "@lanceauto/shared";
+import { brasiliaDayAndTime, formatBRL, formatBrasilia, formatLotNumber, type LotCard as LotCardDto, type MyLotCard, type MyLotsResponse } from "@lanceauto/shared";
 import { Cronometro } from "@/components/lots/cronometro";
 import { LotCard } from "@/components/lots/lot-card";
 import { ConnectionBanner } from "@/components/connection-banner";
@@ -13,6 +13,7 @@ import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { PageShell } from "@/components/ui/page-shell";
 import { apiGet } from "@/lib/api-client";
+import { receivedLabel } from "@/lib/ended-card";
 import { MY_LOTS_KEY } from "@/lib/lot-query";
 import { useConnectionBanner, useConnectionStatus } from "@/lib/realtime/connection-status";
 import { useShowcaseLive } from "@/lib/realtime/use-showcase-live";
@@ -107,12 +108,13 @@ export function PainelScreen() {
   const live = lots.filter((l) => l.status === "LIVE" || l.status === "CLOSING");
   const scheduled = lots.filter((l) => l.status === "SCHEDULED");
   const ended = lots.filter((l) => l.status === "SOLD" || l.status === "UNSOLD");
+  const sold = lots.filter((l) => l.status === "SOLD").length;
 
   // Um GET quando o primeiro cronômetro do painel chega a zero.
   const targets = [...live.filter((l) => l.status === "LIVE").map((l) => Date.parse(l.endsAt)), ...scheduled.map((l) => Date.parse(l.startsAt))].filter((t) => t + 1_000 > now);
   useOnReach(targets.length ? Math.min(...targets) + 1_000 : null, now, () => void query.refetch());
 
-  const liveColumns: DataTableColumn<LotCardDto>[] = [
+  const liveColumns: DataTableColumn<MyLotCard>[] = [
     { key: "lote", header: "Lote", render: (lot) => <LotLink lot={lot} /> },
     { key: "carro", header: "Carro", render: carLabel },
     { key: "lance", header: "Lance atual", align: "right", render: (lot) => formatBRL(lot.currentBidCents ?? lot.startingBidCents) },
@@ -121,7 +123,10 @@ export function PainelScreen() {
       key: "restam",
       header: "Restam",
       render: (lot) => (
-        <Cronometro size="cartao" status={lot.status} startsAt={lot.startsAt} endsAt={lot.endsAt} originalEndsAt={lot.originalEndsAt} serverTime={data?.serverTime} />
+        <>
+          <Cronometro size="cartao" status={lot.status} startsAt={lot.startsAt} endsAt={lot.endsAt} originalEndsAt={lot.originalEndsAt} serverTime={data?.serverTime} />
+          {lot.status === "CLOSING" ? <span className="t-mono mt-1 block text-tinta2">Apurando o resultado…</span> : null}
+        </>
       ),
     },
     { key: "acao", header: "Ação", render: (lot) => <SeeRoom lot={lot} /> },
@@ -174,7 +179,7 @@ export function PainelScreen() {
           ) : null}
           <section aria-label="Resumo" className="mt-8 flex flex-wrap gap-6">
             <div className="min-w-0 basis-[260px] flex-[2] border-2 border-linha bg-papel p-5 shadow-cartao">
-              <p className="t-mono-rotulo">TOTAL RECEBIDO · 0 ARREMATES</p>
+              <p className="t-mono-rotulo">{receivedLabel(sold)}</p>
               <p className="mt-2 font-mono text-[28px] break-all font-semibold">{formatBRL(data.totalReceivedCents)}</p>
               <p className="t-body-nota mt-2">Saldo simulado. O pátio agradece mesmo assim.</p>
             </div>
@@ -214,7 +219,7 @@ export function PainelScreen() {
             {ended.length ? (
               <div className="grid gap-x-6 gap-y-10 pt-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 330px), 1fr))" }}>
                 {ended.map((lot) => (
-                  <LotCard key={lot.id} card={lot} serverTime={data.serverTime} />
+                  <LotCard key={lot.id} card={lot} serverTime={data.serverTime} resultado={lot.resultado} />
                 ))}
               </div>
             ) : (
