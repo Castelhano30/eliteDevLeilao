@@ -42,7 +42,7 @@ export function describeMovement(entry: Pick<LedgerEntryDto, "kind" | "amountCen
   const kind: LedgerKind = entry.kind;
   const signed: Partial<Record<LedgerKind, string>> = {
     DEPOSIT: `+ ${money}`,
-    SALE_DEBIT: `− ${money}`,
+    SALE_DEBIT: `−${money}`,
     SALE_CREDIT: `+ ${money}`,
   };
   if (kind === "SALE_DEBIT") {

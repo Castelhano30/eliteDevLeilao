@@ -36,7 +36,7 @@ describe("describeMovement", () => {
   it("arremate leva o número do lote e a nota de que só o total e o comprometido caem", () => {
     expect(describeMovement({ kind: "SALE_DEBIT", amountCents: 5_750_000, lotNumber: 6 })).toEqual({
       label: "Arremate · lote 006",
-      value: "− R$ 57.500,00",
+      value: "−R$ 57.500,00",
       note: "TOTAL −R$ 57.500,00 · COMPROMETIDO −R$ 57.500,00 · DISPONÍVEL não muda",
     });
     expect(describeMovement({ kind: "SALE_DEBIT", amountCents: 10_000, lotNumber: null }).label).toBe("Arremate");
@@ -45,7 +45,7 @@ describe("describeMovement", () => {
 
   it("travar saldo não muda o total; arremate debita e venda credita", () => {
     expect(describeMovement({ kind: "HOLD", amountCents: 10_000 }).note).toBe("TOTAL NÃO MUDA");
-    expect(describeMovement({ kind: "SALE_DEBIT", amountCents: 10_000 }).value).toBe("− R$ 100,00");
+    expect(describeMovement({ kind: "SALE_DEBIT", amountCents: 10_000 }).value).toBe("−R$ 100,00");
     expect(describeMovement({ kind: "SALE_CREDIT", amountCents: 10_000 }).value).toBe("+ R$ 100,00");
   });
 });
