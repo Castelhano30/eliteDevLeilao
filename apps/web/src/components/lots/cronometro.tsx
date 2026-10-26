@@ -70,7 +70,7 @@ export function Cronometro({ status, startsAt, endsAt, originalEndsAt, size, lab
               : "RESTAM");
   // Leitor de tela: a cada 10 s, não a cada segundo.
   const spoken = formatCountdown(Math.ceil(state.remainingMs / 10_000) * 10_000);
-  const ariaLabel = closed ? "Encerrado" : `${scheduled ? "Abre em" : "Tempo restante"} ${spoken}`;
+  const ariaLabel = closed ? "Tempo restante 00:00" : `${scheduled ? "Abre em" : "Tempo restante"} ${spoken}`;
   const digits = size === "sala" ? 44 : 24;
 
   return (
