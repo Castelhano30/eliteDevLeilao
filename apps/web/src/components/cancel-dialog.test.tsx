@@ -4,7 +4,7 @@ import { CANCEL_TEXT, lotChangedMessage } from "@lanceauto/shared";
 import { cancelDialogReducer, initialCancelDialog, type CancelDialogState } from "@/lib/cancel-dialog";
 import { CancelDialog } from "./cancel-dialog";
 
-const LOT = { number: 19, title: "Hilux SRX 2020", currentBidCents: 2_050_000 };
+const LOT: { number: number; title: string; currentBidCents: number | null } = { number: 19, title: "Hilux SRX 2020", currentBidCents: 2_050_000 };
 const render = (state: CancelDialogState, lot = LOT) =>
   renderToStaticMarkup(<CancelDialog open lot={lot} state={state} onConfirm={() => undefined} onClose={() => undefined} />);
 
