@@ -170,6 +170,11 @@ export interface MyLotResult {
 export interface MyLotCard extends LotCard {
   /** `null` até o fechamento. */
   resultado: MyLotResult | null;
+  /**
+   * Estorno devolvido ao líder quando o lote foi cancelado (= `currentBidCents` se havia lances); `null` sem
+   * lances ou sem cancelamento (S06 R-6.4). O momento do cancelamento está em `cancelledAt` (do `LotCard`).
+   */
+  refundedCents: number | null;
 }
 
 export interface MyLotsResponse {

@@ -46,7 +46,7 @@ describe("upsertShowcaseCard (AC-4.29, R-4.13)", () => {
     for (const status of ["SOLD", "UNSOLD"] as const) {
       const closed = upsertShowcaseCard(base(), card({ id: "a", version: 7, status }), false).data;
       expect(upsertShowcaseCard(closed, card({ id: "a", version: 7, status: "LIVE" }), false).data).toEqual(closed);
-      const mine: MyLotsResponse = { lots: [{ ...closed.lots[0]!, resultado: null }], totalReceivedCents: 0, serverTime: "x" };
+      const mine: MyLotsResponse = { lots: [{ ...closed.lots[0]!, resultado: null, refundedCents: null }], totalReceivedCents: 0, serverTime: "x" };
       expect(upsertMyLot(mine, card({ id: "a", version: 7, status: "LIVE" })).data).toEqual(mine);
     }
   });
@@ -212,7 +212,7 @@ describe("isFiltered", () => {
 });
 
 describe("upsertMyLot (Painel, §9.3)", () => {
-  const row = (over: Partial<LotCard> = {}): MyLotsResponse["lots"][number] => ({ ...card(over), resultado: null });
+  const row = (over: Partial<LotCard> = {}): MyLotsResponse["lots"][number] => ({ ...card(over), resultado: null, refundedCents: null });
   const mine = (): MyLotsResponse => ({ lots: [row({ id: "a", version: 3 }), row({ id: "b", number: 2, version: 1 })], totalReceivedCents: 0, serverTime: "x" });
 
   it("atualiza a linha do lote próprio; id desconhecido é ignorado", () => {

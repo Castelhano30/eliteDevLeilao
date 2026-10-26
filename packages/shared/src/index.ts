@@ -1,6 +1,7 @@
 export * from "./auth";
 export * from "./bids";
 export * from "./brasilia";
+export * from "./cancel";
 export * from "./catalog";
 export * from "./errors";
 export * from "./events";

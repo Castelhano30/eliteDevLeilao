@@ -108,6 +108,8 @@ export function toMyLotCard(row: LotRow, now: Date, winnerPseudonym: string | nu
           settledAt: result.settledAt,
         }
       : null,
+    // Todo lote com lance tem líder; o estorno devolvido é o lance atual (R-6.4). Sem cancelamento ou sem lances, `null`.
+    refundedCents: row.cancelledAt !== null && row.bidCount > 0 && row.currentBidCents !== null ? toNumber(row.currentBidCents) : null,
   };
 }
 

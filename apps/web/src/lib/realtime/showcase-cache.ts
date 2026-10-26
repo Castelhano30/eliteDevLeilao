@@ -168,7 +168,7 @@ export function upsertMyLot(data: MyLotsResponse, card: LotCard): MyLotUpsert {
   const final = card.status === "SOLD" || card.status === "UNSOLD" || card.status === "CANCELLED";
   return {
     // O cartão do evento não traz o resultado: a linha guarda o que já tinha e o `GET` seguinte o traz (R-5.8).
-    data: { ...data, lots: data.lots.map((lot) => (lot.id === card.id ? { ...card, resultado: lot.resultado } : lot)) },
+    data: { ...data, lots: data.lots.map((lot) => (lot.id === card.id ? { ...card, resultado: lot.resultado, refundedCents: lot.refundedCents } : lot)) },
     refetch: final && card.status !== current.status,
   };
 }
