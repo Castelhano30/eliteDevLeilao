@@ -19,7 +19,7 @@ export interface ReceiptCar {
   year: number;
   fuel: string;
   referencePriceCents: number;
-  /** Mês do snapshot da FIPE ("2026-10" ou o texto cru); o web formata. */
+  /** Mês do snapshot da FIPE em MM/YYYY (ou texto cru, quando a origem não informa mês numérico). */
   referenceMonth: string;
   imageUrl: string | null;
   imageCredit: string | null;
