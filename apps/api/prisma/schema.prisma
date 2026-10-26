@@ -34,6 +34,7 @@ model User {
   lotsAuctioned Lot[]    @relation("LotAuctioneer")
   lotsLeading   Lot[]    @relation("LotLeader")
   bids          Bid[]
+  receiptsWon   Receipt[]
 }
 
 model Wallet {
@@ -117,6 +118,7 @@ model Lot {
   createdAt         DateTime  @db.Timestamp(3)
 
   bids              Bid[]
+  receipt           Receipt?
 
   @@index([endsAt])
   @@index([auctioneerId])
@@ -146,4 +148,22 @@ model Bid {
 
   @@unique([lotId, seq])
   @@index([lotId, bidderId])
+}
+
+/// Comprovante público do arremate (um por lote arrematado). `winnerId` nunca sai em DTO público (INV-13).
+model Receipt {
+  id          String   @id @default(uuid())
+  lotId       String   @unique
+  winnerId    String
+  /// Pseudônimo do vencedor NAQUELE lote (o gravado no lance vencedor).
+  pseudonym   String
+  amountCents BigInt
+  /// 24 bytes aleatórios em base64url; só o vencedor e a URL do comprovante o conhecem (T9).
+  token       String   @unique
+  /// = Lot.lastHash no instante da liquidação (a liquidação não escreve na cadeia, INV-12).
+  finalHash   String
+  /// Gravado pelo service com clock.now().
+  issuedAt    DateTime @db.Timestamp(3)
+  lot         Lot      @relation(fields: [lotId], references: [id])
+  winner      User     @relation(fields: [winnerId], references: [id])
 }
