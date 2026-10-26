@@ -113,6 +113,36 @@ export function toMyLotCard(row: LotRow, now: Date, winnerPseudonym: string | nu
   };
 }
 
+/** Linha de `Bid` (kind BID) como a leitura a seleciona. */
+export interface BidRow {
+  seq: number;
+  pseudonym: string | null;
+  amountCents: bigint | null;
+  at: Date;
+  bidderId: string | null;
+}
+
+/**
+ * Lances públicos e o melhor lance de cada licitante. `bidderId` só serve para contar licitantes distintos e a
+ * posição de quem olha: o DTO público leva o pseudônimo, nunca o usuário (INV-13).
+ */
+export function summarizeBids(rows: BidRow[]): { bids: BidDTO[]; bestByBidder: Map<string, number> } {
+  const bestByBidder = new Map<string, number>();
+  for (const bid of rows) {
+    if (bid.bidderId === null || bid.amountCents === null) continue;
+    const amount = toNumber(bid.amountCents);
+    if (amount > (bestByBidder.get(bid.bidderId) ?? 0)) bestByBidder.set(bid.bidderId, amount);
+  }
+  const bids = rows.map((bid) => ({
+    seq: bid.seq,
+    kind: "BID" as const,
+    pseudonym: bid.pseudonym ?? "",
+    amountCents: toNumber(bid.amountCents ?? 0n),
+    at: bid.at.toISOString(),
+  }));
+  return { bids, bestByBidder };
+}
+
 /** O que a leitura acrescenta ao lote: lances, licitantes distintos, a posição de quem olha e o resultado. */
 export interface LotStateExtras {
   bids: BidDTO[];

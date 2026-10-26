@@ -30,7 +30,16 @@ import type { DownloadedImage, ImageDownloader } from "../infra/image-store";
 import type { Logger } from "../infra/logger";
 import type { ImageSuggestionPort } from "../infra/wikipedia";
 import { SHOWCASE_ROOM } from "../socket";
-import { LOT_SELECT, toLotCard, toLotResult, toLotState, toMyLotCard, type LotRow, type LotStateExtras } from "./lot-mappers";
+import {
+  LOT_SELECT,
+  summarizeBids,
+  toLotCard,
+  toLotResult,
+  toLotState,
+  toMyLotCard,
+  type LotRow,
+  type LotStateExtras,
+} from "./lot-mappers";
 import { toNumber } from "./mappers";
 
 export interface CreateLotResult {
@@ -257,12 +266,7 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
         orderBy: { seq: "desc" },
         select: { seq: true, kind: true, pseudonym: true, amountCents: true, at: true, bidderId: true },
       });
-      const bestByBidder = new Map<string, number>();
-      for (const bid of bidRows) {
-        if (bid.bidderId === null || bid.amountCents === null) continue;
-        const amount = toNumber(bid.amountCents);
-        if (amount > (bestByBidder.get(bid.bidderId) ?? 0)) bestByBidder.set(bid.bidderId, amount);
-      }
+      const { bids, bestByBidder } = summarizeBids(bidRows);
       // O comprovante só existe para lote arrematado; o token só sai para o vencedor logado (T9).
       const receipt =
         row.settledAt !== null && row.cancelledAt === null && row.bidCount > 0
@@ -271,14 +275,7 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
       const isBidder = viewer?.role === "BIDDER";
       const position = isBidder ? rankFrom(bestByBidder, viewer.id) : null;
       const extras: LotStateExtras = {
-        // `bidderId` fica aqui dentro: o DTO público só leva o pseudônimo (INV-13).
-        bids: bidRows.map((bid) => ({
-          seq: bid.seq,
-          kind: "BID" as const,
-          pseudonym: bid.pseudonym ?? "",
-          amountCents: toNumber(bid.amountCents ?? 0n),
-          at: bid.at.toISOString(),
-        })),
+        bids,
         bidderCount: bestByBidder.size,
         myPseudonym: isBidder ? pseudonymFor(auditKey, viewer.id, id) : null,
         myRank: position?.rank ?? null,
