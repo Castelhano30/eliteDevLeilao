@@ -5,8 +5,10 @@ import { formatBRL } from "@lanceauto/shared";
 
 export interface PlacaLanceProps {
   cents: number;
-  label: "LANCE ATUAL" | "LANCE INICIAL";
+  label: "LANCE ATUAL" | "LANCE INICIAL" | "LANCE FINAL";
 }
+
+const SPOKEN = { "LANCE ATUAL": "Lance atual", "LANCE INICIAL": "Lance inicial", "LANCE FINAL": "Lance final" } as const;
 
 /**
  * Lance atual/inicial em placas (§10.5): cada dígito numa placa de 40×60 px com linha central.
@@ -22,7 +24,7 @@ export function PlacaLance({ cents, label }: PlacaLanceProps) {
   }
   const money = formatBRL(cents);
   const reais = money.replace(/^R\$\s/, "").replace(/,00$/, "");
-  const spoken = `${label === "LANCE ATUAL" ? "Lance atual" : "Lance inicial"} ${money}`;
+  const spoken = `${SPOKEN[label]} ${money}`;
   return (
     <div>
       <p className="t-mono-rotulo mb-2">{label}</p>

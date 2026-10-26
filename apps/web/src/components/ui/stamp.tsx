@@ -13,13 +13,15 @@ export interface StampProps {
   variant: StampVariant;
   /** "Bate" ao encerrar e assenta em -6°. Em reduced-motion aparece direto no estado final. */
   animate?: boolean;
+  /** Inclinação de repouso; sem ela vale a da variante (ou -6° quando bate). */
+  rotate?: number;
   className?: string;
 }
 
 /** Carimbo de status. O texto é o status: não depende da rotação nem da cor. */
-export function Stamp({ variant, animate = false, className = "" }: StampProps) {
+export function Stamp({ variant, animate = false, rotate: resting, className = "" }: StampProps) {
   const spec = VARIANTS[variant];
-  const rotate = animate ? -6 : spec.rotate;
+  const rotate = resting ?? (animate ? -6 : spec.rotate);
   return (
     <span
       className={`t-carimbo inline-flex items-center gap-2 rounded-nenhum px-3 pb-[2px] pt-1 ${className}`.trim()}

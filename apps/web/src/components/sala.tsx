@@ -15,12 +15,10 @@ import { ConnectionBanner } from "@/components/connection-banner";
 import { BidPanel } from "@/components/lots/bid-panel";
 import { CarPhoto } from "@/components/lots/car-photo";
 import { Cronometro } from "@/components/lots/cronometro";
-import { PlacaLance } from "@/components/lots/placa-lance";
 import { buttonClasses } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { LotTag } from "@/components/ui/lot-tag";
 import { Stamp } from "@/components/ui/stamp";
-import { bidCountLabel } from "@/lib/lots";
 import { fetchLot, lotKey, LotNotFoundError } from "@/lib/lot-query";
 import { INITIAL_OPENING_CHECKS } from "@/lib/lot-state";
 import { bidBlockReason, useConnectionBanner, useConnectionStatus } from "@/lib/realtime/connection-status";
@@ -137,7 +135,8 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
         </p>
       </div>
     );
-  } else if (status === "LIVE" || status === "CLOSING") {
+  } else {
+    // O mesmo painel segue montado do ao vivo ao resultado: a região viva da faixa anuncia a mudança (§9.1).
     panel = (
       <BidPanel
         id={id}
@@ -146,17 +145,6 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
         authLoading={authStatus === "loading" || authStatus === "error"}
         blockReason={blockReason}
       />
-    );
-  } else {
-    // Encerrado (S05 entrega o resultado completo).
-    panel = (
-      <div className="space-y-6">
-        <PlacaLance cents={lot.currentBidCents ?? lot.startingBidCents} label={lot.currentBidCents !== null ? "LANCE ATUAL" : "LANCE INICIAL"} />
-        <p className="t-mono-dado">{bidCountLabel(lot.bidCount)}</p>
-        <Cronometro size="sala" status={status} startsAt={lot.startsAt} endsAt={lot.endsAt} originalEndsAt={lot.originalEndsAt} serverTime={state.serverTime} />
-        <Stamp variant={status === "SOLD" ? "arrematado" : "sem-lances"} />
-        {lot.currentBidCents !== null ? <p className="t-mono-dado">Lance final {formatBRL(lot.currentBidCents)}</p> : null}
-      </div>
     );
   }
 

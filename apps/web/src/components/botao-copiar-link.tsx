@@ -1,0 +1,68 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { COPIED_LABEL_MS, copyLinkAriaLabel } from "@lanceauto/shared";
+import { buttonClasses } from "@/components/ui/button";
+import { copyLink, copyLinkLabel, receiptUrl, type CopyState } from "@/lib/copy-link";
+
+export interface BotaoCopiarLinkProps {
+  token: string;
+  lotNumber: number;
+  className?: string;
+}
+
+/**
+ * "Copiar link" do comprovante (§10): copia {origem}/c/{token}. Sucesso: "Link copiado" por 2,2 s. Falha da área de
+ * transferência: a mensagem de copiar à mão e um campo somente leitura com o link já selecionado. A região
+ * aria-live anuncia o resultado; o nome acessível só carrega o lote enquanto o botão diz "Copiar link".
+ */
+export function BotaoCopiarLink({ token, lotNumber, className = "" }: BotaoCopiarLinkProps) {
+  const [state, setState] = useState<CopyState>("idle");
+  const [url, setUrl] = useState("");
+  const field = useRef<HTMLInputElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+  useEffect(() => {
+    if (state === "failed") {
+      field.current?.focus();
+      field.current?.select();
+    }
+  }, [state]);
+
+  async function copy() {
+    clearTimeout(timer.current);
+    const link = receiptUrl(window.location.origin, token);
+    setUrl(link);
+    const outcome = await copyLink(link, typeof navigator === "undefined" ? undefined : navigator.clipboard);
+    setState(outcome);
+    if (outcome === "copied") timer.current = setTimeout(() => setState("idle"), COPIED_LABEL_MS);
+  }
+
+  return (
+    <div className={className}>
+      <button
+        type="button"
+        onClick={() => void copy()}
+        aria-label={state === "idle" ? copyLinkAriaLabel(lotNumber) : undefined}
+        className={buttonClasses("secundario")}
+      >
+        {copyLinkLabel(state)}
+      </button>
+      {state === "failed" ? (
+        <input
+          ref={field}
+          readOnly
+          value={url}
+          aria-label="Link do comprovante"
+          onFocus={(event) => event.currentTarget.select()}
+          className="font-mono mt-3 h-12 w-full rounded-nenhum border-2 border-linha bg-fundo px-3 text-[14px] text-tinta"
+        />
+      ) : null}
+      {/* A mensagem do botão não é lida sozinha quando troca; esta região a anuncia uma vez. */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {state === "idle" ? "" : copyLinkLabel(state)}
+      </p>
+    </div>
+  );
+}
