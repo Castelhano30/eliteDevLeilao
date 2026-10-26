@@ -348,21 +348,44 @@ Conflitos resolvidos:
 - **Quem venceu:** comparar pseudônimos no cliente é frágil (colisão de 4 hex aceita no README); o servidor decide por `myReceiptToken`.
 - **Rotina com `SKIP LOCKED`:** a arquitetura descreve a busca já com `FOR UPDATE SKIP LOCKED`; para manter uma transação por lote, a rotina lista candidatos sem lock e cada `settleLot` adquire o lock com `SKIP LOCKED` e relê. Equivalente em garantias.
 
-Perguntas abertas (nada bloqueia a fatia):
-- Formato da comparação com a FIPE no Painel (`FIPE R$ X · +8,2%`) é sugestão minha a partir de "comparação com a FIPE" do EXPERIENCE (texto a revisar).
-- Rótulo "LANCE FINAL" da placa no encerrado é sugestão (texto a revisar).
-- Nota de privacidade do Comprovante é sugestão (texto a revisar).
-- `<meta noindex>` no Comprovante é uma proteção barata que não vem das fontes; confirmar que não atrapalha a avaliação.
+Decisões do build (registradas no diário, item 66, e na Fase 2):
+- **Railway no lugar de Neon, Render e Vercel.** Onde a fatia diz Neon/Render/Vercel, vale Railway (API, web e Postgres). "Migração aplicada no deploy" vale para o start da API (`migrate deploy`, seed e servidor; o Railway não lê `railway.json`, então o start fica configurado no serviço). A nota de README sobre hibernação **não se aplica**: o Railway não hiberna; a API só fica parada num deploy ou numa queda, e a varredura do boot cobre isso.
+- **`DomainEvent` é `{ type, room, payload }`.** A fatia escreve `event` em alguns pontos; o contrato da S04 manda.
+- **`sweep(publisher?)`.** O job recebe o `Publisher` guardado na composição; o argumento é opcional (a fatia mostra os dois usos).
+- **Seed.** Ana vence o lote semeado; as linhas de ledger e o `Wallet.updatedAt` do seed ficam datados de 3 dias atrás, fora da ordem do `seq` (efeito do `FakeClock`, cosmético).
+- **`result` e `myReceiptToken` ficam dentro de `LotState.lot`**, ao lado de `myPseudonym` e `myRank` (decisão da S03); `MyLotsResponse.lots` é `MyLotCard[]` (`LotCard` + `resultado`).
+- **O que garante "liquida uma vez".** A prova de mutação mostrou que é a releitura de `settledAt` sob o lock (sem ela, 3 testes caem); o `SKIP LOCKED` evita espera mas, sozinho, não derruba teste, porque `FOR UPDATE` simples também relê depois de esperar. O `UNIQUE` do `Receipt` é a rede de segurança.
+- **`lot:closed` no cliente** aplica o evento (status e valor) e refaz `GET /lots/:id` para obter `result` e `myReceiptToken`. Lote `SOLD`/`UNSOLD` cujo `GET` ainda volte sem `result` conta como "apurando"; a Sala consulta a cada 3 s até o resultado chegar, sem teto (a fatia não promete prazo).
+- **O cartão do `showcase:lot` não leva `resultado` nem o pseudônimo do vencedor.** `upsertMyLot` mantém o `resultado` da linha e o Painel refaz `GET /my/lots` quando o lote vira `SOLD`/`UNSOLD`.
+- **Sala encerrada reaproveita o `BidPanel`.** O painel segue montado do ao vivo ao resultado, para a região `aria-live` da faixa não ser remontada na transição (remontar poderia não anunciar a mudança). O carimbo "Arrematado" só bate se a sessão viu o lote ainda sem resultado.
+- **Texto do apurando em duas linhas:** título "Martelo batido" e subtítulo "Apurando o resultado…" (antes era um título só).
+- **"Voltar à vitrine"** só aparece para visitante e leiloeiro (§9.1); o licitante logado, mesmo sem ter dado lance, não o vê.
+- **`live` por página** (item adiado da S04): `useLotRoom` devolve `syncing` enquanto o socket está conectado e esta montagem ainda não fez join + `GET`; vira o bloqueio `stale`, sem banner nem texto de conexão, e cai com a queda do socket.
+- **Teto do polling da Vitrine** (item adiado da S04): 3 s, no máximo 20 respostas novas (cerca de 1 min), contando só respostas novas (como a conferência de abertura) e zerando quando não há cartão apurando. Passado o teto, o `showcase:lot` e o `connect` seguem atualizando a lista.
+- **Layout do Comprovante por route group.** As rotas do app foram para `(site)` (com o `SiteHeader`) e o Comprovante fica em `(publico)`, com o cabeçalho mínimo (Logo e "PÁGINA PÚBLICA · NÃO PRECISA DE LOGIN"), igual para quem está logado ou não.
+- **Efeito em produção do primeiro boot com a rotina:** a varredura liquidou o lote 004 ("UNI-T 1.5 16V TGDi 2026", R$ 330.000,00), que estava vencido e `CLOSING` desde 24/10: creditou o leiloeiro do seed e debitou o vencedor daquele teste. É o comportamento projetado (AC-5.11); o seed final da S09 recria os lotes.
+
+Perguntas abertas (nada bloqueia a fatia; o build seguiu com a sugestão marcada em cada uma):
+- Formato da comparação com a FIPE no Painel (`FIPE R$ X · +8,2%`) é sugestão minha a partir de "comparação com a FIPE" do EXPERIENCE (texto a revisar). **Adotado:** o formato sugerido, com o sinal de menos tipográfico (−).
+- Rótulo "LANCE FINAL" da placa no encerrado é sugestão (texto a revisar). **Adotado.**
+- Nota de privacidade do Comprovante é sugestão (texto a revisar). **Adotada**, no texto da fatia.
+- `<meta noindex>` no Comprovante é uma proteção barata que não vem das fontes; confirmar que não atrapalha a avaliação. **Adotado** (`robots: noindex`); o link continua abrindo normalmente para quem o recebe.
 - O leiloeiro vê "Total recebido" mas não saldo de carteira: fechado nas fontes; nenhuma tela de carteira do leiloeiro.
+- O cabeçalho mínimo do Comprovante tem só Logo e a legenda, sem o alternador de tema (a fatia não o cita). O tema segue a escolha salva ou o sistema. **Sugestão mantida; decidir se vale pôr o alternador.**
+- A mensagem "Não deu para carregar o comprovante." já vinha marcada como "texto a revisar". **Adotada.**
+- O teto de 20 respostas novas do polling da Vitrine (cerca de 1 min) é escolha minha: a fatia só pede "um teto". **Adotado.**
 
 ## 17. Definition of Done
 
-- [ ] Migração do `Receipt` aplicada no deploy (Neon) pelo start da API.
-- [ ] Rotina ligada em produção (`start()` + varredura de boot); log mostra liquidações.
-- [ ] Testes de §14 passando no CI, incluindo os de concorrência.
-- [ ] Seed estendido com o lote arrematado (com prorrogação) e o sem lances, via services com `FakeClock`; cadeia válida.
-- [ ] ACs [manual] percorridos no link público: Sala nos 4 estados, Comprovante em janela anônima nos dois temas, Painel, Vitrine, Carteira.
-- [ ] Varredura de privacidade: nenhuma resposta de `/receipts`, `/lots/:id`, `/lots` contém e-mail ou nome de usuário.
-- [ ] Nenhum link para a Auditoria foi adicionado (fica para a S08); sem links quebrados.
-- [ ] README: nota sobre hibernação e `settledAt` (rascunho; fechamento na S09).
-- [ ] Deploy atualizado e smoke no link público: lote de 5 min fechado de ponta a ponta com dois navegadores.
+(Adaptada ao Railway: onde estava Neon, Render e Vercel, lê-se Railway.)
+
+- [x] Migração do `Receipt` (`add_receipt`) aplicada no deploy pelo start da API no Railway (log: "No pending migrations to apply" depois do primeiro deploy que a trouxe).
+- [x] Rotina ligada em produção (`start()` + varredura de boot); o log do Railway mostra as liquidações (lotes 004, 006, 007 e, no smoke, 008).
+- [x] Testes de §14 passando no CI, incluindo os de concorrência (shared 84, api 312, web 242).
+- [x] Seed estendido com o lote arrematado (com prorrogação) e o sem lances, via services com `FakeClock`; cadeia válida.
+- [x] ACs [manual] percorridos (Chrome real local e smoke no link público): Sala nos 4 estados, Comprovante em janela anônima nos dois temas (com reduced-motion e a 390 px), Painel, Vitrine, Carteira. **Não conferido ao vivo:** AC-5.31 (FIPE e Wikipedia fora do ar); a garantia é de projeto (Sala, Vitrine, Painel e Comprovante leem só o banco, INV-14).
+- [x] Varredura de privacidade: nenhuma resposta de `/receipts`, `/lots/:id`, `/lots` contém e-mail ou nome de usuário (testes da Fase 1 e conferência na API pública).
+- [x] Nenhum link para a Auditoria foi adicionado (fica para a S08); sem links quebrados (conferido no Painel e na Vitrine).
+- [x] README: nota do fechamento e de `settledAt` × `endsAt`. A nota de hibernação não se aplica ao Railway; o texto final fica na S09.
+- [x] Deploy atualizado e smoke no link público: lote 008 (5 min) criado, lances de Ana e Bruno pela interface em dois navegadores, fechamento ao vivo sem recarregar. Detalhes no diário, itens 70 e 71.
+- [ ] **Pendente do Felipe (não é desta fatia técnica):** leitor de tela na Sala encerrada e no Comprovante (AC-5.20 a 5.30 cobrem o que o Chrome automatizado consegue ver), e a conferência com dois aparelhos reais.
