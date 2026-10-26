@@ -1,3 +1,6 @@
+import { formatLotNumber } from "./catalog";
+import { formatBRL } from "./money";
+
 /** Textos canônicos do extrato da carteira (T8): as fatias importam, não redigitam. */
 export const LEDGER_TEXT = {
   RELEASE: "Saldo liberado · lance superado",
@@ -20,3 +23,14 @@ export const LEDGER_NOTE = {
   RELEASE: `VOLTOU AO DISPONÍVEL · ${LEDGER_TEXT.NOTE}`,
   REFUND: `VOLTOU AO DISPONÍVEL · ${LEDGER_TEXT.NOTE}`,
 } as const;
+
+/** "Arremate · lote 018"; sem o número do lote, só "Arremate". */
+export function saleDebitLabel(lotNumber: number | null): string {
+  return lotNumber === null ? LEDGER_LABEL.SALE_DEBIT : `${LEDGER_LABEL.SALE_DEBIT} · lote ${formatLotNumber(lotNumber)}`;
+}
+
+/** Linha de apoio do arremate: sai do total e do comprometido, o disponível não muda. */
+export function saleDebitNote(amountCents: number): string {
+  const money = formatBRL(amountCents);
+  return `TOTAL −${money} · COMPROMETIDO −${money} · DISPONÍVEL não muda`;
+}

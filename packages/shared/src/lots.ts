@@ -107,6 +107,22 @@ export interface LotStateLot {
   /** 1 + licitantes com lance maior que o meu; `null` sem lance meu. */
   myRank: number | null;
   myBestBidCents: number | null;
+  /** Resultado do fechamento; `null` enquanto ao vivo, agendado, apurando ou cancelado (R-5.9). */
+  result: LotResult | null;
+  /** Token do comprovante: só para o vencedor logado, nunca para outro licitante, o leiloeiro ou visitante (T9). */
+  myReceiptToken: string | null;
+}
+
+export type LotOutcome = "SOLD" | "UNSOLD";
+
+export interface LotResult {
+  outcome: LotOutcome;
+  finalBidCents: number | null;
+  /** Pseudônimo do vencedor NAQUELE lote; `null` sem lances. */
+  winnerPseudonym: string | null;
+  /** O martelo é `endsAt` (com prorrogações), não `settledAt` (R-5.6). */
+  hammerAt: string;
+  settledAt: string;
 }
 
 export interface LotStateCar {
@@ -142,8 +158,22 @@ export interface LotListResponse {
   serverTime: string;
 }
 
+/** Resultado de um lote encerrado do leiloeiro (linha do Painel). */
+export interface MyLotResult {
+  outcome: LotOutcome;
+  finalBidCents: number | null;
+  winnerPseudonym: string | null;
+  referencePriceCents: number;
+  settledAt: string;
+}
+
+export interface MyLotCard extends LotCard {
+  /** `null` até o fechamento. */
+  resultado: MyLotResult | null;
+}
+
 export interface MyLotsResponse {
-  lots: LotCard[];
+  lots: MyLotCard[];
   totalReceivedCents: number;
   serverTime: string;
 }
