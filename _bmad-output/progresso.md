@@ -195,3 +195,9 @@ S05 **pronta e no ar** (itens 66 a 72). **Fase 1 (servidor):** `Receipt`, `settl
 
 ## 26/10/2026 — Ícone da aplicação
 - Substituído o ícone do Next.js pela imagem de marca enviada, em `apps/web/src/app/icon.png`; o App Router usa esse arquivo para gerar o ícone da aplicação.
+
+## 26/10/2026 — S05: correções dos sete achados da revisão
+- Reproduzi em testes a fome da varredura após 100 lotes que falham (inclusive chamadas concorrentes), o retorno de LIVE após SOLD/UNSOLD na mesma versão, a retomada de lotes semeados parcialmente, o mês incorreto do comprovante e o espaço indevido no débito. Acrescentei regressões para o ciclo de polling por filtro e o nome acessível do cronômetro nos três estados finais.
+- Corrigi a posição da varredura entre ciclos, a precedência do estado final nos caches da Vitrine e do Painel, a retomada do seed pelos services com validação do prefixo de lances, a conta do polling por filtro, o nome acessível, o mês MM/YYYY e o valor `−R$`.
+- Testes focados do web: 37/37. Testes focados da API com Postgres do Compose e `DATABASE_URL_TEST`: 42/42. Nenhuma funcionalidade da S06 foi adicionada.
+- Verificação final na raiz: `npm run lint` exit 0; `npm run typecheck` exit 0; `npm test` exit 0 com shared 84/84, API 314/314 (+2) e web 249/249 (+5); `npm run build` exit 0. As duas regressões novas da API são avanço da varredura e retomada parcial; as cinco do web são ordem de eventos (+1), filtro (+1) e cronômetro em três estados (+3). O teste existente do comprovante passou a exigir MM/YYYY e os testes existentes do extrato passaram a exigir `−R$`.
