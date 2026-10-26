@@ -3,7 +3,7 @@ title: 'S06 — Cancelamento de lote e estorno ao líder'
 type: 'feature'
 created: '2026-10-26'
 status: 'in-progress'
-baseline_commit: 'preenchido no commit seguinte a este (o hash do próprio spec não cabe nele)'
+baseline_commit: '705d184'
 route: 'dispatch'
 review_loop_iteration: 0
 context:
@@ -65,13 +65,13 @@ O build corre em **duas fases**, cada uma em sessão de contexto própria se o c
 ### Fase 1 — Servidor: cancelamento, estorno, eventos, seed (shared + `apps/api`)
 
 **Execution:**
-- [ ] Linha de base -- `npm run lint`, `typecheck`, `test`, `build` com saída real (medido: shared 84, api 314, web 249; a fatia esperava 312 e 242, e os commits de correção da S05 depois do item 71 explicam a diferença).
-- [ ] `packages/shared` -- `cancelLotSchema`, `CANCEL_TEXT`, `refundedCents`; testes.
-- [ ] Hash/seal da linha CANCEL -- string canônica exata (`v1|entry|{lotId}|{seq}|CANCEL|||{at}|{prevHash}`) e `sealHash` com o `entryCount` novo; mudar `seq`/`at`/`prevHash` muda o hash.
-- [ ] `cancelLot` + rota + eventos -- AC-6.1, 6.2, 6.6 a 6.12, 6.14 (um erro por caso, com prova de que nada muda), cadeia recalculada de ponta a ponta com a linha CANCEL.
-- [ ] Leituras -- `GET /lots` sem cancelado, `GET /lots/:id` 200 cancelado com `bids[]` só `BID`, `GET /my/lots` com `cancelledAt`/`refundedCents`, `GET /wallet.leadingLots` sem cancelado; AC-6.3, 6.4, 6.5, 6.13, 6.23; privacidade (resposta e `lot:cancelled` sem `userId`, nome, e-mail).
-- [ ] Concorrência com **prova de mutação** -- `Promise.all([cancel, bid])` ×20 em ordens aleatórias (AC-6.19, §13), 5 × cancelar, cancelar × job; sem deadlock. Mutantes: tirar a checagem de `confirmEntryCount` (`LOT_CHANGED`), tirar o `FOR UPDATE` do lote, ler `committed` fora do lock; cópia de segurança antes, nunca `git checkout` em edição não commitada.
-- [ ] Seed -- lote "cancelado de demonstração" pelos services com `FakeClock` (§11), invariante de saldo verdadeira, idempotente; `seedLiveBids` checa `cancelledAt`/`endsAt`; teste do seed.
+- [x] Linha de base -- `npm run lint`, `typecheck`, `test`, `build` com saída real (medido: shared 84, api 314, web 249; a fatia esperava 312 e 242, e os commits de correção da S05 depois do item 71 explicam a diferença).
+- [x] `packages/shared` -- `cancelLotSchema`, `CANCEL_TEXT`, `refundedCents`; testes.
+- [x] Hash/seal da linha CANCEL -- string canônica exata (`v1|entry|{lotId}|{seq}|CANCEL|||{at}|{prevHash}`) e `sealHash` com o `entryCount` novo; mudar `seq`/`at`/`prevHash` muda o hash.
+- [x] `cancelLot` + rota + eventos -- AC-6.1, 6.2, 6.6 a 6.12, 6.14 (um erro por caso, com prova de que nada muda), cadeia recalculada de ponta a ponta com a linha CANCEL.
+- [x] Leituras -- `GET /lots` sem cancelado, `GET /lots/:id` 200 cancelado com `bids[]` só `BID`, `GET /my/lots` com `cancelledAt`/`refundedCents`, `GET /wallet.leadingLots` sem cancelado; AC-6.3, 6.4, 6.5, 6.13, 6.23; privacidade (resposta e `lot:cancelled` sem `userId`, nome, e-mail).
+- [x] Concorrência com **prova de mutação** -- `Promise.all([cancel, bid])` ×20 em ordens aleatórias (AC-6.19, §13), 5 × cancelar, cancelar × job; sem deadlock. Mutantes: tirar a checagem de `confirmEntryCount` (`LOT_CHANGED`), tirar o `FOR UPDATE` do lote, ler `committed` fora do lock; cópia de segurança antes, nunca `git checkout` em edição não commitada.
+- [x] Seed -- lote "cancelado de demonstração" pelos services com `FakeClock` (§11), invariante de saldo verdadeira, idempotente; `seedLiveBids` checa `cancelledAt`/`endsAt`; teste do seed.
 - [ ] Fechamento da fase -- `lint`, `typecheck`, `test`, `build` na raiz com saída real no diário; push; CI verde; deploy da API no Railway `SUCCESS` (o web antigo segue funcionando: mudança aditiva); log do seed; diário (75+) e "Onde parei" com o que a Fase 2 precisa saber.
 
 **Fora da Fase 1:** qualquer arquivo de `apps/web` (exceto o que o typecheck exigir pelo contrato novo), README, `resolved:` do `deferred-work.md`, smoke em produção.
@@ -97,6 +97,8 @@ O build corre em **duas fases**, cada uma em sessão de contexto própria se o c
 6. **Pergunta 1 da §16 (linha CANCEL em lote sem lances):** sugestão adotada, sim, sempre.
 
 ## Implementation Notes
+
+**Fase 1 (servidor), 26/10/2026.** Implementada direto, sem subagente. Commits `ff654ae` a `8c77353`; saída real, prova de mutação e roteiro na API real no diário, itens 75 e 76. Desvios do Code Map, a registrar na §16: o service é `services/cancel.service.ts` (`lot.service.ts` já é grande), e `summarizeBids` saiu do `getLotState` para `lot-mappers.ts` para a resposta do cancelamento usar a mesma conta. A camada de revisão (step-04) **não rodou**: ela exige revisores em paralelo; fica para o `bmad-code-review` se o Felipe pedir.
 
 ## Spec Change Log
 
