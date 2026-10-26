@@ -3,20 +3,23 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { brasiliaDayAndTime, formatBRL, formatBrasilia, formatLotNumber, type LotCard as LotCardDto, type MyLotCard, type MyLotsResponse } from "@lanceauto/shared";
+import { CancelDialog } from "@/components/cancel-dialog";
 import { Cronometro } from "@/components/lots/cronometro";
 import { LotCard } from "@/components/lots/lot-card";
 import { ConnectionBanner } from "@/components/connection-banner";
-import { buttonClasses } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { PageShell } from "@/components/ui/page-shell";
 import { apiGet } from "@/lib/api-client";
 import { receivedLabel } from "@/lib/ended-card";
 import { MY_LOTS_KEY } from "@/lib/lot-query";
+import { canCancel, cancelButtonLabel, cancelledColumns, splitMyLots } from "@/lib/panel-sections";
 import { useConnectionBanner, useConnectionStatus } from "@/lib/realtime/connection-status";
 import { useShowcaseLive } from "@/lib/realtime/use-showcase-live";
+import { cancelButtonId, useCancelFlow } from "@/lib/use-cancel-flow";
 import { useOnReach, useServerNow } from "@/lib/use-server-clock";
 
 async function fetchMyLots(signal?: AbortSignal): Promise<MyLotsResponse> {
@@ -80,6 +83,27 @@ function SeeRoom({ lot }: { lot: LotCardDto }) {
   );
 }
 
+/** "Ver sala" e "Cancelar" (S06 §9.1): o cancelamento vale para qualquer linha ao vivo ou agendada, com ou sem lances. */
+function RowActions({ lot, onCancel }: { lot: MyLotCard; onCancel: (lot: MyLotCard) => void }) {
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      <SeeRoom lot={lot} />
+      {canCancel(lot) ? (
+        <Button
+          id={cancelButtonId(lot.id)}
+          variant="secundario"
+          destrutivo
+          aria-label={cancelButtonLabel(lot)}
+          className="!min-h-alvo whitespace-nowrap !px-3 !py-1 text-[16px]"
+          onClick={() => onCancel(lot)}
+        >
+          Cancelar
+        </Button>
+      ) : null}
+    </span>
+  );
+}
+
 function Counter({ label, value, alert = false }: { label: string; value: number; alert?: boolean }) {
   return (
     <div className="flex min-w-[150px] flex-1 flex-col justify-between border-2 border-linha bg-painel px-4 py-3">
@@ -104,11 +128,17 @@ export function PainelScreen() {
   const connection = useConnectionStatus();
   const banner = useConnectionBanner(connection);
 
-  const lots = data?.lots ?? [];
-  const live = lots.filter((l) => l.status === "LIVE" || l.status === "CLOSING");
-  const scheduled = lots.filter((l) => l.status === "SCHEDULED");
-  const ended = lots.filter((l) => l.status === "SOLD" || l.status === "UNSOLD");
-  const sold = lots.filter((l) => l.status === "SOLD").length;
+  const { live, scheduled, ended, cancelled, soldCount: sold } = splitMyLots(data?.lots ?? []);
+  const cancel = useCancelFlow(query);
+  const cancelledHeading = useRef<HTMLHeadingElement>(null);
+  // Cancelou: o foco vai ao título de "Cancelados" assim que a seção existir (a linha só chega lá com o servidor).
+  const { focusCancelled, clearFocusCancelled } = cancel;
+  useEffect(() => {
+    if (focusCancelled && cancelledHeading.current) {
+      cancelledHeading.current.focus();
+      clearFocusCancelled();
+    }
+  }, [focusCancelled, cancelled.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Um GET quando o primeiro cronômetro do painel chega a zero.
   const targets = [...live.filter((l) => l.status === "LIVE").map((l) => Date.parse(l.endsAt)), ...scheduled.map((l) => Date.parse(l.startsAt))].filter((t) => t + 1_000 > now);
@@ -129,16 +159,24 @@ export function PainelScreen() {
         </>
       ),
     },
-    { key: "acao", header: "Ação", render: (lot) => <SeeRoom lot={lot} /> },
+    { key: "acao", header: "Ação", render: (lot) => <RowActions lot={lot} onCancel={cancel.begin} /> },
   ];
-  const scheduledColumns: DataTableColumn<LotCardDto>[] = [
+  const scheduledColumns: DataTableColumn<MyLotCard>[] = [
     { key: "lote", header: "Lote", render: (lot) => <LotLink lot={lot} /> },
     { key: "carro", header: "Carro", render: carLabel },
     { key: "inicial", header: "Lance inicial", align: "right", render: (lot) => formatBRL(lot.startingBidCents) },
     { key: "lances", header: "Lances", align: "right", render: (lot) => String(lot.bidCount) },
     { key: "abre", header: "Abre", render: (lot) => formatBrasilia(lot.startsAt) },
     { key: "fecha", header: "Fecha", render: (lot) => formatBrasilia(lot.endsAt) },
-    { key: "acao", header: "Ação", render: (lot) => <SeeRoom lot={lot} /> },
+    { key: "acao", header: "Ação", render: (lot) => <RowActions lot={lot} onCancel={cancel.begin} /> },
+  ];
+  const cancelledTableColumns: DataTableColumn<MyLotCard>[] = [
+    { key: "lote", header: "Lote", render: (lot) => <LotLink lot={lot} /> },
+    { key: "carro", header: "Carro", render: (lot) => cancelledColumns(lot).car },
+    { key: "lances", header: "Lances", align: "right", render: (lot) => cancelledColumns(lot).bids },
+    { key: "ultimo", header: "Último lance", align: "right", render: (lot) => cancelledColumns(lot).lastBid },
+    { key: "estorno", header: "Estorno", align: "right", render: (lot) => cancelledColumns(lot).refund },
+    { key: "em", header: "Cancelado em", render: (lot) => cancelledColumns(lot).cancelledAt },
   ];
 
   return (
@@ -157,6 +195,17 @@ export function PainelScreen() {
       {notice ? (
         <FeedbackState variant="vazio" className="mt-8">
           {notice}
+        </FeedbackState>
+      ) : null}
+      {/* Região viva sempre presente: o aviso do cancelamento é anunciado quando o texto entra (S06 §9.1). */}
+      <div role="status" aria-live="polite" className="empty:hidden">
+        {cancel.announce ? (
+          <p className="t-body mt-8 border-[3px] border-dashed border-tracejado bg-papel p-6 text-tinta">{cancel.announce}</p>
+        ) : null}
+      </div>
+      {cancel.notice ? (
+        <FeedbackState variant="erro" className="mt-8">
+          {cancel.notice}
         </FeedbackState>
       ) : null}
 
@@ -191,7 +240,7 @@ export function PainelScreen() {
           </section>
 
           <section aria-labelledby="painel-ao-vivo" className="mt-8">
-            <h2 id="painel-ao-vivo" className="t-display-secao mb-6">
+            <h2 id="painel-ao-vivo" tabIndex={-1} className="t-display-secao mb-6">
               Ao vivo
             </h2>
             {live.length ? (
@@ -202,7 +251,7 @@ export function PainelScreen() {
           </section>
 
           <section aria-labelledby="painel-agendados" className="mt-8">
-            <h2 id="painel-agendados" className="t-display-secao mb-6">
+            <h2 id="painel-agendados" tabIndex={-1} className="t-display-secao mb-6">
               Agendados
             </h2>
             {scheduled.length ? (
@@ -213,7 +262,7 @@ export function PainelScreen() {
           </section>
 
           <section aria-labelledby="painel-encerrados" className="mt-8">
-            <h2 id="painel-encerrados" className="t-display-secao mb-6">
+            <h2 id="painel-encerrados" tabIndex={-1} className="t-display-secao mb-6">
               Encerrados
             </h2>
             {ended.length ? (
@@ -226,8 +275,19 @@ export function PainelScreen() {
               <FeedbackState variant="vazio">Nenhum lote encerrado.</FeedbackState>
             )}
           </section>
+
+          {/* Só aparece se houver cancelado: nenhuma caixa vazia (S06 §9.1). */}
+          {cancelled.length ? (
+            <section aria-labelledby="painel-cancelados" className="mt-8">
+              <h2 id="painel-cancelados" ref={cancelledHeading} tabIndex={-1} className="t-display-secao mb-6">
+                Cancelados
+              </h2>
+              <DataTable caption="Lotes cancelados" captionHidden columns={cancelledTableColumns} rows={cancelled} rowKey={(l) => l.id} minWidth={760} />
+            </section>
+          ) : null}
         </>
       )}
+      <CancelDialog open={cancel.open} lot={cancel.target} state={cancel.dialog} onConfirm={() => void cancel.confirm()} onClose={cancel.close} />
     </PageShell>
   );
 }
