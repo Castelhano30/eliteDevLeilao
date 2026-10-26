@@ -1,4 +1,13 @@
-import { brasiliaParts, formatBRL, LEDGER_LABEL, LEDGER_NOTE, type LedgerEntryDto, type LedgerKind } from "@lanceauto/shared";
+import {
+  brasiliaParts,
+  formatBRL,
+  LEDGER_LABEL,
+  LEDGER_NOTE,
+  saleDebitLabel,
+  saleDebitNote,
+  type LedgerEntryDto,
+  type LedgerKind,
+} from "@lanceauto/shared";
 
 const parts = new Intl.DateTimeFormat("pt-BR", {
   timeZone: "America/Sao_Paulo",
@@ -28,7 +37,7 @@ export interface MovementView {
 }
 
 /** Rótulo, valor e nota de cada linha do extrato (S01 9.4). */
-export function describeMovement(entry: Pick<LedgerEntryDto, "kind" | "amountCents">): MovementView {
+export function describeMovement(entry: Pick<LedgerEntryDto, "kind" | "amountCents"> & { lotNumber?: number | null }): MovementView {
   const money = formatBRL(entry.amountCents);
   const kind: LedgerKind = entry.kind;
   const signed: Partial<Record<LedgerKind, string>> = {
@@ -36,6 +45,9 @@ export function describeMovement(entry: Pick<LedgerEntryDto, "kind" | "amountCen
     SALE_DEBIT: `− ${money}`,
     SALE_CREDIT: `+ ${money}`,
   };
+  if (kind === "SALE_DEBIT") {
+    return { label: saleDebitLabel(entry.lotNumber ?? null), value: signed[kind] ?? money, note: saleDebitNote(entry.amountCents) };
+  }
   const note = kind === "HOLD" || kind === "RELEASE" || kind === "REFUND" ? LEDGER_NOTE[kind] : null;
   return { label: LEDGER_LABEL[kind], value: signed[kind] ?? money, note };
 }
