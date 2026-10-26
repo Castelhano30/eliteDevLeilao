@@ -8,6 +8,7 @@ import type { PrismaClient } from "@prisma/client";
 import { makeAuth } from "./middleware/auth";
 import { SystemClock, type Clock } from "./infra/clock";
 import { guardPublisher, NoopPublisher, type Publisher } from "./infra/publisher";
+import { makeSettlementJob, type SettlementJob } from "./infra/settlement-job";
 import { ExternalCache } from "./infra/external-cache";
 import { makeFipeCatalog, type CatalogPort } from "./infra/fipe";
 import { makeImageStore, type ImageDownloader, type ImageStoreOptions } from "./infra/image-store";
@@ -16,11 +17,14 @@ import { requestContext } from "./middleware/request-context";
 import { accountRouter } from "./routes/account";
 import { authRouter } from "./routes/auth";
 import { healthRouter } from "./routes/health";
+import { receiptsRouter } from "./routes/receipts";
 import { catalogRouter, lotsRouter } from "./routes/lots";
 import { makeAuthService } from "./services/auth.service";
 import { makeBidService } from "./services/bid.service";
 import { makeCatalogService } from "./services/catalog.service";
 import { makeLotService, type LotService } from "./services/lot.service";
+import { makeReceiptService } from "./services/receipt.service";
+import { makeSettlementService, type SettlementService } from "./services/settlement.service";
 import { makeWalletService } from "./services/wallet.service";
 
 export interface AppDeps {
@@ -57,7 +61,16 @@ export function createApp(deps: AppDeps): Express {
   return composeApp(deps).app;
 }
 
-/** O app e os services que o servidor de tempo real também usa (o snapshot do `lot:join`). */
+export interface ComposedApp {
+  app: Express;
+  /** O snapshot do `lot:join` do servidor de tempo real. */
+  lots: LotService;
+  settlement: SettlementService;
+  /** Rotina de fechamento: quem sobe o servidor chama `start()` depois do `listen` e `stop()` no shutdown. */
+  settlementJob: SettlementJob;
+}
+
+/** O app e o que o servidor de tempo real e o processo também usam. */
 export function composeApp({
   env,
   db,
@@ -65,7 +78,7 @@ export function composeApp({
   clock = new SystemClock(),
   publisher: rawPublisher = new NoopPublisher(),
   external = {},
-}: AppDeps): { app: Express; lots: LotService } {
+}: AppDeps): ComposedApp {
   const app = express();
   // Publicar nunca derruba uma requisição já confirmada (R-4.2): um ponto só protege todas as rotas.
   const publisher = guardPublisher(rawPublisher, logger);
@@ -105,14 +118,18 @@ export function composeApp({
   const lotService = makeLotService({ db, clock, auditKey: env.AUDIT_HMAC_KEY, catalog, images, imageStore, logger });
 
   const bidService = makeBidService({ db, clock, auditKey: env.AUDIT_HMAC_KEY });
+  const settlement = makeSettlementService({ db, clock });
+  const settlementJob = makeSettlementJob({ db, clock, settlement, publisher, logger });
+  const receiptService = makeReceiptService({ db });
 
   app.use(healthRouter(db));
   app.use(authRouter(authService, env.AUTH_RATE_LIMIT_MAX));
   app.use(accountRouter(auth, authService, walletService, publisher));
   app.use(catalogRouter(auth, catalogService));
   app.use(lotsRouter(auth, lotService, bidService, clock, publisher));
+  app.use(receiptsRouter(receiptService));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
-  return { app, lots: lotService };
+  return { app, lots: lotService, settlement, settlementJob };
 }

@@ -30,7 +30,7 @@ import type { DownloadedImage, ImageDownloader } from "../infra/image-store";
 import type { Logger } from "../infra/logger";
 import type { ImageSuggestionPort } from "../infra/wikipedia";
 import { SHOWCASE_ROOM } from "../socket";
-import { LOT_SELECT, toLotCard, toLotState, type LotRow, type LotStateExtras } from "./lot-mappers";
+import { LOT_SELECT, toLotCard, toLotResult, toLotState, toMyLotCard, type LotRow, type LotStateExtras } from "./lot-mappers";
 import { toNumber } from "./mappers";
 
 export interface CreateLotResult {
@@ -263,6 +263,11 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
         const amount = toNumber(bid.amountCents);
         if (amount > (bestByBidder.get(bid.bidderId) ?? 0)) bestByBidder.set(bid.bidderId, amount);
       }
+      // O comprovante só existe para lote arrematado; o token só sai para o vencedor logado (T9).
+      const receipt =
+        row.settledAt !== null && row.cancelledAt === null && row.bidCount > 0
+          ? await db.receipt.findUnique({ where: { lotId: id }, select: { winnerId: true, token: true, pseudonym: true } })
+          : null;
       const isBidder = viewer?.role === "BIDDER";
       const position = isBidder ? rankFrom(bestByBidder, viewer.id) : null;
       const extras: LotStateExtras = {
@@ -278,11 +283,16 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
         myPseudonym: isBidder ? pseudonymFor(auditKey, viewer.id, id) : null,
         myRank: position?.rank ?? null,
         myBestBidCents: position?.myBestBidCents ?? null,
+        result: toLotResult(row, receipt?.pseudonym ?? null),
+        myReceiptToken: receipt !== null && viewer !== undefined && receipt.winnerId === viewer.id ? receipt.token : null,
       };
       return toLotState(row, now, extras);
     },
 
-    /** Lotes do leiloeiro, cancelados no fim (R-2.11). `totalReceivedCents` é 0 até a S05. */
+    /**
+     * Lotes do leiloeiro, cancelados no fim (R-2.11). Cada encerrado traz o `resultado`; `totalReceivedCents` é a
+     * soma dos `SALE_CREDIT` dele (R-5.8): lote cancelado ou sem lances não entra.
+     */
     async myLots(auctioneerId: string): Promise<MyLotsResponse> {
       const now = clock.now();
       const rows = await db.lot.findMany({
@@ -302,7 +312,18 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
       const sorted = rows
         .map((row) => ({ row, status: lotStatus(row, now) }))
         .sort((a, b) => rank[a.status] - rank[b.status] || key(a.row, a.status) - key(b.row, b.status));
-      return { lots: sorted.map(({ row }) => toLotCard(row, now)), totalReceivedCents: 0, serverTime: now.toISOString() };
+      const soldIds = sorted.filter(({ status }) => status === "SOLD").map(({ row }) => row.id);
+      const receipts = await db.receipt.findMany({ where: { lotId: { in: soldIds } }, select: { lotId: true, pseudonym: true } });
+      const pseudonymByLot = new Map(receipts.map((receipt) => [receipt.lotId, receipt.pseudonym]));
+      const received = await db.ledgerEntry.aggregate({
+        where: { userId: auctioneerId, kind: "SALE_CREDIT" },
+        _sum: { amountCents: true },
+      });
+      return {
+        lots: sorted.map(({ row }) => toMyLotCard(row, now, pseudonymByLot.get(row.id) ?? null)),
+        totalReceivedCents: toNumber(received._sum.amountCents ?? 0n),
+        serverTime: now.toISOString(),
+      };
     },
 
     /**

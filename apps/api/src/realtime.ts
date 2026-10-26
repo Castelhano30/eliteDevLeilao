@@ -4,12 +4,14 @@ import type { Server } from "socket.io";
 import { composeApp, type AppDeps } from "./app";
 import { SystemClock } from "./infra/clock";
 import { SocketPublisher } from "./infra/publisher";
+import type { SettlementJob } from "./infra/settlement-job";
 import { createSocketServer, registerSocketHandlers } from "./socket";
 
 export interface RealtimeServer {
   httpServer: HttpServer;
   io: Server;
   app: Express;
+  settlementJob: SettlementJob;
 }
 
 /**
@@ -20,9 +22,9 @@ export function createRealtimeServer(deps: Omit<AppDeps, "publisher">): Realtime
   const clock = deps.clock ?? new SystemClock();
   const io = createSocketServer({ webOrigin: deps.env.WEB_ORIGIN });
   const publisher = new SocketPublisher(io, clock, deps.logger);
-  const { app, lots } = composeApp({ ...deps, clock, publisher });
+  const { app, lots, settlementJob } = composeApp({ ...deps, clock, publisher });
   registerSocketHandlers(io, { jwtSecret: deps.env.JWT_SECRET, lots, logger: deps.logger });
   const httpServer = createServer(app);
   io.attach(httpServer);
-  return { httpServer, io, app };
+  return { httpServer, io, app, settlementJob };
 }

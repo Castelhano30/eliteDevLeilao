@@ -1,5 +1,13 @@
 import type { Prisma } from "@prisma/client";
-import { lotStatus, minimumNextCents, type BidDTO, type LotCard, type LotState } from "@lanceauto/shared";
+import {
+  lotStatus,
+  minimumNextCents,
+  type BidDTO,
+  type LotCard,
+  type LotResult,
+  type LotState,
+  type MyLotCard,
+} from "@lanceauto/shared";
 import { toNumber } from "./mappers";
 
 /**
@@ -70,16 +78,59 @@ export function toLotCard(row: LotRow, now: Date): LotCard {
   };
 }
 
-/** O que a leitura acrescenta ao lote: lances, licitantes distintos e a posição de quem está olhando. */
+/**
+ * Resultado do fechamento (R-5.9): `null` até o lote ser liquidado e sempre `null` no cancelado. O pseudônimo do
+ * vencedor vem do `Receipt` (o do lance vencedor); nunca se compara pseudônimo no cliente.
+ */
+export function toLotResult(
+  row: Pick<LotRow, "endsAt" | "settledAt" | "cancelledAt" | "bidCount" | "currentBidCents">,
+  winnerPseudonym: string | null,
+): LotResult | null {
+  if (row.settledAt === null || row.cancelledAt !== null) return null;
+  const base = { hammerAt: iso(row.endsAt), settledAt: iso(row.settledAt) };
+  if (row.bidCount === 0 || row.currentBidCents === null) {
+    return { outcome: "UNSOLD", finalBidCents: null, winnerPseudonym: null, ...base };
+  }
+  return { outcome: "SOLD", finalBidCents: toNumber(row.currentBidCents), winnerPseudonym, ...base };
+}
+
+/** Linha do Painel do leiloeiro: o cartão mais o resultado, quando há. */
+export function toMyLotCard(row: LotRow, now: Date, winnerPseudonym: string | null): MyLotCard {
+  const result = toLotResult(row, winnerPseudonym);
+  return {
+    ...toLotCard(row, now),
+    resultado: result
+      ? {
+          outcome: result.outcome,
+          finalBidCents: result.finalBidCents,
+          winnerPseudonym: result.winnerPseudonym,
+          referencePriceCents: toNumber(row.item.referencePriceCents),
+          settledAt: result.settledAt,
+        }
+      : null,
+  };
+}
+
+/** O que a leitura acrescenta ao lote: lances, licitantes distintos, a posição de quem olha e o resultado. */
 export interface LotStateExtras {
   bids: BidDTO[];
   bidderCount: number;
   myPseudonym: string | null;
   myRank: number | null;
   myBestBidCents: number | null;
+  result: LotResult | null;
+  myReceiptToken: string | null;
 }
 
-const NO_EXTRAS: LotStateExtras = { bids: [], bidderCount: 0, myPseudonym: null, myRank: null, myBestBidCents: null };
+const NO_EXTRAS: LotStateExtras = {
+  bids: [],
+  bidderCount: 0,
+  myPseudonym: null,
+  myRank: null,
+  myBestBidCents: null,
+  result: null,
+  myReceiptToken: null,
+};
 
 export function toLotState(row: LotRow, now: Date, extras: LotStateExtras = NO_EXTRAS): LotState {
   const card = toLotCard(row, now);
@@ -106,6 +157,8 @@ export function toLotState(row: LotRow, now: Date, extras: LotStateExtras = NO_E
       myPseudonym: extras.myPseudonym,
       myRank: extras.myRank,
       myBestBidCents: extras.myBestBidCents,
+      result: extras.result,
+      myReceiptToken: extras.myReceiptToken,
     },
     car: {
       brand: row.item.brand,

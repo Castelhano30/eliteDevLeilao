@@ -24,13 +24,20 @@ function main() {
   const env = loadEnv();
   const logger = createLogger(env.NODE_ENV === "production" ? "info" : "debug");
   const prisma = createPrisma(env.DATABASE_URL);
-  const { httpServer, io } = createRealtimeServer({ env, db: prisma, logger });
+  const { httpServer, io, settlementJob } = createRealtimeServer({ env, db: prisma, logger });
 
-  httpServer.listen(env.PORT, () => logger.info({ port: env.PORT }, "API no ar"));
+  httpServer.listen(env.PORT, () => {
+    logger.info({ port: env.PORT }, "API no ar");
+    // Varredura já no boot: liquida o que venceu enquanto o servidor estava parado (INV-10); depois, a cada 5 s.
+    settlementJob.start();
+  });
 
   const shutdown = () => {
-    void io.close(() => {
-      void prisma.$disconnect().finally(() => process.exit(0));
+    // Espera a liquidação em curso terminar: cada lote é uma transação, nenhum fica pela metade.
+    void settlementJob.stop().finally(() => {
+      void io.close(() => {
+        void prisma.$disconnect().finally(() => process.exit(0));
+      });
     });
   };
   process.on("SIGTERM", shutdown);
