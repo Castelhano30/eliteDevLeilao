@@ -194,6 +194,34 @@ describe.skipIf(!testDatabaseUrl)("seed dos lotes (integração, sem rede)", () 
       expect(logs.filter((message) => message.includes("já existe"))).toHaveLength(2);
     });
 
+    it("retoma lote arrematado criado sem lances e lote sem lances ainda não liquidado", async () => {
+      const { deps: fresh } = await setup();
+      const { makeLotService } = await import("../services/lot.service");
+      const { toDate } = await import("../infra/clock");
+      const fake = new FakeClock(toDate(fresh.clock.now().getTime() - 3 * 24 * 3_600_000));
+      const lots = makeLotService({ db: prisma, clock: fake, auditKey: testEnv.AUDIT_HMAC_KEY, catalog: makeFixtureCatalog(cars, fake), images: { suggest: async () => ({ status: "NOT_FOUND" }) }, imageStore: { download: async () => null } });
+      for (const [title, key, daysAgo, minimum, increment] of [["Honda Civic LXS 2012", "civic-2012", 3, 5_000_000, 250_000], ["Volkswagen Gol GTI 1996", "gol-gti-1996", 2, 4_000_000, 100_000]] as const) {
+        const car = cars.find((item) => item.key === key)!;
+        const start = fresh.clock.now().getTime() - daysAgo * 24 * 3_600_000;
+        fake.set(toDate(start));
+        await lots.createLot(fresh.auctioneerId, { brandId: car.brandId, modelId: car.modelId, yearId: car.yearId, title, startingBidCents: minimum, minIncrementCents: increment, startsAt: toDate(start).toISOString(), endsAt: toDate(start + 3_600_000).toISOString() }, { allowPast: true });
+      }
+      const soldBefore = await prisma.lot.findFirstOrThrow({ where: { title: "Honda Civic LXS 2012" } });
+      const rival = await prisma.user.findUniqueOrThrow({ where: { email: fresh.rivalEmail } });
+      const { makeBidService } = await import("../services/bid.service");
+      fake.set(toDate(soldBefore.startsAt.getTime() + 5 * 60_000));
+      await makeBidService({ db: prisma, clock: fake, auditKey: testEnv.AUDIT_HMAC_KEY }).placeBid(rival.id, "BIDDER", soldBefore.id, { amountCents: 5_000_000, expectedCurrentCents: null });
+      const result = await seedClosedLots(fresh);
+      expect(result).toEqual({ created: 0, receiptPath: expect.stringMatching(/^\/c\//) });
+      expect(await prisma.lot.count()).toBe(2);
+      expect((await prisma.lot.findFirstOrThrow({ where: { title: "Honda Civic LXS 2012" } })).bidCount).toBe(4);
+      expect((await prisma.lot.findFirstOrThrow({ where: { title: "Volkswagen Gol GTI 1996" } })).settledAt).not.toBeNull();
+      expect(await prisma.bid.count({ where: { lotId: soldBefore.id } })).toBe(4);
+      expect(await prisma.receipt.count({ where: { lotId: soldBefore.id } })).toBe(1);
+      expect(await seedClosedLots(fresh)).toEqual(result);
+      expect(await prisma.bid.count({ where: { lotId: soldBefore.id } })).toBe(4);
+    });
+
     it("falha com mensagem clara se uma das contas não existir", async () => {
       const { deps } = await setup();
       await expect(seedClosedLots({ ...deps, rivalEmail: "ninguem@lanceauto.test" })).rejects.toThrow(

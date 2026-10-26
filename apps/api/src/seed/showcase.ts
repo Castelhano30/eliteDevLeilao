@@ -228,7 +228,7 @@ export interface SeedClosedLotsResult {
  * passado, nunca por insert direto: a cadeia HMAC nasce válida (PRD S9). Arrematado (3 dias atrás): 4 lances
  * alternados, o último a 40 s do fim, que prorroga em +2 min; depois o relógio passa do novo fim e `settleLot`
  * liquida. Sem lances (2 dias atrás): cria, avança o relógio e liquida como `UNSOLD`.
- * Idempotente por título (roda em todo deploy): lote que já existe não é refeito.
+ * Retoma por título: valida o prefixo de lances gravado e completa as etapas pendentes.
  */
 export async function seedClosedLots(deps: SeedClosedLotsDeps): Promise<SeedClosedLotsResult> {
   const { db, clock, auditKey, auctioneerId, cars, baseDir, log = () => undefined } = deps;
@@ -276,11 +276,12 @@ export async function seedClosedLots(deps: SeedClosedLotsDeps): Promise<SeedClos
     return receipt ? `/c/${receipt.token}` : null;
   }
 
-  const existingSold = await db.lot.findFirst({ where: { title: CLOSED.sold.title }, select: { id: true, number: true } });
+  const existingSold = await db.lot.findFirst({ where: { title: CLOSED.sold.title }, select: { id: true, number: true, startsAt: true, bidCount: true, settledAt: true } });
   let receiptPath: string | null = null;
-  if (existingSold) {
-    log(`Lote ${formatLotNumber(existingSold.number)} (${CLOSED.sold.title}) já existe: o seed não refaz.`);
+  if (existingSold?.settledAt) {
     receiptPath = await receiptPathOf(existingSold.id);
+    if (!receiptPath) throw new Error(`Seed dos encerrados: lote ${existingSold.number} liquidado sem comprovante.`);
+    log(`Lote ${formatLotNumber(existingSold.number)} (${CLOSED.sold.title}) já existe: o seed não refaz.`);
   } else {
     const users = await db.user.findMany({
       where: { email: { in: [deps.rivalEmail, deps.winnerEmail] } },
@@ -294,7 +295,9 @@ export async function seedClosedLots(deps: SeedClosedLotsDeps): Promise<SeedClos
     const rival = idOf(deps.rivalEmail);
     const winner = idOf(deps.winnerEmail);
     const plan = CLOSED.sold;
-    const lot = await createPast(plan);
+    const lot = existingSold
+      ? { id: existingSold.id, number: existingSold.number, start: existingSold.startsAt.getTime() }
+      : await createPast(plan);
     const bid = async (userId: string, amountCents: number, expected: number | null, at: number) => {
       fake.set(toDate(at));
       try {
@@ -306,11 +309,20 @@ export async function seedClosedLots(deps: SeedClosedLotsDeps): Promise<SeedClos
     };
     const step = plan.minIncrementCents;
     const first = plan.startingBidCents;
-    await bid(rival, first, null, lot.start + 5 * MINUTE);
-    await bid(winner, first + step, first, lot.start + 15 * MINUTE);
-    await bid(rival, first + 2 * step, first + step, lot.start + 30 * MINUTE);
-    // A 40 s do fim: prorroga em +2 min, para o comprovante mostrar "PRORROGADO".
-    await bid(winner, first + 3 * step, first + 2 * step, lot.start + 60 * MINUTE - 40_000);
+    const planned = [
+      { userId: rival, amount: first, expected: null, at: lot.start + 5 * MINUTE },
+      { userId: winner, amount: first + step, expected: first, at: lot.start + 15 * MINUTE },
+      { userId: rival, amount: first + 2 * step, expected: first + step, at: lot.start + 30 * MINUTE },
+      // A 40 s do fim: prorroga em +2 min.
+      { userId: winner, amount: first + 3 * step, expected: first + 2 * step, at: lot.start + 60 * MINUTE - 40_000 },
+    ];
+    const recorded = await db.bid.findMany({ where: { lotId: lot.id }, orderBy: { seq: "asc" }, select: { bidderId: true, amountCents: true } });
+    if (recorded.length > planned.length || recorded.some((row, index) => row.bidderId !== planned[index]!.userId || Number(row.amountCents) !== planned[index]!.amount)) {
+      throw new Error(`Seed dos encerrados: lances do lote ${lot.number} divergem do plano; revisão manual necessária.`);
+    }
+    for (const plannedBid of planned.slice(recorded.length)) {
+      await bid(plannedBid.userId, plannedBid.amount, plannedBid.expected, plannedBid.at);
+    }
     const extended = await db.lot.findUniqueOrThrow({ where: { id: lot.id }, select: { endsAt: true } });
     fake.set(toDate(extended.endsAt.getTime() + 1_000));
     const outcome = await settlement.settleLot(lot.id);
@@ -319,10 +331,15 @@ export async function seedClosedLots(deps: SeedClosedLotsDeps): Promise<SeedClos
     log(`Lote ${formatLotNumber(lot.number)} arrematado: ${plan.title}.`);
   }
 
-  if (await db.lot.findFirst({ where: { title: CLOSED.unsold.title }, select: { id: true } })) {
+  const existingUnsold = await db.lot.findFirst({ where: { title: CLOSED.unsold.title }, select: { id: true, number: true, startsAt: true, settledAt: true, bidCount: true } });
+  if (existingUnsold?.settledAt) {
+    if (existingUnsold.bidCount !== 0) throw new Error(`Seed dos encerrados: lote ${existingUnsold.number} tem lances; revisão manual necessária.`);
     log(`Lote "${CLOSED.unsold.title}" já existe: o seed não refaz.`);
   } else {
-    const lot = await createPast(CLOSED.unsold);
+    const lot = existingUnsold
+      ? { id: existingUnsold.id, number: existingUnsold.number, start: existingUnsold.startsAt.getTime() }
+      : await createPast(CLOSED.unsold);
+    if (existingUnsold?.bidCount) throw new Error(`Seed dos encerrados: lote ${lot.number} tem lances; revisão manual necessária.`);
     fake.set(toDate(lot.start + 60 * MINUTE + 1_000));
     const outcome = await settlement.settleLot(lot.id);
     if (outcome.result !== "UNSOLD") throw new Error(`Seed dos encerrados: o lote ${lot.number} não fechou sem lances (${outcome.result}).`);
