@@ -35,6 +35,12 @@ function group(card: LotCard): ShowcaseGroup | null {
   return showcaseGroup(card.status);
 }
 
+function olderThanFinal(current: LotCard, incoming: LotCard): boolean {
+  return (current.status === "SOLD" || current.status === "UNSOLD" || current.status === "CANCELLED") &&
+    incoming.version === current.version &&
+    (incoming.status === "LIVE" || incoming.status === "CLOSING" || incoming.status === "SCHEDULED");
+}
+
 const COUNT_KEY = { LIVE: "live", SCHEDULED: "scheduled", ENDED: "ended" } as const;
 
 function moveCount(counts: LotListResponse["counts"], from: ShowcaseGroup | null, to: ShowcaseGroup | null): LotListResponse["counts"] {
@@ -58,8 +64,8 @@ export interface ShowcaseUpsert {
 
 /**
  * `showcase:lot` aplicado a uma lista da Vitrine (R-4.13): descarta o evento se `card.version < version` do cartão
- * que a lista já tem (dois lances quase simultâneos podem sair fora de ordem); versão igual aplica, e é assim que
- * o fechamento, que não incrementa `entryCount`, chega. Cancelado sai da lista. Id desconhecido entra direto
+ * que a lista já tem (dois lances quase simultâneos podem sair fora de ordem); versão igual aplica o fechamento,
+ * mas nunca reabre um estado final. Cancelado sai da lista. Id desconhecido entra direto
  * numa lista sem filtro; com filtro, só o servidor sabe se casa, então pede nova consulta.
  */
 export function upsertShowcaseCard(data: LotListResponse, card: LotCard, filtered: boolean): ShowcaseUpsert {
@@ -72,7 +78,7 @@ export function upsertShowcaseCard(data: LotListResponse, card: LotCard, filtere
       invalidate: false,
     };
   }
-  if (card.version < current.version) return { data, invalidate: false };
+  if (card.version < current.version || olderThanFinal(current, card)) return { data, invalidate: false };
   const from = group(current);
   if (card.status === "CANCELLED") {
     return {
@@ -115,6 +121,13 @@ export const SHOWCASE_CLOSING_CHECKS = 20;
 /** API caída: tenta de novo sozinha a cada 10 s (AC-2.35). */
 export const SHOWCASE_ERROR_POLL_MS = 10_000;
 
+export function checksForFilter(
+  state: { key: string; checks: OpeningChecks },
+  key: string,
+): { key: string; checks: OpeningChecks } {
+  return state.key === key ? state : { key, checks: INITIAL_OPENING_CHECKS };
+}
+
 /**
  * `refetchInterval` da Vitrine (puro). O polling de 3 s só existe enquanto há cartão apurando e tem teto: conta só
  * respostas novas (como a conferência de abertura da Sala) e zera quando não há cartão apurando, que é o que o
@@ -151,7 +164,7 @@ export interface MyLotUpsert {
  */
 export function upsertMyLot(data: MyLotsResponse, card: LotCard): MyLotUpsert {
   const current = data.lots.find((lot) => lot.id === card.id);
-  if (!current || card.version < current.version) return { data, refetch: false };
+  if (!current || card.version < current.version || olderThanFinal(current, card)) return { data, refetch: false };
   const final = card.status === "SOLD" || card.status === "UNSOLD" || card.status === "CANCELLED";
   return {
     // O cartão do evento não traz o resultado: a linha guarda o que já tinha e o `GET` seguinte o traz (R-5.8).

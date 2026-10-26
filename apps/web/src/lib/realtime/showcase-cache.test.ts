@@ -8,6 +8,7 @@ import {
   SHOWCASE_CLOSING_POLL_MS,
   SHOWCASE_ERROR_POLL_MS,
   cardStatusAt,
+  checksForFilter,
   isFiltered,
   needsClosingPoll,
   showcaseRefetchInterval,
@@ -39,6 +40,15 @@ describe("upsertShowcaseCard (AC-4.29, R-4.13)", () => {
     const result = upsertShowcaseCard(base(), card({ id: "a", version: 7, status: "SOLD" }), false);
     expect(result.data.lots[0]!.status).toBe("SOLD");
     expect(result.data.counts).toEqual({ live: 0, scheduled: 0, ended: 1 });
+  });
+
+  it("LIVE atrasado na mesma versão não reabre SOLD nem UNSOLD", () => {
+    for (const status of ["SOLD", "UNSOLD"] as const) {
+      const closed = upsertShowcaseCard(base(), card({ id: "a", version: 7, status }), false).data;
+      expect(upsertShowcaseCard(closed, card({ id: "a", version: 7, status: "LIVE" }), false).data).toEqual(closed);
+      const mine: MyLotsResponse = { lots: [{ ...closed.lots[0]!, resultado: null }], totalReceivedCents: 0, serverTime: "x" };
+      expect(upsertMyLot(mine, card({ id: "a", version: 7, status: "LIVE" })).data).toEqual(mine);
+    }
   });
 
   it("não muta a lista recebida", () => {
@@ -180,6 +190,14 @@ describe("showcaseRefetchInterval (polling da Vitrine, com teto)", () => {
   it("consulta com erro tenta de novo a cada 10 s sem mexer na conta", () => {
     const checks = { seenAt: 9_000, count: 3 };
     expect(step({ failed: true, checks })).toEqual({ interval: SHOWCASE_ERROR_POLL_MS, checks });
+  });
+
+  it("um filtro novo recebe seu próprio ciclo de 20 respostas, mesmo após esgotar o anterior", () => {
+    const exhausted = { key: "/lots?brand=Fiat", checks: { seenAt: 61_000, count: SHOWCASE_CLOSING_CHECKS } };
+    expect(step({ checks: exhausted.checks, dataUpdatedAt: 61_000 }).interval).toBe(false);
+    const next = checksForFilter(exhausted, "/lots?brand=Toyota");
+    expect(step({ checks: next.checks, dataUpdatedAt: 62_000 }).interval).toBe(SHOWCASE_CLOSING_POLL_MS);
+    expect(checksForFilter(next, next.key)).toBe(next);
   });
 });
 
