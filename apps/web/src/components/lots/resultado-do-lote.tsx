@@ -31,8 +31,10 @@ export function ResultadoDoLote({ view, lotNumber, animate }: ResultadoDoLotePro
       {view.sentence ? <p className="t-body-lead">{view.sentence}</p> : null}
       {view.kind === "arrematou" ? (
         <div className="space-y-3">
-          <Link href={receiptPath(view.receiptToken)} className={`${buttonClasses("primario")} w-full`}>
+          {/* O comprovante abre em outra guia: a Sala continua onde a pessoa estava. */}
+          <Link href={receiptPath(view.receiptToken)} target="_blank" rel="noopener noreferrer" className={`${buttonClasses("primario")} w-full`}>
             Ver comprovante
+            <span className="sr-only"> (abre em outra guia)</span>
           </Link>
           <BotaoCopiarLink token={view.receiptToken} lotNumber={lotNumber} />
         </div>
