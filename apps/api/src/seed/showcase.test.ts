@@ -7,7 +7,7 @@ import { createTestPrisma, testDatabaseUrl, truncateAll } from "../../test/helpe
 import { genesisHash, sealHash } from "../domain/audit-chain";
 import { FakeClock } from "../infra/clock";
 import { assertLotInvariants, makeUser } from "../../test/helpers/bids";
-import { makeFixtureCatalog, seedLiveBids, seedShowcaseLots, type FixtureCar } from "./showcase";
+import { makeFixtureCatalog, seedClosedLots, seedLiveBids, seedShowcaseLots, type FixtureCar } from "./showcase";
 
 const baseDir = path.resolve(__dirname, "../../prisma");
 const cars = JSON.parse(readFileSync(path.join(baseDir, "fipe-fixture.json"), "utf8")) as FixtureCar[];
@@ -114,6 +114,108 @@ describe.skipIf(!testDatabaseUrl)("seed dos lotes (integração, sem rede)", () 
       await expect(seedLiveBids({ ...deps, bidderEmails: ["ninguem@lanceauto.test", "ana@lanceauto.test"] })).rejects.toThrow(
         /a conta ninguem@lanceauto.test não existe/,
       );
+    });
+  });
+
+  describe("seedClosedLots (S05 §11)", () => {
+    async function setup() {
+      const { app, clock } = makeTestApp(prisma);
+      const { user } = await registerUser(app, { role: "AUCTIONEER", email: "leiloeiro@lanceauto.test" });
+      const ana = await makeUser(app, "Ana", { depositCents: 50_000_000 });
+      const bruno = await makeUser(app, "Bruno", { depositCents: 30_000_000 });
+      const logs: string[] = [];
+      const deps = {
+        db: prisma,
+        clock,
+        auditKey: testEnv.AUDIT_HMAC_KEY,
+        auctioneerId: user.id,
+        cars,
+        baseDir,
+        rivalEmail: "bruno@lanceauto.test",
+        winnerEmail: "ana@lanceauto.test",
+        log: (message: string) => void logs.push(message),
+      };
+      return { app, ana, bruno, auctioneerId: user.id, deps, logs };
+    }
+
+    it("cria o arrematado (com prorrogação) e o sem lances pelos services, com a cadeia válida", async () => {
+      const { app, ana, bruno, auctioneerId, deps, logs } = await setup();
+      const result = await seedClosedLots(deps);
+
+      expect(result.created).toBe(2);
+      expect(result.receiptPath).toMatch(/^\/c\/[A-Za-z0-9_-]{32}$/);
+      expect(logs.join("\n")).toContain(`Comprovante de demonstração: ${result.receiptPath}`);
+
+      const sold = await prisma.lot.findFirstOrThrow({ where: { title: "Honda Civic LXS 2012" } });
+      const unsold = await prisma.lot.findFirstOrThrow({ where: { title: "Volkswagen Gol GTI 1996" } });
+      const listed = await request(app).get("/lots?status=ENDED");
+      expect(listed.body.lots.map((lot: { id: string; status: string }) => [lot.id, lot.status])).toEqual([
+        [unsold.id, "UNSOLD"],
+        [sold.id, "SOLD"],
+      ]);
+
+      // 4 lances alternados; o último, a 40 s do fim, prorrogou em +2 min (fim = início + 60 min − 40 s + 2 min).
+      expect(sold).toMatchObject({ bidCount: 4, entryCount: 4, currentBidCents: 5_750_000n });
+      expect(sold.endsAt.getTime() - sold.originalEndsAt.getTime()).toBe(80_000);
+      expect(sold.settledAt!.getTime()).toBeGreaterThan(sold.endsAt.getTime());
+      expect(sold.createdAt.getTime()).toBeLessThan(Date.parse("2026-10-23T12:00:00.000Z") - 2 * 24 * 3_600_000);
+      await assertLotInvariants(prisma, sold.id);
+
+      const receipt = await prisma.receipt.findUniqueOrThrow({ where: { lotId: sold.id } });
+      expect(result.receiptPath).toBe(`/c/${receipt.token}`);
+      expect(receipt).toMatchObject({ winnerId: ana.id, amountCents: 5_750_000n, finalHash: sold.lastHash });
+      const dto = (await request(app).get(`/receipts/${receipt.token}`)).body;
+      expect(dto).toMatchObject({ extended: true, bidCount: 4, amountCents: 5_750_000, hammerAt: sold.endsAt.toISOString() });
+
+      // Ana pagou, Bruno foi liberado, o leiloeiro recebeu; e os saldos do seed seguem cobrindo novos lances.
+      const walletOf = (id: string) => prisma.wallet.findUniqueOrThrow({ where: { userId: id } });
+      expect(await walletOf(ana.id)).toMatchObject({ totalCents: 50_000_000n - 5_750_000n, committedCents: 0n });
+      expect(await walletOf(bruno.id)).toMatchObject({ totalCents: 30_000_000n, committedCents: 0n });
+      expect(await walletOf(auctioneerId)).toMatchObject({ totalCents: 5_750_000n });
+
+      // Sem lances: só settledAt.
+      expect(unsold.bidCount).toBe(0);
+      expect(unsold.settledAt).not.toBeNull();
+      expect(await prisma.receipt.count({ where: { lotId: unsold.id } })).toBe(0);
+      await assertLotInvariants(prisma, unsold.id);
+    });
+
+    it("é idempotente: a segunda rodada não cria, não liquida e devolve o mesmo comprovante", async () => {
+      const { deps, logs } = await setup();
+      const first = await seedClosedLots(deps);
+      const before = { lots: await prisma.lot.count(), bids: await prisma.bid.count(), ledger: await prisma.ledgerEntry.count() };
+
+      const second = await seedClosedLots(deps);
+      expect(second).toEqual({ created: 0, receiptPath: first.receiptPath });
+      expect(await prisma.lot.count()).toBe(before.lots);
+      expect(await prisma.bid.count()).toBe(before.bids);
+      expect(await prisma.ledgerEntry.count()).toBe(before.ledger);
+      expect(await prisma.receipt.count()).toBe(1);
+      expect(logs.filter((message) => message.includes("já existe"))).toHaveLength(2);
+    });
+
+    it("falha com mensagem clara se uma das contas não existir", async () => {
+      const { deps } = await setup();
+      await expect(seedClosedLots({ ...deps, rivalEmail: "ninguem@lanceauto.test" })).rejects.toThrow(
+        /a conta ninguem@lanceauto.test não existe/,
+      );
+    });
+
+    it("falha com mensagem clara se um lance for recusado (saldo insuficiente)", async () => {
+      const { app, auctioneerId } = await setup();
+      const poor = await makeUser(app, "Pobre", { depositCents: 1_000_000 });
+      await expect(
+        seedClosedLots({
+          db: prisma,
+          clock: makeTestApp(prisma).clock,
+          auditKey: testEnv.AUDIT_HMAC_KEY,
+          auctioneerId,
+          cars,
+          baseDir,
+          rivalEmail: poor.email,
+          winnerEmail: "ana@lanceauto.test",
+        }),
+      ).rejects.toThrow(/lance de 5000000 centavos no lote \d+ foi recusado .*Saldo insuficiente/);
     });
   });
 });

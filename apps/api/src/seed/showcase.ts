@@ -2,11 +2,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { PrismaClient } from "@prisma/client";
 import { cleanBrand, formatLotNumber, type CatalogOption } from "@lanceauto/shared";
-import { toDate, type Clock } from "../infra/clock";
+import { FakeClock, toDate, type Clock } from "../infra/clock";
 import { carNotFound, type CatalogPort } from "../infra/fipe";
 import type { DownloadedImage } from "../infra/image-store";
 import { makeBidService } from "../services/bid.service";
 import { makeLotService } from "../services/lot.service";
+import { makeSettlementService } from "../services/settlement.service";
 
 /** Um carro do `prisma/fipe-fixture.json`, no formato do detalhe normalizado da FIPE (S8: sem rede). */
 export interface FixtureCar {
@@ -192,4 +193,142 @@ export async function seedLiveBids(deps: SeedLiveBidsDeps): Promise<number> {
   }
   log(`Lote ${formatLotNumber(lot.number)}: ${SEED_BID_COUNT} lances registrados pelo placeBid.`);
   return SEED_BID_COUNT;
+}
+
+const MINUTE = 60_000;
+
+/** Lotes já encerrados do seed (S05 §11): um arrematado, com prorrogação, e um sem lances. */
+const CLOSED = {
+  sold: { key: "civic-2012", title: "Honda Civic LXS 2012", daysAgo: 3, startingBidCents: 5_000_000, minIncrementCents: 250_000 },
+  unsold: { key: "gol-gti-1996", title: "Volkswagen Gol GTI 1996", daysAgo: 2, startingBidCents: 4_000_000, minIncrementCents: 100_000 },
+} as const;
+
+export interface SeedClosedLotsDeps {
+  db: PrismaClient;
+  /** Relógio de verdade: o seed recua um `FakeClock` a partir dele. */
+  clock: Clock;
+  auditKey: string;
+  auctioneerId: string;
+  cars: FixtureCar[];
+  baseDir: string;
+  /** O rival abre e cobre os lances; o vencedor dá o último, dentro dos 2 minutos finais (prorroga). */
+  rivalEmail: string;
+  winnerEmail: string;
+  log?: (message: string) => void;
+}
+
+export interface SeedClosedLotsResult {
+  created: number;
+  /** Caminho do comprovante de demonstração (`/c/{token}`) do lote arrematado, se existir. */
+  receiptPath: string | null;
+}
+
+/**
+ * Cria os lotes encerrados pelos MESMOS services da aplicação (create lot, bid, settle) com um `FakeClock` no
+ * passado, nunca por insert direto: a cadeia HMAC nasce válida (PRD S9). Arrematado (3 dias atrás): 4 lances
+ * alternados, o último a 40 s do fim, que prorroga em +2 min; depois o relógio passa do novo fim e `settleLot`
+ * liquida. Sem lances (2 dias atrás): cria, avança o relógio e liquida como `UNSOLD`.
+ * Idempotente por título (roda em todo deploy): lote que já existe não é refeito.
+ */
+export async function seedClosedLots(deps: SeedClosedLotsDeps): Promise<SeedClosedLotsResult> {
+  const { db, clock, auditKey, auctioneerId, cars, baseDir, log = () => undefined } = deps;
+  const fake = new FakeClock(clock.now());
+  const lots = makeLotService({
+    db,
+    clock: fake,
+    auditKey,
+    catalog: makeFixtureCatalog(cars, fake),
+    images: { suggest: async () => ({ status: "NOT_FOUND" }) },
+    imageStore: { download: async () => null },
+  });
+  const bids = makeBidService({ db, clock: fake, auditKey });
+  const settlement = makeSettlementService({ db, clock: fake });
+  const realNow = clock.now().getTime();
+  let created = 0;
+
+  async function createPast(plan: (typeof CLOSED)[keyof typeof CLOSED]) {
+    const car = cars.find((c) => c.key === plan.key);
+    if (!car) throw new Error(`fipe-fixture.json sem o carro ${plan.key}`);
+    fake.set(toDate(realNow - plan.daysAgo * 24 * 60 * MINUTE));
+    const start = fake.now().getTime();
+    const { response } = await lots.createLot(
+      auctioneerId,
+      {
+        brandId: car.brandId,
+        modelId: car.modelId,
+        yearId: car.yearId,
+        title: plan.title,
+        startingBidCents: plan.startingBidCents,
+        minIncrementCents: plan.minIncrementCents,
+        startsAt: toDate(start).toISOString(),
+        endsAt: toDate(start + 60 * MINUTE).toISOString(),
+        imageCredit: car.imageCredit ?? undefined,
+        imageCreditUrl: car.imageCreditUrl ?? undefined,
+      },
+      { allowPast: true, image: await readFixtureImage(baseDir, car) },
+    );
+    created += 1;
+    return { id: response.lot.id, number: response.lot.number, start };
+  }
+
+  async function receiptPathOf(lotId: string): Promise<string | null> {
+    const receipt = await db.receipt.findUnique({ where: { lotId }, select: { token: true } });
+    return receipt ? `/c/${receipt.token}` : null;
+  }
+
+  const existingSold = await db.lot.findFirst({ where: { title: CLOSED.sold.title }, select: { id: true, number: true } });
+  let receiptPath: string | null = null;
+  if (existingSold) {
+    log(`Lote ${formatLotNumber(existingSold.number)} (${CLOSED.sold.title}) já existe: o seed não refaz.`);
+    receiptPath = await receiptPathOf(existingSold.id);
+  } else {
+    const users = await db.user.findMany({
+      where: { email: { in: [deps.rivalEmail, deps.winnerEmail] } },
+      select: { id: true, email: true },
+    });
+    const idOf = (email: string) => {
+      const id = users.find((user) => user.email === email)?.id;
+      if (!id) throw new Error(`Seed dos encerrados: a conta ${email} não existe.`);
+      return id;
+    };
+    const rival = idOf(deps.rivalEmail);
+    const winner = idOf(deps.winnerEmail);
+    const plan = CLOSED.sold;
+    const lot = await createPast(plan);
+    const bid = async (userId: string, amountCents: number, expected: number | null, at: number) => {
+      fake.set(toDate(at));
+      try {
+        await bids.placeBid(userId, "BIDDER", lot.id, { amountCents, expectedCurrentCents: expected });
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        throw new Error(`Seed dos encerrados: lance de ${amountCents} centavos no lote ${lot.number} foi recusado (${reason}).`);
+      }
+    };
+    const step = plan.minIncrementCents;
+    const first = plan.startingBidCents;
+    await bid(rival, first, null, lot.start + 5 * MINUTE);
+    await bid(winner, first + step, first, lot.start + 15 * MINUTE);
+    await bid(rival, first + 2 * step, first + step, lot.start + 30 * MINUTE);
+    // A 40 s do fim: prorroga em +2 min, para o comprovante mostrar "PRORROGADO".
+    await bid(winner, first + 3 * step, first + 2 * step, lot.start + 60 * MINUTE - 40_000);
+    const extended = await db.lot.findUniqueOrThrow({ where: { id: lot.id }, select: { endsAt: true } });
+    fake.set(toDate(extended.endsAt.getTime() + 1_000));
+    const outcome = await settlement.settleLot(lot.id);
+    if (outcome.result !== "SOLD") throw new Error(`Seed dos encerrados: o lote ${lot.number} não foi liquidado (${outcome.result}).`);
+    receiptPath = await receiptPathOf(lot.id);
+    log(`Lote ${formatLotNumber(lot.number)} arrematado: ${plan.title}.`);
+  }
+
+  if (await db.lot.findFirst({ where: { title: CLOSED.unsold.title }, select: { id: true } })) {
+    log(`Lote "${CLOSED.unsold.title}" já existe: o seed não refaz.`);
+  } else {
+    const lot = await createPast(CLOSED.unsold);
+    fake.set(toDate(lot.start + 60 * MINUTE + 1_000));
+    const outcome = await settlement.settleLot(lot.id);
+    if (outcome.result !== "UNSOLD") throw new Error(`Seed dos encerrados: o lote ${lot.number} não fechou sem lances (${outcome.result}).`);
+    log(`Lote ${formatLotNumber(lot.number)} encerrado sem lances: ${CLOSED.unsold.title}.`);
+  }
+
+  if (receiptPath) log(`Comprovante de demonstração: ${receiptPath}`);
+  return { created, receiptPath };
 }

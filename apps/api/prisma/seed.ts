@@ -3,7 +3,7 @@ import path from "node:path";
 import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import { SystemClock } from "../src/infra/clock";
-import { seedLiveBids, seedShowcaseLots, type FixtureCar } from "../src/seed/showcase";
+import { seedClosedLots, seedLiveBids, seedShowcaseLots, type FixtureCar } from "../src/seed/showcase";
 import { makeAuthService } from "../src/services/auth.service";
 import { makeWalletService } from "../src/services/wallet.service";
 
@@ -24,7 +24,7 @@ const USERS = [
 ];
 
 /**
- * Cria as contas de teste, os lotes de demonstração e os 5 lances do lote ao vivo pelos services da aplicação, nunca por SQL direto.
+ * Cria as contas de teste, os lotes de demonstração, os 5 lances do lote ao vivo e os dois lotes encerrados pelos services da aplicação, nunca por SQL direto.
  * Contas: confere cada uma pelo e-mail e cria só as que faltam. Lotes: só se ainda não houver nenhum
  * (seguro a cada deploy). `--demo` (`npm run seed:demo`) cria um lote ao vivo novo, sem rede.
  */
@@ -59,6 +59,18 @@ async function main() {
     );
     // Roda em todo deploy: chega a um banco já populado (o lote 001 existe, sem lances) e não repete (guarda por bidCount).
     await seedLiveBids({ db, clock, auditKey, bidderEmails: BID_ORDER, log: (message) => console.log(message) });
+    // Lotes já encerrados (arrematado com prorrogação e sem lances), pelos services com relógio no passado. Também idempotente.
+    await seedClosedLots({
+      db,
+      clock,
+      auditKey,
+      auctioneerId: auctioneer.id,
+      cars,
+      baseDir: __dirname,
+      rivalEmail: BRUNO_EMAIL,
+      winnerEmail: ANA_EMAIL,
+      log: (message) => console.log(message),
+    });
   } finally {
     await db.$disconnect();
   }
