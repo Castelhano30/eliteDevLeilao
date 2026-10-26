@@ -20,6 +20,7 @@
   summary: Tirar da produção o lote 003 criado pelo smoke da S02.
   evidence: Aparece em Agendados e abre sozinho em 28/10; o cancelamento só existe na S06 e o seed final (S09) recria os lotes.
   alvo: S06 (cancelar) ou S09 (o seed final recria os lotes); abre sozinho ao vivo em 28/10, durante a S04
+  segue adiado: a S06 entrega a ação de cancelar, mas cancelar o lote em produção é uma escrita no dado do Felipe que não pedi nem fiz (o smoke da S06 usou lote novo). Hoje a numeração em produção já passou do 003 (o lote que o item cita pode ter outro número): o Felipe cancela pelo Painel quando quiser, ou o seed final da S09 recria os lotes.
 - source_spec: `_bmad-output/specs/spec-lanceauto/slice-03-lances-sala.md` (revisão geral antes da S03, grupo 1)
   summary: Gravar `Wallet.updatedAt` explicitamente (`clock.now()`) nos `INSERT`/`UPDATE` crus da S03.
   evidence: `Wallet.updatedAt` é NOT NULL sem `DEFAULT` na migração `contas_e_carteira`; só o `@updatedAt` do Prisma Client o preenche, então um `UPDATE` cru não o renova e um `INSERT` cru falha.
@@ -59,6 +60,7 @@
   summary: `seedLiveBids` checar `cancelledAt` e `endsAt` antes de dar os lances (e pular com log), ou corrigir o docstring que diz "ao vivo".
   evidence: `seed/showcase.ts:160-166` só checa que o lote existe e tem `bidCount == 0`; lote cancelado ou encerrado sem lance faz o `placeBid` recusar e o seed lançar. Em produção o lote 001 já tem lances e o `startCommand` ignora falha do seed; o seed final da S09 recria os lotes.
   alvo: S09 (seed final)
+  resolved: S06, `seedLiveBids` pula lote cancelado (`cancelledAt`) ou vencido (`endsAt <= agora`) com log, em vez de falhar; teste "pula o lote cancelado ou encerrado sem lance" (spec-s06-cancelamento-estorno.md). O resto do seed final (001 arrematado … 005 ao vivo, fotos) segue com a S09.
 - source_spec: `_bmad-output/progresso.md` (revisão geral S00–S03, item 57)
   summary: Responder 413/400 no envelope quando o corpo passa de 100 KB, em vez de 500 `INTERNAL`.
   evidence: `errors.ts` só trata `entity.parse.failed`; o `entity.too.large` do `express.json()` cai no ramo de erro não tratado (500 e log de erro). Nenhum cliente real manda corpo desse tamanho.
