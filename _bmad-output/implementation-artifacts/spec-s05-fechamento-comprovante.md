@@ -63,13 +63,13 @@ O build corre em **duas fases**, cada uma numa sessão de contexto próprio. A F
 ### Fase 1 — Servidor: fechamento, liquidação, comprovante e seed (shared + `apps/api`)
 
 **Execution:**
-- [ ] Linha de base -- `npm run lint`, `typecheck`, `test` com saída real (esperado shared 77, api 278, web 195).
-- [ ] `packages/shared` -- tipos, `receiptCode`, textos, `LotResult`/`MyLotCard`; testes.
-- [ ] Migração `Receipt` + `settleLot` + regra `LOT_ENDED` por `settledAt` -- AC-5.1, 5.2, 5.5, 5.8, 5.9, 5.19.
-- [ ] Rotina (`settlement-job`) + composição + boot -- AC-5.3, 5.4, 5.6, 5.7, 5.10, 5.11, 5.12; testes de concorrência com **prova de mutação** (tirar `SKIP LOCKED`/releitura/`UNIQUE` derruba o teste; cópia de segurança antes, nunca `git checkout` em edição não commitada).
-- [ ] Leituras e eventos -- `GET /receipts/:token`, `result`/`myReceiptToken`, `resultado`/`totalReceivedCents`, `lot:closed`/`showcase:lot`/`wallet:updated`; AC-5.13 a 5.18; varredura de privacidade (e-mail, nome, `userId`, token fora do dono) em `/receipts`, `/lots/:id`, `/lots`.
-- [ ] Seed estendido -- cadeia válida, idempotente; teste do seed.
-- [ ] Fechamento da fase -- `lint`, `typecheck`, `test`, `build` na raiz com saída real no diário; push; CI verde; deploy da API no Railway `SUCCESS` (o web antigo segue funcionando, a mudança é aditiva); log da API com as liquidações do seed; `GET /receipts/{token do seed}` 200 e sem dados pessoais no link público. Diário (item 66+) e "Onde parei" com o que a Fase 2 precisa saber (contratos finais, token de demonstração, decisões novas).
+- [x] Linha de base -- `npm run lint`, `typecheck`, `test` com saída real (esperado shared 77, api 278, web 195).
+- [x] `packages/shared` -- tipos, `receiptCode`, textos, `LotResult`/`MyLotCard`; testes.
+- [x] Migração `Receipt` + `settleLot` + regra `LOT_ENDED` por `settledAt` -- AC-5.1, 5.2, 5.5, 5.8, 5.9, 5.19.
+- [x] Rotina (`settlement-job`) + composição + boot -- AC-5.3, 5.4, 5.6, 5.7, 5.10, 5.11, 5.12; testes de concorrência com **prova de mutação** (tirar `SKIP LOCKED`/releitura/`UNIQUE` derruba o teste; cópia de segurança antes, nunca `git checkout` em edição não commitada).
+- [x] Leituras e eventos -- `GET /receipts/:token`, `result`/`myReceiptToken`, `resultado`/`totalReceivedCents`, `lot:closed`/`showcase:lot`/`wallet:updated`; AC-5.13 a 5.18; varredura de privacidade (e-mail, nome, `userId`, token fora do dono) em `/receipts`, `/lots/:id`, `/lots`.
+- [x] Seed estendido -- cadeia válida, idempotente; teste do seed.
+- [x] Fechamento da fase -- `lint`, `typecheck`, `test`, `build` na raiz com saída real no diário; push; CI verde; deploy da API no Railway `SUCCESS` (o web antigo segue funcionando, a mudança é aditiva); log da API com as liquidações do seed; `GET /receipts/{token do seed}` 200 e sem dados pessoais no link público. Diário (item 66+) e "Onde parei" com o que a Fase 2 precisa saber (contratos finais, token de demonstração, decisões novas).
 
 **Fora da Fase 1:** qualquer arquivo de `apps/web`, README, `resolved:` do `deferred-work.md`, lote de 5 min em produção.
 
@@ -95,6 +95,17 @@ O build corre em **duas fases**, cada uma numa sessão de contexto próprio. A F
 7. **Polling da Vitrine:** teto de respostas novas (padrão da conferência de abertura); zera quando não há cartão apurando.
 
 ## Implementation Notes
+
+Implementado direto, sem subagente (o pedido não os autorizava e a sessão pediu contexto curto). A camada de revisão (step-04) **não rodou**: ela exige revisores em paralelo; fica para o `bmad-code-review` se o Felipe pedir.
+
+**Fase 1 (servidor), 26/10/2026.** Commits `d9ecbbc` a `da460ea`; saída real e roteiros no diário, itens 66 e 67. Decisões e achados que a Fase 2 precisa saber:
+
+- `result` e `myReceiptToken` ficam dentro de `LotState.lot` (junto de `myPseudonym`); `MyLotsResponse.lots` é `MyLotCard[]` (`LotCard` + `resultado`). O cartão do `showcase:lot` **não** leva `resultado` nem pseudônimo do vencedor: `upsertMyLot` já mantém o `resultado` da linha e o `GET /my/lots` traz o novo quando o lote vira `SOLD`/`UNSOLD`.
+- `lot:closed` não traz `result` nem token; o cliente aplica o evento (status e valor) e refaz `GET /lots/:id` para obter `result` e `myReceiptToken`. Um `GET` que ainda volte sem `result` num lote `SOLD`/`UNSOLD` deve ser tratado como "apurando" até chegar.
+- `receiptPath(token)`, `copyLinkAriaLabel(n)`, `COPIED_LABEL_MS`, `RECEIPT_TEXT` e `isReceiptToken` estão em `@lanceauto/shared`; `saleDebitLabel(lotNumber)` e `saleDebitNote(cents)` também (a Carteira deve usá-los no lugar de `LEDGER_LABEL.SALE_DEBIT`).
+- O seed imprime `Comprovante de demonstração: /c/{token}`; no Railway o token fica no log do start da API.
+- Prova de mutação: o que garante a unicidade é a releitura de `settledAt` sob o lock (sem ela, 3 testes caem); o `SKIP LOCKED` sozinho não derruba nenhum teste, porque `FOR UPDATE` simples também relê depois da espera.
+- Exceção desta fase em `apps/web`: só `fixtures.ts` e `upsertMyLot` (necessários para o typecheck); nenhuma tela mudou.
 
 ## Spec Change Log
 
