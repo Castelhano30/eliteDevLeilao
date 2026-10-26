@@ -74,7 +74,7 @@ Consequência dessa ordem: o líder que reenvia um valor **abaixo** do mínimo r
 
 **Prorrogação:** lance feito quando faltam 2 minutos ou menos (inclusive) leva o fim a *hora do lance + 2 min*, sem teto de prorrogações. O `originalEndsAt` nunca muda; a Sala mostra o selo "+2 MIN" quando `endsAt > originalEndsAt`.
 
-**Saldo:** quem lidera tem o valor do lance atual comprometido; ao ser superado, o valor volta ao disponível na mesma transação do lance que o superou. O total só muda na liquidação (S05). O extrato registra `HOLD` e `RELEASE` com o número do lote.
+**Saldo:** quem lidera tem o valor do lance atual comprometido; ao ser superado, o valor volta ao disponível na mesma transação do lance que o superou. O total só muda na liquidação (ver Fechamento e comprovante). O extrato registra `HOLD` e `RELEASE` com o número do lote e, no arremate, `Arremate · lote NNN`.
 
 **Privacidade e cadeia:** o histórico mostra um pseudônimo por lote ("Licitante 7F3A", 4 hex de um HMAC de usuário e lote), então a mesma pessoa aparece com nomes diferentes em lotes diferentes. Com 4 hex a colisão entre dois licitantes do mesmo lote é possível (1 em 65.536 por par) e foi aceita: o pseudônimo é só rótulo, o lance sempre pertence ao `userId` gravado. Nenhuma resposta pública leva `userId`, nome ou e-mail. Cada lance entra na cadeia HMAC-SHA256 do lote (`prevHash` e `hash`) e a tabela `Bid` recusa `UPDATE` e `DELETE` por trigger.
 
@@ -87,6 +87,16 @@ Consequência dessa ordem: o líder que reenvia um valor **abaixo** do mínimo r
 - **Sem WebSocket não há bloqueio eterno:** na primeira conexão o aviso aparece depois de 3 s e, passados 10 s, o botão de lance é liberado; o servidor valida tudo (`expectedCurrentCents`), então dar lance não depende do socket.
 - **Relógio:** o cronômetro usa o relógio do servidor (`offset` da resposta HTTP de menor latência). Evento do socket não mexe no `offset`.
 - **Fora desta versão:** replay de eventos perdidos (a reconciliação é um snapshot) e mais de uma instância da API (sem adapter Redis).
+
+## Fechamento e comprovante
+
+Quando o relógio chega ao fim, o lote fecha sozinho. Uma rotina na API (`settlement-job`) varre os lotes vencidos no boot e depois a cada 5 s, e cada lote é liquidado numa transação própria: o lote é travado (`FOR UPDATE SKIP LOCKED`), `settledAt` é relido sob o lock, as carteiras são travadas em ordem de `userId`, o vencedor é debitado (total e comprometido), o leiloeiro é creditado e o `Receipt` nasce com um token aleatório de 24 bytes. A garantia de liquidar uma única vez é a releitura sob o lock, com `Receipt.lotId UNIQUE` como rede de segurança. Sem lances, só `settledAt` é preenchido. Um `GET` nunca liquida; entre `endsAt` e a liquidação o status é `CLOSING` e a tela mostra "Martelo batido. Apurando o resultado…". Falha em um lote é logada e o ciclo segue para o próximo; ele é tentado de novo no ciclo seguinte.
+
+- **`endsAt` × `settledAt`:** o martelo mostrado (Sala e comprovante) é sempre o `endsAt`, já com as prorrogações. `settledAt` é só quando a rotina liquidou e pode ser bem depois (a API ficou parada, ou um deploy atravessou o fim do lote): a varredura do boot liquida o que venceu enquanto ela estava fora, e é por isso que o lote que já estava vencido numa base antiga é liquidado na primeira subida depois do deploy da rotina.
+- **Comprovante** (`/c/{token}`, público e sem login): recibo com lote, carro, valor, martelo com segundos, pseudônimo daquele lote e o HMAC-SHA256 final da cadeia (a liquidação não escreve na cadeia, então é o mesmo `lastHash` do lote). Nenhuma resposta traz nome, e-mail ou `userId`. O token só aparece para o vencedor logado (`myReceiptToken` em `GET /lots/:id`) e na própria URL; nenhum evento nem lista pública o carrega. A página é renderizada no servidor com timeout de 8 s e `noindex`; se a API não responder, o cliente tenta de novo, e só um 404 da API vira "Comprovante não encontrado".
+- **Quem venceu** é decidido pelo servidor (`myReceiptToken`), nunca comparando pseudônimos no navegador.
+- **Seed:** além do lote ao vivo e do agendado, `npm run seed` cria, pelos mesmos services e com relógio simulado, um lote **arrematado** pela Ana (4 lances, o último a menos de 2 minutos do fim, então prorrogado) e um **encerrado sem lances**, e imprime o link do comprovante de demonstração (`Comprovante de demonstração: /c/…`). Entre como Ana, abra o lote arrematado na Vitrine e use "Ver comprovante".
+- **Vitrine apurando:** um cartão cujo fim passou e que o servidor ainda não encerrou fica em "Ao vivo" com "Apurando o resultado…"; a lista é refeita a cada 3 s, com teto de 20 respostas, e o `showcase:lot` do fechamento o move para "Encerrados" e zera a conta.
 
 ## Catálogo: Tabela FIPE e Wikipedia
 
