@@ -21,6 +21,7 @@ import { receiptsRouter } from "./routes/receipts";
 import { catalogRouter, lotsRouter } from "./routes/lots";
 import { makeAuthService } from "./services/auth.service";
 import { makeBidService } from "./services/bid.service";
+import { makeCancelService } from "./services/cancel.service";
 import { makeCatalogService } from "./services/catalog.service";
 import { makeLotService, type LotService } from "./services/lot.service";
 import { makeReceiptService } from "./services/receipt.service";
@@ -118,6 +119,7 @@ export function composeApp({
   const lotService = makeLotService({ db, clock, auditKey: env.AUDIT_HMAC_KEY, catalog, images, imageStore, logger });
 
   const bidService = makeBidService({ db, clock, auditKey: env.AUDIT_HMAC_KEY });
+  const cancelService = makeCancelService({ db, clock, auditKey: env.AUDIT_HMAC_KEY });
   const settlement = makeSettlementService({ db, clock });
   const settlementJob = makeSettlementJob({ db, clock, settlement, publisher, logger });
   const receiptService = makeReceiptService({ db });
@@ -126,7 +128,7 @@ export function composeApp({
   app.use(authRouter(authService, env.AUTH_RATE_LIMIT_MAX));
   app.use(accountRouter(auth, authService, walletService, publisher));
   app.use(catalogRouter(auth, catalogService));
-  app.use(lotsRouter(auth, lotService, bidService, clock, publisher));
+  app.use(lotsRouter(auth, lotService, bidService, cancelService, clock, publisher));
   app.use(receiptsRouter(receiptService));
 
   app.use(notFoundHandler);

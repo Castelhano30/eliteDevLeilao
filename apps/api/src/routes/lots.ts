@@ -1,8 +1,10 @@
 import { Router, type Request } from "express";
 import {
   BID_TEXT,
+  CANCEL_TEXT,
   CATALOG_TEXT,
   LOT_TEXT,
+  cancelLotSchema,
   fieldErrors,
   lotListQuerySchema,
   placeBidSchema,
@@ -14,6 +16,7 @@ import type { Publisher } from "../infra/publisher";
 import type { AuthMiddleware } from "../middleware/auth";
 import { makeRateLimiter } from "../middleware/rate-limit";
 import type { BidService } from "../services/bid.service";
+import type { CancelService } from "../services/cancel.service";
 import type { CatalogService } from "../services/catalog.service";
 import type { LotService } from "../services/lot.service";
 import { parseBody } from "./auth";
@@ -78,6 +81,7 @@ export function lotsRouter(
   auth: AuthMiddleware,
   lots: LotService,
   bids: BidService,
+  cancel: CancelService,
   clock: Clock,
   publisher: Publisher,
 ): Router {
@@ -119,6 +123,19 @@ export function lotsRouter(
       // Só depois do commit: se o service lançou, nada chega aqui (R-3.11). O publisher é guardado (R-4.2).
       publisher.publish(events);
       res.status(201).json(response);
+    },
+  );
+
+  // Cancelar: só o leiloeiro dono (o service confere). Eventos só depois do commit (INV-4).
+  router.post(
+    "/lots/:id/cancel",
+    auth.requireAuth,
+    auth.requireRole("AUCTIONEER", CANCEL_TEXT.roleNotAllowed),
+    async (req, res) => {
+      const { confirmEntryCount } = parseBody(cancelLotSchema, req.body);
+      const { response, events } = await cancel.cancelLot(req.user!.id, param(req, "id"), confirmEntryCount);
+      publisher.publish(events);
+      res.json(response);
     },
   );
 

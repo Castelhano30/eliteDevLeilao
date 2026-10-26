@@ -97,6 +97,17 @@ export async function assertLotInvariants(prisma: PrismaClient, lotId: string): 
     }
     prevHash = row.hash;
   }
+  // Cancelado: a linha CANCEL é a última da cadeia, sem autor nem valor, com o instante do cancelamento (S06).
+  const cancelRows = rows.filter((row) => row.kind === "CANCEL");
+  if (lot.cancelledAt) {
+    expect(cancelRows).toHaveLength(1);
+    const cancel = rows[rows.length - 1]!;
+    expect(cancel.kind).toBe("CANCEL");
+    expect([cancel.bidderId, cancel.pseudonym, cancel.amountCents]).toEqual([null, null, null]);
+    expect(cancel.at.getTime()).toBe(lot.cancelledAt.getTime());
+  } else {
+    expect(cancelRows).toHaveLength(0);
+  }
   expect(lot.lastHash).toBe(prevHash);
   expect(lot.seal).toBe(sealHash(testEnv.AUDIT_HMAC_KEY, lotId, rows.length, prevHash));
 
@@ -109,13 +120,14 @@ export async function assertLotInvariants(prisma: PrismaClient, lotId: string): 
   const entries = await prisma.ledgerEntry.findMany({ where: { lotId }, orderBy: { seq: "asc" } });
   const net = new Map<string, bigint>();
   for (const entry of entries) {
-    const sign = entry.kind === "HOLD" ? 1n : entry.kind === "RELEASE" ? -1n : 0n;
+    const sign = entry.kind === "HOLD" ? 1n : entry.kind === "RELEASE" || entry.kind === "REFUND" ? -1n : 0n;
     net.set(entry.userId, (net.get(entry.userId) ?? 0n) + sign * entry.amountCents);
   }
   for (const [userId, committed] of net) {
-    expect(committed).toBe(userId === lot.leaderId ? (lot.currentBidCents ?? 0n) : 0n);
+    // Cancelado: o líder segue gravado no lote (histórico), mas o estorno zerou o que ele tinha comprometido nele.
+    expect(committed).toBe(userId === lot.leaderId && !lot.cancelledAt ? (lot.currentBidCents ?? 0n) : 0n);
   }
-  if (lot.leaderId) expect(net.get(lot.leaderId)).toBe(lot.currentBidCents);
+  if (lot.leaderId) expect(net.get(lot.leaderId)).toBe(lot.cancelledAt ? 0n : lot.currentBidCents);
 
   const wallets = await prisma.wallet.findMany();
   for (const wallet of wallets) {
