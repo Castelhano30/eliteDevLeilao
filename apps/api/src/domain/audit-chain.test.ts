@@ -63,6 +63,35 @@ describe("audit-chain (entrada BID, vetor da §4.5)", () => {
     expect(entryHash(KEY, cancel)).toBe(independent("v1|entry|lot-1|1|CANCEL|||2026-10-22T14:00:00.123Z|genesis-x"));
   });
 
+  describe("linha CANCEL (S06 §5)", () => {
+    const cancel = {
+      lotId: "lot-1",
+      seq: 3,
+      kind: "CANCEL" as const,
+      pseudonym: null,
+      amountCents: null,
+      at: new Date("2026-10-22T14:00:00.123Z"),
+      prevHash: "hash-do-lance-2",
+    };
+
+    it("string canônica exata: v1|entry|{lotId}|{seq}|CANCEL|||{at}|{prevHash}", () => {
+      expect(entryHash(KEY, cancel)).toBe(independent("v1|entry|lot-1|3|CANCEL|||2026-10-22T14:00:00.123Z|hash-do-lance-2"));
+    });
+
+    it("mudar seq, at ou prevHash muda o hash", () => {
+      const base = entryHash(KEY, cancel);
+      expect(entryHash(KEY, { ...cancel, seq: 4 })).not.toBe(base);
+      expect(entryHash(KEY, { ...cancel, at: new Date("2026-10-22T14:00:00.124Z") })).not.toBe(base);
+      expect(entryHash(KEY, { ...cancel, prevHash: "outro" })).not.toBe(base);
+    });
+
+    it("o selo depois do cancelamento conta a linha CANCEL no entryCount", () => {
+      const hash = entryHash(KEY, cancel);
+      expect(sealHash(KEY, "lot-1", 3, hash)).toBe(independent(`v1|seal|lot-1|3|${hash}`));
+      expect(sealHash(KEY, "lot-1", 3, hash)).not.toBe(sealHash(KEY, "lot-1", 2, hash));
+    });
+  });
+
   it("qualquer campo, ou a chave, muda o hash", () => {
     const base = entryHash(KEY, entry);
     const changes = [
