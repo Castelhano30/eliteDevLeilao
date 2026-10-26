@@ -22,7 +22,7 @@ export function SeloProrrogacao({ size }: { size: "sala" | "cartao" }) {
   return (
     <span
       aria-hidden="true"
-      className="absolute font-display font-black text-sobreOcre"
+      className="absolute font-extrabold text-sobreOcre"
       style={{
         right: -14,
         top: -14,
@@ -81,7 +81,7 @@ export function Cronometro({ status, startsAt, endsAt, originalEndsAt, size, lab
       <span className="t-mono-rotulo-pequeno" style={{ color: alert ? "var(--c-led-alerta)" : "var(--f-rotulo-relogio)" }}>
         {shownLabel}
       </span>
-      <span role="timer" aria-label={ariaLabel} className="relative font-mono font-semibold leading-none" style={{ fontSize: digits }}>
+      <span role="timer" aria-label={ariaLabel} className="relative font-semibold leading-none" style={{ fontSize: digits }}>
         <span aria-hidden="true" className="absolute inset-0 opacity-10" style={{ color: "var(--c-led)" }}>
           {text.replace(/\d/g, "8")}
         </span>

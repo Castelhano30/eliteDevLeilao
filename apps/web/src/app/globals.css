@@ -98,7 +98,7 @@ html {
 body {
   background: var(--c-fundo);
   color: var(--c-tinta);
-  font-family: var(--font-serif), Georgia, serif;
+  font-family: var(--font-manrope);
   font-size: 16px;
   line-height: 1.45;
   min-height: 100vh;
@@ -120,29 +120,29 @@ label:has(input:focus-visible) {
 }
 
 /* ---------- Tipografia (.t-<nome>) ---------- */
-.t-display { font-family: var(--font-display), Impact, sans-serif; font-weight: 900; line-height: 1; text-transform: uppercase; }
-.t-mono { font-family: var(--font-mono), monospace; font-size: 14px; font-weight: 400; line-height: 1.3; }
-.t-logo { font-family: var(--font-display), Impact, sans-serif; font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: 0.1em; }
-.t-logo-tela { font-family: var(--font-display), Impact, sans-serif; font-size: 24px; font-weight: 800; line-height: 1; letter-spacing: 0.1em; }
-.t-display-hero { font-family: var(--font-display), Impact, sans-serif; font-size: clamp(48px, 8vw, 112px); font-weight: 900; line-height: 0.8; text-transform: uppercase; }
-.t-display-titulo { font-family: var(--font-display), Impact, sans-serif; font-size: clamp(40px, 6vw, 80px); font-weight: 900; line-height: 0.84; text-transform: uppercase; }
-.t-display-secao { font-family: var(--font-display), Impact, sans-serif; font-size: clamp(30px, 4vw, 48px); font-weight: 900; line-height: 1; text-transform: uppercase; }
-.t-cartaz-cartao { font-family: var(--font-display), Impact, sans-serif; font-size: 26px; font-weight: 800; line-height: 1; text-transform: uppercase; }
-.t-cartaz-subtitulo { font-family: var(--font-display), Impact, sans-serif; font-size: 26px; font-weight: 800; line-height: 1; text-transform: uppercase; }
-.t-botao-primario { font-family: var(--font-display), Impact, sans-serif; font-size: 20px; font-weight: 900; line-height: 1; letter-spacing: 0.04em; text-transform: uppercase; }
-.t-botao { font-family: var(--font-display), Impact, sans-serif; font-size: 18px; font-weight: 800; line-height: 1; letter-spacing: 0.04em; text-transform: uppercase; }
-.t-carimbo { font-family: var(--font-display), Impact, sans-serif; font-size: 26px; font-weight: 900; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase; }
-.t-placar { font-family: var(--font-display), Impact, sans-serif; font-size: 30px; font-weight: 900; line-height: 1; text-transform: uppercase; }
-.t-numero-lote { font-family: var(--font-display), Impact, sans-serif; font-size: 52px; font-weight: 900; line-height: 0.9; }
-.t-body-lead { font-family: var(--font-serif), Georgia, serif; font-size: 18px; font-weight: 400; line-height: 1.4; }
-.t-body { font-family: var(--font-serif), Georgia, serif; font-size: 16px; font-weight: 400; line-height: 1.45; }
-.t-body-nota { font-family: var(--font-serif), Georgia, serif; font-size: 15px; font-weight: 400; line-height: 1.35; color: var(--c-tinta2); }
-.t-body-legenda { font-family: var(--font-serif), Georgia, serif; font-size: 13px; font-weight: 400; line-height: 1.3; }
-.t-mono-recibo { font-family: var(--font-mono), monospace; font-size: 17px; font-weight: 400; line-height: 1.7; }
-.t-mono-dado { font-family: var(--font-mono), monospace; font-size: 14px; font-weight: 600; line-height: 1.3; }
-.t-mono-rotulo { font-family: var(--font-mono), monospace; font-size: 12px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; }
-.t-mono-rotulo-pequeno { font-family: var(--font-mono), monospace; font-size: 12px; font-weight: 400; letter-spacing: 0.16em; text-transform: uppercase; }
-.t-cronometro { font-family: var(--font-mono), monospace; font-size: 40px; font-weight: 600; line-height: 1; }
+.t-display { font-weight: 800; line-height: 1; text-transform: uppercase; }
+.t-mono { font-size: 14px; font-weight: 500; line-height: 1.3; }
+.t-logo { font-size: clamp(40px, 10vw, 56px); font-weight: 800; line-height: 1; letter-spacing: 0.04em; }
+.t-logo-tela { font-size: 24px; font-weight: 800; line-height: 1; letter-spacing: 0.04em; }
+.t-display-hero { font-size: clamp(48px, 8vw, 112px); font-weight: 800; line-height: 0.95; text-transform: uppercase; overflow-wrap: anywhere; }
+.t-display-titulo { font-size: clamp(40px, 6vw, 80px); font-weight: 800; line-height: 0.98; text-transform: uppercase; overflow-wrap: anywhere; }
+.t-display-secao { font-size: clamp(30px, 4vw, 48px); font-weight: 800; line-height: 1; text-transform: uppercase; }
+.t-cartaz-cartao { font-size: 26px; font-weight: 700; line-height: 1; text-transform: uppercase; }
+.t-cartaz-subtitulo { font-size: 26px; font-weight: 700; line-height: 1; text-transform: uppercase; }
+.t-botao-primario { font-size: 20px; font-weight: 600; line-height: 1; letter-spacing: 0.01em; text-transform: uppercase; }
+.t-botao { font-size: 18px; font-weight: 600; line-height: 1; letter-spacing: 0.01em; text-transform: uppercase; }
+.t-carimbo { font-size: 26px; font-weight: 800; line-height: 1; letter-spacing: 0.04em; text-transform: uppercase; }
+.t-placar { font-size: 30px; font-weight: 800; line-height: 1; text-transform: uppercase; }
+.t-numero-lote { font-size: 52px; font-weight: 800; line-height: 1; }
+.t-body-lead { font-size: 18px; font-weight: 400; line-height: 1.4; }
+.t-body { font-size: 16px; font-weight: 400; line-height: 1.45; }
+.t-body-nota { font-size: 15px; font-weight: 500; line-height: 1.35; color: var(--c-tinta2); }
+.t-body-legenda { font-size: 13px; font-weight: 500; line-height: 1.3; }
+.t-mono-recibo { font-size: 17px; font-weight: 500; line-height: 1.7; }
+.t-mono-dado { font-size: 14px; font-weight: 500; line-height: 1.3; }
+.t-mono-rotulo { font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+.t-mono-rotulo-pequeno { font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
+.t-cronometro { font-size: 40px; font-weight: 700; line-height: 1; }
 
 /* ---------- Movimento ---------- */
 @keyframes la-pulsa { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }

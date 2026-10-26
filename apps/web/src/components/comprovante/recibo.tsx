@@ -32,7 +32,7 @@ export function Recibo({ receipt }: { receipt: ReceiptDTO }) {
       <div className={`${BAND} flex flex-wrap items-center justify-between gap-4 border-2 !pt-6`}>
         <div className="flex min-w-0 items-center gap-5">
           <LotTag number={receipt.lotNumber} tone="papel" />
-          <p className="font-display min-w-0 text-[32px] font-black uppercase leading-none [overflow-wrap:anywhere]">{car.title}</p>
+          <p className="min-w-0 text-[32px] font-bold uppercase leading-none [overflow-wrap:anywhere]">{car.title}</p>
         </div>
         <Stamp variant="arrematado" />
       </div>
@@ -53,19 +53,19 @@ export function Recibo({ receipt }: { receipt: ReceiptDTO }) {
         <Row label="Martelo">{formatBrasilia(receipt.hammerAt, "seconds")}</Row>
         <Row label="Arrematante">{receipt.winnerPseudonym}</Row>
         <Row label="Valor">
-          <strong className="font-semibold">{formatBRL(receipt.amountCents)}</strong>
+          <strong className="font-extrabold">{formatBRL(receipt.amountCents)}</strong>
         </Row>
       </dl>
       <Perforation />
       <div className={`${BAND} space-y-4 border-2 border-t-0`}>
         <div>
           <p className="t-mono-rotulo">{RECEIPT_TEXT.hashLabel}</p>
-          <p className="font-mono mt-1 select-all text-[15px] leading-[1.5] [overflow-wrap:anywhere]">{receipt.finalHash}</p>
+          <p className="mt-1 select-all text-[15px] leading-[1.5] [overflow-wrap:anywhere]">{receipt.finalHash}</p>
         </div>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="t-mono-rotulo">Nº do comprovante</p>
-            <p className="font-mono text-[22px] font-semibold">{receipt.receiptCode}</p>
+            <p className="text-[22px] font-semibold">{receipt.receiptCode}</p>
           </div>
           <div className="min-w-[160px] flex-1">
             <CodigoDeBarras hash={receipt.finalHash} />

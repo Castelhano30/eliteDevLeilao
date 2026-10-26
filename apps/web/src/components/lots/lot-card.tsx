@@ -40,7 +40,7 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="t-mono-rotulo">{card.currentBidCents === null ? "LANCE INICIAL" : "LANCE ATUAL"}</p>
-          <p className="font-mono text-[20px] break-all font-semibold">{formatBRL(card.currentBidCents ?? card.startingBidCents)}</p>
+          <p className="text-[20px] break-all font-extrabold">{formatBRL(card.currentBidCents ?? card.startingBidCents)}</p>
           <p className="t-mono mt-1 text-tinta2">{status === "CLOSING" ? "Apurando o resultado…" : bidsText(card.bidCount)}</p>
         </div>
         <Cronometro
@@ -59,12 +59,12 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="t-mono-rotulo">LANCE INICIAL</p>
-          <p className="font-mono text-[20px] break-all font-semibold">{formatBRL(card.startingBidCents)}</p>
+          <p className="text-[20px] break-all font-extrabold">{formatBRL(card.startingBidCents)}</p>
           <p className="t-mono mt-1 text-tinta2">incremento {formatBRL(card.minIncrementCents)}</p>
         </div>
         <div className="border-2 border-linha bg-papel px-3 py-2 text-center">
           <p className="t-mono-rotulo-pequeno">ABERTURA</p>
-          <p className="font-display text-[26px] font-black leading-none">
+          <p className="text-[26px] font-extrabold leading-none">
             {validStart ? brasiliaWeekday(card.startsAt).toUpperCase() : ""} {day}
           </p>
           <p className="t-mono-dado">{time}</p>
@@ -79,7 +79,7 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
         {lines?.kind === "sold" ? (
           <>
             <p className="t-mono mt-1">{lines.headline}</p>
-            <p className="font-mono text-[22px] font-semibold">{lines.value}</p>
+            <p className="text-[22px] font-extrabold">{lines.value}</p>
             <p className="t-mono text-tinta2">{lines.bids}</p>
             {lines.fipe ? <p className="t-mono mt-1 text-tinta2">{lines.fipe}</p> : null}
           </>
@@ -118,10 +118,10 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
         ) : null}
       </div>
       <div className="p-4">
-        <h3 id={titleId} className="font-display text-[26px] font-black uppercase leading-none">
+        <h3 id={titleId} className="text-[26px] font-bold uppercase leading-none [overflow-wrap:anywhere]">
           {card.title}
         </h3>
-        <p className="mt-2 font-mono text-[13px] text-tinta2">{meta}</p>
+        <p className="mt-2 text-[13px] text-tinta2">{meta}</p>
         <div className="my-4 border-t-2 border-dashed border-tracejado" />
         {footer}
       </div>

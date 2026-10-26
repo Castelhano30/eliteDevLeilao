@@ -68,7 +68,7 @@ function LotLink({ lot }: { lot: LotCardDto }) {
   return (
     <span className="flex items-center gap-3">
       <span className="t-mono-dado shrink-0 border-2 border-linha bg-ocre px-2 py-1 text-sobreOcre">{formatLotNumber(lot.number)}</span>
-      <Link href={`/lotes/${lot.id}`} className="t-body font-semibold">
+      <Link href={`/lotes/${lot.id}`} className="text-[16px] font-bold leading-[1.45]">
         {lot.title}
       </Link>
     </span>
@@ -110,7 +110,7 @@ function Counter({ label, value, alert = false }: { label: string; value: number
       <p className="t-mono-rotulo-pequeno" style={{ color: "var(--f-rotulo-relogio)" }}>
         {label}
       </p>
-      <p className="mt-3 font-mono text-[36px] font-semibold leading-none" style={{ color: alert ? "var(--c-led-alerta)" : "var(--c-led)" }}>
+      <p className="mt-3 text-[36px] font-semibold leading-none" style={{ color: alert ? "var(--c-led-alerta)" : "var(--c-led)" }}>
         {String(value).padStart(2, "0")}
       </p>
     </div>
@@ -229,7 +229,7 @@ export function PainelScreen() {
           <section aria-label="Resumo" className="mt-8 flex flex-wrap gap-6">
             <div className="min-w-0 basis-[260px] flex-[2] border-2 border-linha bg-papel p-5 shadow-cartao">
               <p className="t-mono-rotulo">{receivedLabel(sold)}</p>
-              <p className="mt-2 font-mono text-[28px] break-all font-semibold">{formatBRL(data.totalReceivedCents)}</p>
+              <p className="mt-2 text-[28px] break-all font-extrabold">{formatBRL(data.totalReceivedCents)}</p>
               <p className="t-body-nota mt-2">Saldo simulado. O pátio agradece mesmo assim.</p>
             </div>
             <div className="flex flex-[3] flex-wrap gap-4">

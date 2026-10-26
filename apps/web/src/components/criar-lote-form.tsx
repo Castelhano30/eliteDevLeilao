@@ -70,7 +70,7 @@ function Group({ number, title, children }: { number: string; title: string; chi
     <fieldset aria-labelledby={id} className="min-w-0 rounded-nenhum border-2 border-linha bg-papel p-4 shadow-cartao">
       <legend className="sr-only">{`${number} ${title}`}</legend>
       <h2 id={id} className="t-cartaz-subtitulo mb-5 flex items-baseline gap-3">
-        <span className="font-mono text-[18px]">{number}</span>
+        <span className="text-[18px]">{number}</span>
         {title}
       </h2>
       <div className="space-y-5">{children}</div>
@@ -104,7 +104,7 @@ function CatalogSelect({ id, label, value, onChange, options, disabled, down, pl
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-erro` : undefined}
         onChange={(event) => onChange(event.target.value)}
-        className={`min-h-12 w-full rounded-nenhum border-2 bg-fundo px-3 font-serif text-[16px] text-tinta ${
+        className={`min-h-12 w-full rounded-nenhum border-2 bg-fundo px-3 text-[16px] text-tinta ${
           error ? "border-ferrugem" : "border-linha"
         } ${down ? "border-dashed opacity-50" : ""} disabled:bg-suave`}
       >
@@ -395,7 +395,7 @@ export function CriarLoteForm() {
             {hasCar && car ? (
               <div className="border-2 border-linha bg-fundo p-4">
                 <p className="t-mono-rotulo">REFERÊNCIA FIPE · {formatReferenceMonth(car.referenceMonth)}</p>
-                <p className="mt-1 font-mono text-[24px] font-semibold">{formatBRL(car.referencePriceCents)}</p>
+                <p className="mt-1 text-[24px] font-extrabold">{formatBRL(car.referencePriceCents)}</p>
                 <p className="t-mono mt-1 text-tinta2">
                   {car.brand} · {car.model} · {car.year} · {car.fuel}
                 </p>

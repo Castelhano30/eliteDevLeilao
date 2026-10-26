@@ -174,7 +174,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Marca, modelo, ano…"
-            className="h-12 w-full rounded-nenhum border-2 border-linha bg-fundo px-3 font-serif text-[16px] text-tinta placeholder:text-tinta2"
+            className="h-12 w-full rounded-nenhum border-2 border-linha bg-fundo px-3 text-[16px] text-tinta placeholder:text-tinta2"
           />
         </div>
         <div className="min-w-[min(100%,200px)]">
@@ -185,7 +185,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
             id={brandId}
             value={filters.brand}
             onChange={(event) => setFilters((current) => ({ ...current, brand: event.target.value }))}
-            className="h-12 w-full rounded-nenhum border-2 border-linha bg-fundo px-3 font-serif text-[16px] text-tinta"
+            className="h-12 w-full rounded-nenhum border-2 border-linha bg-fundo px-3 text-[16px] text-tinta"
           >
             <option value="">Todas</option>
             {(data?.brands ?? []).map((brand) => (

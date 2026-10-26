@@ -41,7 +41,7 @@ export function DataTable<Row>({ caption, captionHidden = false, columns, rows, 
               <th
                 key={column.key}
                 scope="col"
-                className={`py-3 font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-tinta2 ${
+                className={`py-3 text-[11px] font-medium uppercase tracking-[0.06em] text-tinta2 ${
                   column.align === "right" ? "text-right" : "text-left"
                 } ${edge(index, columns.length)}`}
               >
@@ -56,7 +56,7 @@ export function DataTable<Row>({ caption, captionHidden = false, columns, rows, 
               {columns.map((column, index) => (
                 <td
                   key={column.key}
-                  className={`py-[14px] font-mono ${column.align === "right" ? "text-right" : "text-left"} ${edge(index, columns.length)}`}
+                  className={`py-[14px] ${column.align === "right" ? "text-right" : "text-left"} ${edge(index, columns.length)}`}
                 >
                   {column.render(row)}
                 </td>

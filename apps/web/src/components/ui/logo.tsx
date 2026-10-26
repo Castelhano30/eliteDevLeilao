@@ -17,7 +17,7 @@ export function Logo({ size = "tela" }: LogoProps) {
       >
         <span
           aria-hidden="true"
-          className="block bg-faixaPlaca text-center font-mono font-semibold text-brasilTexto"
+          className="block bg-faixaPlaca text-center font-semibold text-brasilTexto"
           style={
             manual
               ? { fontSize: 12, letterSpacing: "0.5em", padding: "2px 0" }

@@ -44,7 +44,7 @@ function when(iso: string) {
   const { day, time } = brasiliaDayAndTime(iso);
   return (
     <>
-      <span className="font-mono">{day}</span> às <span className="font-mono">{time}</span> (Brasília)
+      <span>{day}</span> às <span>{time}</span> (Brasília)
     </>
   );
 }
@@ -190,7 +190,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
             ))}
             <div className="border-t-2 border-dashed border-tracejado pt-2">
               <dt className="t-mono-rotulo">Preço de referência</dt>
-              <dd className="t-mono-dado mt-1 text-[18px]">{formatBRL(car.referencePriceCents)}</dd>
+              <dd className="mt-1 text-[18px] font-bold leading-[1.3]">{formatBRL(car.referencePriceCents)}</dd>
             </div>
           </dl>
           <p className="t-mono-rotulo mt-6">FONTE: TABELA FIPE · {formatReferenceMonth(car.referenceMonth)}</p>
@@ -201,7 +201,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
             <LotTag number={lot.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} />
             {status === "LIVE" ? <Stamp variant="ao-vivo" /> : null}
           </div>
-          <h1 className="font-display mt-6 font-black uppercase" style={{ fontSize: "clamp(40px, 5vw, 72px)", lineHeight: 0.84 }}>
+          <h1 className="mt-6 font-bold uppercase [overflow-wrap:anywhere]" style={{ fontSize: "clamp(40px, 5vw, 72px)", lineHeight: 0.98 }}>
             {lot.title}
           </h1>
           <div className="mt-6">{panel}</div>

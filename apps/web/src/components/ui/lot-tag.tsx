@@ -39,7 +39,7 @@ export function LotTag({ number, tone = "ocre", rotate = tone === "papel" ? -2 :
             className="absolute left-[10px] top-3 h-[10px] w-[10px] rounded-circulo border-[3px] border-linha bg-fundo"
             aria-hidden="true"
           />
-          <span className="block font-mono text-[11px] tracking-[0.14em]">LOTE</span>
+          <span className="block text-[11px] tracking-[0.14em]">LOTE</span>
           <span className="t-numero-lote block">{typeof number === "number" ? String(number).padStart(3, "0") : number}</span>
         </span>
       </span>

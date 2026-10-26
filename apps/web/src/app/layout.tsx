@@ -1,35 +1,17 @@
 import type { Metadata } from "next";
-import { Big_Shoulders, IBM_Plex_Mono, Newsreader } from "next/font/google";
+import { Manrope } from "next/font/google";
 import type { ReactNode } from "react";
 import { SkipLink } from "@/components/ui/skip-link";
 import { themeInitScript } from "@/lib/theme";
 import { Providers } from "./providers";
 import "./globals.css";
 
-// "Big Shoulders Display" virou "Big Shoulders" (variável, eixo opsz); com `axes` o peso é omitido.
-const display = Big_Shoulders({
+const manrope = Manrope({
   subsets: ["latin"],
-  axes: ["opsz"],
-  variable: "--font-display",
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-manrope",
   display: "swap",
-  fallback: ["Impact", "sans-serif"],
-});
-
-const mono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-mono",
-  display: "swap",
-  fallback: ["monospace"],
-});
-
-const serif = Newsreader({
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  axes: ["opsz"],
-  variable: "--font-serif",
-  display: "swap",
-  fallback: ["Georgia", "serif"],
+  fallback: ["Arial", "sans-serif"],
 });
 
 export const metadata: Metadata = {
@@ -40,7 +22,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     // suppressHydrationWarning: o script do tema altera data-theme antes da hidratação.
-    <html lang="pt-BR" suppressHydrationWarning className={`${display.variable} ${mono.variable} ${serif.variable}`}>
+    <html lang="pt-BR" suppressHydrationWarning className={manrope.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>

@@ -47,9 +47,7 @@ const config = {
         painel: "4px 4px 0 var(--c-sombra)",
       },
       fontFamily: {
-        display: ["var(--font-display)", "Impact", "sans-serif"],
-        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
-        serif: ["var(--font-serif)", "Georgia", "serif"],
+        sans: ["var(--font-manrope)"],
       },
       maxWidth: {
         container: "1320px",

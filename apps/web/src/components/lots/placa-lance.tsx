@@ -29,19 +29,19 @@ export function PlacaLance({ cents, label }: PlacaLanceProps) {
     <div>
       <p className="t-mono-rotulo mb-2">{label}</p>
       <div role="img" aria-label={spoken} className="flex flex-wrap items-end gap-y-2">
-        <span aria-hidden="true" className="mr-2 font-mono text-[20px] font-semibold">
+        <span aria-hidden="true" className="mr-2 text-[20px] font-extrabold">
           R$
         </span>
         <span aria-hidden="true" className="flex flex-wrap items-end gap-1" style={{ perspective: 400 }}>
           {reais.split("").map((char, index) =>
             char === "." ? (
-              <span key={`p${index}`} className="inline-block w-4 text-center font-mono text-[28px] font-semibold">
+              <span key={`p${index}`} className="inline-block w-4 text-center text-[28px] font-extrabold">
                 .
               </span>
             ) : (
               <span
                 key={`${index}-${char}`}
-                className="relative inline-flex items-center justify-center rounded-placa bg-painel font-mono font-semibold"
+                className="relative inline-flex items-center justify-center rounded-placa bg-painel font-extrabold"
                 style={{
                   width: 32,
                   height: 48,
@@ -56,7 +56,7 @@ export function PlacaLance({ cents, label }: PlacaLanceProps) {
             ),
           )}
         </span>
-        <span aria-hidden="true" className="ml-1 font-mono text-[20px] font-semibold">
+        <span aria-hidden="true" className="ml-1 text-[20px] font-extrabold">
           ,00
         </span>
       </div>

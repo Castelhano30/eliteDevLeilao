@@ -45,7 +45,7 @@ function Equation({ total, committed, available }: { total?: number; committed?:
     <div className="flex flex-col gap-3 lg:flex-row" role="group" aria-label="Saldo">
       <div className={card}>
         <p className="t-mono-rotulo mb-2">Total</p>
-        <p className="font-mono text-[24px] break-all font-semibold" aria-label={total === undefined ? undefined : show(total)}>
+        <p className="text-[24px] break-all font-extrabold" aria-label={total === undefined ? undefined : show(total)}>
           {show(total)}
         </p>
       </div>
@@ -54,14 +54,14 @@ function Equation({ total, committed, available }: { total?: number; committed?:
       </span>
       <div className={card}>
         <p className="t-mono-rotulo mb-2">Comprometido</p>
-        <p className="font-mono text-[24px] break-all font-semibold">{show(committed)}</p>
+        <p className="text-[24px] break-all font-extrabold">{show(committed)}</p>
       </div>
       <span aria-hidden="true" className={glyph}>
         =
       </span>
       <div className={`${card} !border-[3px]`}>
         <p className="t-mono-rotulo mb-2">Disponível</p>
-        <p className="font-mono text-[24px] break-all font-semibold">{show(available)}</p>
+        <p className="text-[24px] break-all font-extrabold">{show(available)}</p>
       </div>
     </div>
   );

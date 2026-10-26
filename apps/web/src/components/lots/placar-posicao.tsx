@@ -11,7 +11,7 @@ export function PlacarPosicao({ tone, title, sub }: PlacarPosicaoProps) {
   return (
     <div className={`rounded-nenhum border-[3px] border-tinta px-4 pb-[10px] pt-3 text-sobreCor ${tone === "verde" ? "bg-verde" : "bg-ferrugem"}`}>
       <p className="t-placar">{title}</p>
-      <p className="font-mono mt-1 text-[13px]">{sub}</p>
+      <p className="mt-1 text-[13px]">{sub}</p>
     </div>
   );
 }

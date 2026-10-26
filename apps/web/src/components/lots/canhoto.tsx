@@ -16,7 +16,7 @@ export function Canhoto({ number, title, children }: CanhotoProps) {
     <article className="flex flex-col rounded-nenhum border-2 border-linha bg-papel p-4 shadow-cartao">
       <span
         aria-hidden="true"
-        className="font-display font-black leading-none"
+        className="font-extrabold leading-none"
         style={{ fontSize: 56, color: "var(--c-ocre)", WebkitTextStroke: "2px var(--c-linha)" }}
       >
         {label}

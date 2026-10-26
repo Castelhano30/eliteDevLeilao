@@ -39,7 +39,7 @@ export function BidHistory({ bids, myPseudonym }: BidHistoryProps) {
             >
               <span className="t-mono-dado w-12 shrink-0">Nº {bid.seq}</span>
               <ChipLicitante name={bid.pseudonym} mine={myPseudonym !== null && bid.pseudonym === myPseudonym} />
-              <span className="t-mono-dado ml-auto text-[16px]">{formatBRL(bid.amountCents)}</span>
+              <span className="ml-auto text-[16px] font-bold leading-[1.3]">{formatBRL(bid.amountCents)}</span>
               <time dateTime={bid.at} className="t-mono-dado font-normal text-tinta2">
                 {clockTime(bid.at)}
               </time>

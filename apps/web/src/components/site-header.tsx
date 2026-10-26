@@ -10,7 +10,7 @@ import { Logo } from "@/components/ui/logo";
 import { ThemeSwitch } from "@/components/ui/theme-switch";
 import { useAuth } from "./auth-provider";
 
-const LINK = "t-mono-rotulo inline-flex min-h-alvo items-center border-b-2 border-transparent text-tinta no-underline";
+const LINK = "inline-flex min-h-alvo items-center border-b-2 border-transparent text-[12px] font-semibold uppercase tracking-[0.06em] text-tinta no-underline";
 const wideHeader = () => window.matchMedia("(min-width: 1200px)").matches;
 function subscribeWidth(listener: () => void) {
   const media = window.matchMedia("(min-width: 1200px)");

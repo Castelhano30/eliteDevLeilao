@@ -31,7 +31,7 @@ export function FilterTabs<Value extends string>({ label, tabs, value, onChange 
           >
             {tab.label}
             {tab.count !== undefined ? (
-              <span className="font-mono text-[14px] font-semibold">{String(tab.count).padStart(2, "0")}</span>
+              <span className="text-[14px] font-semibold">{String(tab.count).padStart(2, "0")}</span>
             ) : null}
           </button>
         );

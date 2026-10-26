@@ -97,7 +97,7 @@ export function BidPanel({ id, state, viewer, authLoading, blockReason }: BidPan
         />
         {extended ? (
           <p className="t-body-nota mt-3">
-            Lance nos 2 minutos finais: o relógio ganhou +2 min. Novo fim às <span className="font-mono">{clockTime(lot.endsAt)}</span>. Ninguém leva
+            Lance nos 2 minutos finais: o relógio ganhou +2 min. Novo fim às <span>{clockTime(lot.endsAt)}</span>. Ninguém leva
             no susto.
           </p>
         ) : null}
