@@ -67,7 +67,9 @@ export function makeReceiptService({ db }: ReceiptServiceDeps) {
           year: item.year,
           fuel: item.fuel,
           referencePriceCents: toNumber(item.referencePriceCents),
-          referenceMonth: item.referenceMonth,
+          referenceMonth: /^\d{4}-(0[1-9]|1[0-2])$/.test(item.referenceMonth)
+            ? `${item.referenceMonth.slice(5)}/${item.referenceMonth.slice(0, 4)}`
+            : item.referenceMonth,
           imageUrl: hasImage ? `/items/${lot.itemId}/image` : null,
           imageCredit: hasImage ? item.imageCredit : null,
         },

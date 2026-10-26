@@ -102,7 +102,7 @@ describe.skipIf(!testDatabaseUrl)("comprovante e resultado do lote (integração
         winnerPseudonym: settled.bids[0]!.pseudonym,
         finalHash: settled.lastHash,
         auditUrl: `/lotes/${lot.id}/auditoria`,
-        car: { title: "Lote de teste", brand: "Toyota", model: "Corolla XEi 2.0", year: 2015, fuel: "Flex", referencePriceCents: 8_000_000, referenceMonth: "2026-10", imageUrl: null, imageCredit: null },
+        car: { title: "Lote de teste", brand: "Toyota", model: "Corolla XEi 2.0", year: 2015, fuel: "Flex", referencePriceCents: 8_000_000, referenceMonth: "10/2026", imageUrl: null, imageCredit: null },
       });
       expect(dto.receiptCode).toBe(`${String(lot.number).padStart(3, "0")}-${token.slice(0, 4).toUpperCase()}`);
       expect(dto.finalHash).toMatch(/^[0-9a-f]{64}$/);
