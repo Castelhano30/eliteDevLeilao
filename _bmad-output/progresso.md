@@ -172,3 +172,6 @@ S04 (tempo real) implementada, verificada no Chrome real, no ar no Railway, conf
 ## 24/10/2026 — Login: contas de teste
 - Abaixo do cartão de acesso (aba Entrar) entram as 3 contas do seed; escolher uma preenche e-mail e senha do login. Estado do login subiu para o AccessScreen. A senha de teste não vai para o HTML inicial.
 - Typecheck, lint e 126+ testes do web verdes. Conferência visual no navegador pendente.
+
+## 26/10/2026 — Ícone da aplicação
+- Substituído o ícone do Next.js pela imagem de marca enviada, em `apps/web/src/app/icon.png`; o App Router usa esse arquivo para gerar o ícone da aplicação.
