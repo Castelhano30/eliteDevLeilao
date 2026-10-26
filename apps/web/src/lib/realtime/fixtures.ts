@@ -35,6 +35,8 @@ export function lotState(over: Partial<LotState["lot"]> = {}, bids: BidDTO[] = [
       myPseudonym: null,
       myRank: null,
       myBestBidCents: null,
+      result: null,
+      myReceiptToken: null,
       ...over,
     },
     car: {

@@ -140,7 +140,8 @@ describe("isFiltered", () => {
 });
 
 describe("upsertMyLot (Painel, §9.3)", () => {
-  const mine = (): MyLotsResponse => ({ lots: [card({ id: "a", version: 3 }), card({ id: "b", number: 2, version: 1 })], totalReceivedCents: 0, serverTime: "x" });
+  const row = (over: Partial<LotCard> = {}): MyLotsResponse["lots"][number] => ({ ...card(over), resultado: null });
+  const mine = (): MyLotsResponse => ({ lots: [row({ id: "a", version: 3 }), row({ id: "b", number: 2, version: 1 })], totalReceivedCents: 0, serverTime: "x" });
 
   it("atualiza a linha do lote próprio; id desconhecido é ignorado", () => {
     const result = upsertMyLot(mine(), card({ id: "a", version: 4, currentBidCents: 1_600_000, bidCount: 4 }));
@@ -149,6 +150,13 @@ describe("upsertMyLot (Painel, §9.3)", () => {
 
     const data = mine();
     expect(upsertMyLot(data, card({ id: "de-outro" }))).toEqual({ data, refetch: false });
+  });
+
+  it("o cartão do evento não apaga o resultado que a linha já tinha", () => {
+    const resultado = { outcome: "SOLD" as const, finalBidCents: 3_200_000, winnerPseudonym: "Licitante 7F3A", referencePriceCents: 3_000_000, settledAt: "2026-10-24T16:00:00.000Z" };
+    const data: MyLotsResponse = { ...mine(), lots: [{ ...row({ id: "a", version: 3, status: "SOLD" }), resultado }] };
+    const result = upsertMyLot(data, card({ id: "a", version: 3, status: "SOLD" }));
+    expect(result.data.lots[0]!.resultado).toEqual(resultado);
   });
 
   it("evento mais velho que a linha é descartado", () => {
@@ -160,7 +168,7 @@ describe("upsertMyLot (Painel, §9.3)", () => {
     for (const status of ["SOLD", "UNSOLD", "CANCELLED"] as const) {
       expect(upsertMyLot(mine(), card({ id: "a", version: 3, status })).refetch).toBe(true);
     }
-    const already: MyLotsResponse = { lots: [card({ id: "a", version: 3, status: "SOLD" })], totalReceivedCents: 0, serverTime: "x" };
+    const already: MyLotsResponse = { lots: [row({ id: "a", version: 3, status: "SOLD" })], totalReceivedCents: 0, serverTime: "x" };
     expect(upsertMyLot(already, card({ id: "a", version: 3, status: "SOLD" })).refetch).toBe(false);
   });
 });
