@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { formatBrasiliaClock, showcaseGroup, type LotCard as LotCardDto, type LotListResponse, type ShowcaseGroup } from "@lanceauto/shared";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,8 @@ import { LotCard } from "@/components/lots/lot-card";
 import { apiGet } from "@/lib/api-client";
 import { lotCountLabel } from "@/lib/lots";
 import { useConnectionBanner, useConnectionStatus } from "@/lib/realtime/connection-status";
-import { cardStatusAt, needsClosingPoll } from "@/lib/realtime/showcase-cache";
+import { INITIAL_OPENING_CHECKS } from "@/lib/lot-state";
+import { cardStatusAt, showcaseRefetchInterval } from "@/lib/realtime/showcase-cache";
 import { SHOWCASE_LISTS_KEY, useShowcaseLive } from "@/lib/realtime/use-showcase-live";
 import { serverNow } from "@/lib/server-clock";
 import { useOnReach, useServerNow } from "@/lib/use-server-clock";
@@ -68,14 +69,26 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
     return () => clearTimeout(handle);
   }, [search]);
 
+  const closingChecks = useRef(INITIAL_OPENING_CHECKS);
   const query = useQuery({
     queryKey: lotsKey(filters),
     queryFn: ({ signal }) => fetchLots(filters, signal),
     placeholderData: keepPreviousData,
     retry: 1,
     // API caída (inclusive no SSR): tenta de novo sozinha até voltar, sem recarregar à mão (AC-2.35).
-    // Cartão apurando (fim passou e o servidor ainda não encerrou): olha a cada 3 s até o servidor decidir (§9.2).
-    refetchInterval: (q) => (q.state.status === "error" ? 10_000 : needsClosingPoll(q.state.data?.lots, serverNow()) ? 3_000 : false),
+    // Cartão apurando (fim passou e o servidor ainda não encerrou): olha a cada 3 s até o servidor decidir (§9.2),
+    // com teto de respostas novas; o showcase:lot do fechamento zera a conta.
+    refetchInterval: (q) => {
+      const step = showcaseRefetchInterval({
+        failed: q.state.status === "error",
+        lots: q.state.data?.lots,
+        now: serverNow(),
+        checks: closingChecks.current,
+        dataUpdatedAt: q.state.dataUpdatedAt,
+      });
+      closingChecks.current = step.checks;
+      return step.interval;
+    },
   });
   // Sala showcase: lance, prorrogação e lote novo chegam sozinhos; reconectar refaz a consulta.
   useShowcaseLive(SHOWCASE_LISTS_KEY);

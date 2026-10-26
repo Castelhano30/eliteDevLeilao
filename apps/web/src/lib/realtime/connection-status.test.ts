@@ -10,6 +10,7 @@ import {
   connectionFacts,
   deriveConnectionStatus,
   markSynced,
+  pageSyncing,
   resetConnectionStatus,
   trackSocketConnection,
   type BannerView,
@@ -64,6 +65,27 @@ describe("bidBlockReason (R-4.9)", () => {
 
   it("a conexão pesa mais que o refetch quando as duas coisas valem", () => {
     expect(reason("reconnecting", "quiet", true)).toBe("connection");
+  });
+});
+
+describe("pageSyncing (live por página)", () => {
+  it("conectado, mas esta página ainda não fez join + GET: sincronizando, mesmo que outra tela já tenha marcado live", () => {
+    expect(pageSyncing({ connected: true, joined: false, stale: false })).toBe(true);
+    expect(pageSyncing({ connected: true, joined: true, stale: false })).toBe(false);
+  });
+
+  it("sem socket a conexão é quem bloqueia (e destrava aos 10 s): a página não segura o lance por conta própria", () => {
+    expect(pageSyncing({ connected: false, joined: false, stale: false })).toBe(false);
+  });
+
+  it("salto de version (stale) segue valendo", () => {
+    expect(pageSyncing({ connected: true, joined: true, stale: true })).toBe(true);
+    expect(pageSyncing({ connected: false, joined: false, stale: true })).toBe(true);
+  });
+
+  it("vira o motivo stale do botão de lance, sem texto de conexão", () => {
+    const stale = pageSyncing({ connected: true, joined: false, stale: false });
+    expect(bidBlockReason({ status: "live", phase: "quiet", stale })).toBe("stale");
   });
 });
 

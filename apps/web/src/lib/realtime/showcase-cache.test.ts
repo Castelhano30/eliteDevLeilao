@@ -2,7 +2,19 @@ import { describe, expect, it } from "vitest";
 import type { LotCard, LotListResponse, MyLotsResponse } from "@lanceauto/shared";
 import { DEFAULT_FILTERS } from "../vitrine-query";
 import { card } from "./fixtures";
-import { cardStatusAt, isFiltered, needsClosingPoll, sortShowcase, upsertMyLot, upsertShowcaseCard } from "./showcase-cache";
+import { INITIAL_OPENING_CHECKS } from "../lot-state";
+import {
+  SHOWCASE_CLOSING_CHECKS,
+  SHOWCASE_CLOSING_POLL_MS,
+  SHOWCASE_ERROR_POLL_MS,
+  cardStatusAt,
+  isFiltered,
+  needsClosingPoll,
+  showcaseRefetchInterval,
+  sortShowcase,
+  upsertMyLot,
+  upsertShowcaseCard,
+} from "./showcase-cache";
 
 const list = (lots: LotCard[], counts = { live: 0, scheduled: 0, ended: 0 }): LotListResponse => ({
   lots,
@@ -126,6 +138,48 @@ describe("needsClosingPoll", () => {
     expect(needsClosingPoll([card({ status: "CLOSING" })], 1)).toBe(true);
     expect(needsClosingPoll([card({ status: "SOLD" })], Date.parse("2030-01-01T00:00:00.000Z"))).toBe(false);
     expect(needsClosingPoll(undefined, 1)).toBe(false);
+  });
+});
+
+describe("showcaseRefetchInterval (polling da Vitrine, com teto)", () => {
+  const ENDS = "2026-10-24T16:00:00.000Z";
+  const closing = [card({ status: "LIVE", endsAt: ENDS })];
+  const now = Date.parse(ENDS);
+  const step = (over: Partial<Parameters<typeof showcaseRefetchInterval>[0]> = {}) =>
+    showcaseRefetchInterval({ failed: false, lots: closing, now, checks: INITIAL_OPENING_CHECKS, dataUpdatedAt: 1_000, ...over });
+
+  it("com cartão apurando, confere de 3 em 3 s; sem cartão apurando, não consulta e zera a conta", () => {
+    expect(step().interval).toBe(SHOWCASE_CLOSING_POLL_MS);
+    const none = step({ lots: [card({ status: "SOLD" })], checks: { seenAt: 5, count: 7 } });
+    expect(none).toEqual({ interval: false, checks: INITIAL_OPENING_CHECKS });
+  });
+
+  it("reavaliar sem resposta nova (cada render) não gasta tentativa; cada resposta nova conta uma", () => {
+    let checks = step().checks;
+    for (let render = 0; render < 50; render++) checks = step({ checks }).checks;
+    expect(checks.count).toBe(0);
+    checks = step({ checks, dataUpdatedAt: 4_000 }).checks;
+    expect(checks.count).toBe(1);
+  });
+
+  it("para depois do teto de respostas novas, mesmo com o cartão ainda apurando", () => {
+    let current = step();
+    for (let n = 1; n <= SHOWCASE_CLOSING_CHECKS; n++) {
+      current = step({ checks: current.checks, dataUpdatedAt: 1_000 + n * SHOWCASE_CLOSING_POLL_MS });
+      expect(current.interval).toBe(n < SHOWCASE_CLOSING_CHECKS ? SHOWCASE_CLOSING_POLL_MS : false);
+    }
+  });
+
+  it("o showcase:lot que encerra o cartão faz o polling parar e a conta recomeçar do zero no próximo apurando", () => {
+    const counted = step({ checks: { seenAt: 9_000, count: 12 } });
+    expect(counted.interval).toBe(SHOWCASE_CLOSING_POLL_MS);
+    const closed = step({ lots: [card({ status: "SOLD" })], checks: counted.checks });
+    expect(closed).toEqual({ interval: false, checks: INITIAL_OPENING_CHECKS });
+  });
+
+  it("consulta com erro tenta de novo a cada 10 s sem mexer na conta", () => {
+    const checks = { seenAt: 9_000, count: 3 };
+    expect(step({ failed: true, checks })).toEqual({ interval: SHOWCASE_ERROR_POLL_MS, checks });
   });
 });
 

@@ -6,6 +6,7 @@ import {
   type MyLotsResponse,
   type ShowcaseGroup,
 } from "@lanceauto/shared";
+import { INITIAL_OPENING_CHECKS, nextOpeningCheck, type OpeningChecks } from "../lot-state";
 import type { VitrineFilters } from "../vitrine-query";
 
 const GROUP_ORDER: Record<ShowcaseGroup, number> = { LIVE: 0, SCHEDULED: 1, ENDED: 2 };
@@ -106,6 +107,36 @@ export function cardStatusAt(card: LotCard, now: number): LotStatus {
 /** Há cartão apurando (ou ao vivo com o relógio em 00:00)? Então a lista é refeita a cada 3 s até o servidor decidir. */
 export function needsClosingPoll(lots: readonly LotCard[] | undefined, now: number): boolean {
   return (lots ?? []).some((card) => cardStatusAt(card, now) === "CLOSING");
+}
+
+/** Vitrine com cartão apurando: confere de 3 em 3 s, no máximo `SHOWCASE_CLOSING_CHECKS` respostas novas. */
+export const SHOWCASE_CLOSING_POLL_MS = 3_000;
+export const SHOWCASE_CLOSING_CHECKS = 20;
+/** API caída: tenta de novo sozinha a cada 10 s (AC-2.35). */
+export const SHOWCASE_ERROR_POLL_MS = 10_000;
+
+/**
+ * `refetchInterval` da Vitrine (puro). O polling de 3 s só existe enquanto há cartão apurando e tem teto: conta só
+ * respostas novas (como a conferência de abertura da Sala) e zera quando não há cartão apurando, que é o que o
+ * `showcase:lot` do fechamento provoca. Passado o teto, o evento e o `connect` continuam atualizando a lista.
+ */
+export function showcaseRefetchInterval({
+  failed,
+  lots,
+  now,
+  checks,
+  dataUpdatedAt,
+}: {
+  failed: boolean;
+  lots: readonly LotCard[] | undefined;
+  now: number;
+  checks: OpeningChecks;
+  dataUpdatedAt: number;
+}): { interval: number | false; checks: OpeningChecks } {
+  if (failed) return { interval: SHOWCASE_ERROR_POLL_MS, checks };
+  if (!needsClosingPoll(lots, now)) return { interval: false, checks: INITIAL_OPENING_CHECKS };
+  const step = nextOpeningCheck(checks, dataUpdatedAt, SHOWCASE_CLOSING_CHECKS);
+  return { interval: step.keepPolling ? SHOWCASE_CLOSING_POLL_MS : false, checks: step.next };
 }
 
 export interface MyLotUpsert {

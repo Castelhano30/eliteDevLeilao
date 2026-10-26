@@ -39,6 +39,15 @@ export function connectingPhase(elapsedMs: number): ConnectingPhase {
   return "quiet";
 }
 
+/**
+ * O live é do app inteiro (o socket é um só), mas cada página precisa do seu join + GET: com o socket conectado
+ * e esta montagem ainda sem os dois, o estado dela está desatualizado. Sem socket, a conexão é quem decide (R-4.9).
+ * stale é o salto de version.
+ */
+export function pageSyncing({ connected, joined, stale }: { connected: boolean; joined: boolean; stale: boolean }): boolean {
+  return stale || (connected && !joined);
+}
+
 export type BidBlockReason = "connection" | "stale";
 
 /**
@@ -131,6 +140,11 @@ export function connectionFacts(): ConnectionFacts {
 export function resetConnectionStatus(): void {
   snapshot = INITIAL;
   for (const listener of listeners) listener();
+}
+
+/** O socket compartilhado está conectado agora? (No servidor e na hidratação: não.) */
+export function useSocketConnected(): boolean {
+  return useSyncExternalStore(subscribe, () => snapshot.connected, () => false);
 }
 
 function subscribe(listener: () => void) {

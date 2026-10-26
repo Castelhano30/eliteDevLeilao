@@ -14,9 +14,9 @@ import {
 import { lotKey } from "../lot-query";
 import { clockMark, syncServerTime } from "../server-clock";
 import { getSocket } from "../socket";
-import { markSynced } from "./connection-status";
+import { markSynced, pageSyncing, useSocketConnected } from "./connection-status";
 import { createGapResync } from "./gap-resync";
-import { applyLotEvent } from "./lot-reducer";
+import { applyLotEvent, needsResultSnapshot } from "./lot-reducer";
 
 const ACK_TIMEOUT_MS = 8_000;
 const RETRY_MS = 3_000;
@@ -31,13 +31,19 @@ const RETRY_MS = 3_000;
  *   `queryFn` da Sala).
  * - Evento de outro lote é ignorado; salto de `version` refaz o `GET` e deixa o botão de lance inerte até aplicar
  *   (`createGapResync`).
+ * - `lot:closed` não traz `result` nem token: depois de aplicado, refaz o `GET` para obtê-los (S05 §7).
  * - `lot:leave` ao sair. Falha de ack ou de `GET` tenta de novo em 3 s enquanto conectado.
  *
- * Devolve `syncing`: há um salto de `version` ainda sem `GET` aplicado (a Sala trata como desatualizada).
+ * Devolve `syncing`: há um salto de `version` ainda sem `GET` aplicado, ou o socket está conectado e ESTA montagem
+ * ainda não fez join + `GET` (o `live` de `connection-status` vale para o app inteiro; outra tela pode tê-lo marcado).
+ * A Sala trata como desatualizada; sem banner nem texto de conexão. Cai com a conexão e volta no `connect`.
  */
 export function useLotRoom(lotId: string, { enabled = true }: { enabled?: boolean } = {}): { syncing: boolean } {
   const queryClient = useQueryClient();
   const [stale, setStale] = useState(false);
+  // Qual sala já fez join + GET nesta montagem (a queda do socket zera).
+  const [joinedLot, setJoinedLot] = useState<string | null>(null);
+  const connected = useSocketConnected();
 
   useEffect(() => {
     if (!enabled) return;
@@ -73,6 +79,7 @@ export function useLotRoom(lotId: string, { enabled = true }: { enabled?: boolea
           if (disposed) return;
           if (!ok) return scheduleRetry();
           markSynced();
+          setJoinedLot(lotId);
           gap.settle();
         });
       });
@@ -85,6 +92,8 @@ export function useLotRoom(lotId: string, { enabled = true }: { enabled?: boolea
       const result = applyLotEvent(cache, event);
       if (result.action === "applied") {
         queryClient.setQueryData(key, result.state);
+        // Se falhar, a Sala segue consultando de 3 em 3 s enquanto o lote encerrado estiver sem `result`.
+        if (needsResultSnapshot(event, result.action)) void refetchSnapshot();
       } else if (result.action === "refetch") {
         gap.request();
       }
@@ -96,7 +105,10 @@ export function useLotRoom(lotId: string, { enabled = true }: { enabled?: boolea
     socket.on(EVENTS.BID_PLACED, onBid);
     socket.on(EVENTS.LOT_CLOSED, onClosed);
     socket.on(EVENTS.LOT_CANCELLED, onCancelled);
+    const onDisconnect = () => setJoinedLot(null);
+
     socket.on("connect", joinAndSync);
+    socket.on("disconnect", onDisconnect);
     joinAndSync();
 
     return () => {
@@ -107,9 +119,10 @@ export function useLotRoom(lotId: string, { enabled = true }: { enabled?: boolea
       socket.off(EVENTS.LOT_CLOSED, onClosed);
       socket.off(EVENTS.LOT_CANCELLED, onCancelled);
       socket.off("connect", joinAndSync);
+      socket.off("disconnect", onDisconnect);
       if (socket.connected) socket.emit(EVENTS.LOT_LEAVE, { lotId });
     };
   }, [lotId, enabled, queryClient]);
 
-  return { syncing: stale };
+  return { syncing: enabled && pageSyncing({ connected, joined: joinedLot === lotId, stale }) };
 }
