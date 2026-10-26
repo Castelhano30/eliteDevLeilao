@@ -13,7 +13,7 @@ import { apiGet } from "@/lib/api-client";
 import { lotCountLabel } from "@/lib/lots";
 import { useConnectionBanner, useConnectionStatus } from "@/lib/realtime/connection-status";
 import { INITIAL_OPENING_CHECKS } from "@/lib/lot-state";
-import { cardStatusAt, showcaseRefetchInterval } from "@/lib/realtime/showcase-cache";
+import { cardStatusAt, checksForFilter, showcaseRefetchInterval } from "@/lib/realtime/showcase-cache";
 import { SHOWCASE_LISTS_KEY, useShowcaseLive } from "@/lib/realtime/use-showcase-live";
 import { serverNow } from "@/lib/server-clock";
 import { useOnReach, useServerNow } from "@/lib/use-server-clock";
@@ -69,7 +69,8 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
     return () => clearTimeout(handle);
   }, [search]);
 
-  const closingChecks = useRef(INITIAL_OPENING_CHECKS);
+  const filterKey = lotsPath(filters);
+  const closingChecks = useRef({ key: filterKey, checks: INITIAL_OPENING_CHECKS });
   const query = useQuery({
     queryKey: lotsKey(filters),
     queryFn: ({ signal }) => fetchLots(filters, signal),
@@ -79,14 +80,15 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
     // Cartão apurando (fim passou e o servidor ainda não encerrou): olha a cada 3 s até o servidor decidir (§9.2),
     // com teto de respostas novas; o showcase:lot do fechamento zera a conta.
     refetchInterval: (q) => {
+      const scoped = checksForFilter(closingChecks.current, filterKey);
       const step = showcaseRefetchInterval({
         failed: q.state.status === "error",
         lots: q.state.data?.lots,
         now: serverNow(),
-        checks: closingChecks.current,
+        checks: scoped.checks,
         dataUpdatedAt: q.state.dataUpdatedAt,
       });
-      closingChecks.current = step.checks;
+      closingChecks.current = { key: filterKey, checks: step.checks };
       return step.interval;
     },
   });
