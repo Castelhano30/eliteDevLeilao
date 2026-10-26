@@ -2,7 +2,7 @@
 title: 'S06 — Cancelamento de lote e estorno ao líder'
 type: 'feature'
 created: '2026-10-26'
-status: 'in-progress'
+status: 'done'
 baseline_commit: '705d184'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -72,18 +72,18 @@ O build corre em **duas fases**, cada uma em sessão de contexto própria se o c
 - [x] Leituras -- `GET /lots` sem cancelado, `GET /lots/:id` 200 cancelado com `bids[]` só `BID`, `GET /my/lots` com `cancelledAt`/`refundedCents`, `GET /wallet.leadingLots` sem cancelado; AC-6.3, 6.4, 6.5, 6.13, 6.23; privacidade (resposta e `lot:cancelled` sem `userId`, nome, e-mail).
 - [x] Concorrência com **prova de mutação** -- `Promise.all([cancel, bid])` ×20 em ordens aleatórias (AC-6.19, §13), 5 × cancelar, cancelar × job; sem deadlock. Mutantes: tirar a checagem de `confirmEntryCount` (`LOT_CHANGED`), tirar o `FOR UPDATE` do lote, ler `committed` fora do lock; cópia de segurança antes, nunca `git checkout` em edição não commitada.
 - [x] Seed -- lote "cancelado de demonstração" pelos services com `FakeClock` (§11), invariante de saldo verdadeira, idempotente; `seedLiveBids` checa `cancelledAt`/`endsAt`; teste do seed.
-- [ ] Fechamento da fase -- `lint`, `typecheck`, `test`, `build` na raiz com saída real no diário; push; CI verde; deploy da API no Railway `SUCCESS` (o web antigo segue funcionando: mudança aditiva); log do seed; diário (75+) e "Onde parei" com o que a Fase 2 precisa saber.
+- [x] Fechamento da fase -- `lint`, `typecheck`, `test`, `build` na raiz com saída real no diário; push; CI verde; deploy da API no Railway `SUCCESS` (o web antigo segue funcionando: mudança aditiva); log do seed; diário (75+) e "Onde parei" com o que a Fase 2 precisa saber.
 
 **Fora da Fase 1:** qualquer arquivo de `apps/web` (exceto o que o typecheck exigir pelo contrato novo), README, `resolved:` do `deferred-work.md`, smoke em produção.
 
 ### Fase 2 — Web: Painel, diálogo, Sala cancelada, verificação e entrega (`apps/web`)
 
 **Execution:**
-- [ ] Retomada -- ler o diário, este spec e a §16 da fatia; `lint`, `typecheck`, `test` como linha de base da fase.
-- [ ] Web puro, com teste antes -- estado do diálogo, plural, mapeamento de erro → mensagem, seção "Cancelados", refetch do Painel por `showcase:lot` próprio; mutação nos testes novos.
-- [ ] Web telas -- Painel (botão, seção, placares, live region, foco), `CancelDialog`, Sala cancelada (carimbo, aviso, reduced-motion), Vitrine; "se sobrar tempo" por último: aviso "Chegou lance novo: agora são {N}.".
-- [ ] Documentação -- §16 e §17 da fatia, `slice-03`, `resolved:`/`alvo:` no `deferred-work.md`, README, diário.
-- [ ] Verificação -- `lint`, `typecheck`, `test`, `build` na raiz; Chrome real (ACs [manual] 6.15 a 6.18, 6.20 a 6.22, 6.24, claro e noite, 390 px, dois clientes, corrida do diálogo); push, CI verde, Railway web e API `SUCCESS` no commit certo, smoke público com lote novo.
+- [x] Retomada -- ler o diário, este spec e a §16 da fatia; `lint`, `typecheck`, `test` como linha de base da fase.
+- [x] Web puro, com teste antes -- estado do diálogo, plural, mapeamento de erro → mensagem, seção "Cancelados", refetch do Painel por `showcase:lot` próprio; mutação nos testes novos.
+- [x] Web telas -- Painel (botão, seção, placares, live region, foco), `CancelDialog`, Sala cancelada (carimbo, aviso, reduced-motion), Vitrine; "se sobrar tempo" por último: aviso "Chegou lance novo: agora são {N}.".
+- [x] Documentação -- §16 e §17 da fatia, `slice-03`, `resolved:`/`alvo:` no `deferred-work.md`, README, diário.
+- [x] Verificação -- `lint`, `typecheck`, `test`, `build` na raiz; Chrome real (ACs [manual] 6.15 a 6.18, 6.20 a 6.22, 6.24, claro e noite, 390 px, dois clientes, corrida do diálogo); push, CI verde, Railway web e API `SUCCESS` no commit certo, smoke público com lote novo.
 
 **Acceptance Criteria:** AC-6.1 a 6.14, 6.19 e 6.23 [auto] fecham na Fase 1; AC-6.15 a 6.18, 6.20 a 6.22 e 6.24 [manual] na Fase 2 (Chrome local e link público). Leitor de tela e aparelho real **não** serão conferidos por mim: ficam como pendência do Felipe, sem marcar feito. §17 adaptada ao Railway.
 
@@ -99,6 +99,8 @@ O build corre em **duas fases**, cada uma em sessão de contexto própria se o c
 ## Implementation Notes
 
 **Fase 1 (servidor), 26/10/2026.** Implementada direto, sem subagente. Commits `ff654ae` a `8c77353`; saída real, prova de mutação e roteiro na API real no diário, itens 75 e 76. Desvios do Code Map, a registrar na §16: o service é `services/cancel.service.ts` (`lot.service.ts` já é grande), e `summarizeBids` saiu do `getLotState` para `lot-mappers.ts` para a resposta do cancelamento usar a mesma conta. A camada de revisão (step-04) **não rodou**: ela exige revisores em paralelo; fica para o `bmad-code-review` se o Felipe pedir.
+
+**Fase 2 (web), 26/10/2026.** Implementada direto, sem subagente. Commits `528e613` a `9ed7e10` e o de documentação final; saída real, prova de mutação (web 6 de 6), Chrome real (64/64) e smoke público (19/19, lote 013) no diário, itens 78 e 79. O aviso opcional "Chegou lance novo" entrou. Efeito em produção: lotes 010 (seed), 011 e 012 (cancelados sem lances por defeito do meu script de smoke) e 013 (cancelado com 2 lances). A revisão em paralelo (step-04) segue **não rodada**.
 
 ## Spec Change Log
 

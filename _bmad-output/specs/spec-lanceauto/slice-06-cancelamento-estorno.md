@@ -369,10 +369,10 @@ Perguntas abertas, com a sugestão adotada:
 
 ## 17. Definition of Done
 
-- [ ] Todos os AC `[auto]` passam no CI (Postgres de serviço); `Promise.all` cancelar×lance e cancelar×cancelar verdes.
-- [ ] Checklist manual dos AC `[manual]` percorrido em dois navegadores, nos temas claro e noite e em 390px.
-- [ ] Sem migração nova (confirmado) ou, se necessária, aplicada no deploy.
-- [ ] Seed estendido roda (`npm run seed`) e deixa o lote cancelado com estorno e invariante de saldo verdadeira.
-- [ ] DTOs em `packages/shared` atualizados (`MyLotRow`, `LotState.cancelledAt`, extrato com `lotNumber`).
-- [ ] Smoke no link público: cancelar um lote com lances e ver a Sala, a Vitrine e a Carteira atualizarem.
-- [ ] README ganha a regra "cancelamento com estorno e linha CANCEL na auditoria".
+- [x] Todos os AC `[auto]` passam no CI (Postgres de serviço); `Promise.all` cancelar×lance (20 rodadas, ordens aleatórias com semente impressa) e cancelar×cancelar (5 simultâneos) verdes. CI verde em `9ed7e10`; prova de mutação: 4 mutantes do service mortos (diário, item 76).
+- [x] Checklist manual dos AC `[manual]` (6.15 a 6.18, 6.20 a 6.22 e 6.24) percorrido no **Chrome real local**, com dois clientes, nos temas claro e noite e em 390 px, mais a corrida do diálogo (diário, item 78: 64/64). **Não conferido, fica com o Felipe:** leitor de tela e aparelho real (e o Tab em um Chrome com interface), sem marcar feito.
+- [x] Sem migração nova (confirmado: `migrate deploy` no Railway disse "No pending migrations to apply").
+- [x] Seed estendido roda (`npm run seed`, duas vezes, num banco novo e no deploy do Railway) e deixa o lote cancelado com estorno e a invariante de saldo verdadeira (comprometido de cada carteira = soma dos lances dos lotes ao vivo que ela lidera, conferido em produção).
+- [x] DTOs em `packages/shared` atualizados (`MyLotCard.refundedCents`; `LotState.cancelledAt` e o extrato com `lotNumber` já existiam e foram conferidos).
+- [x] Smoke no link público: cancelar um lote com lances e ver a Sala, a Vitrine e a Carteira atualizarem (lote 013, 19/19; diário, item 79).
+- [x] README ganha a regra "cancelamento com estorno e linha CANCEL na auditoria".
