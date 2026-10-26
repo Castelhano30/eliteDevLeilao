@@ -6,7 +6,7 @@ import type { Publisher } from "./publisher";
 
 /** Ciclo da rotina (INV-10). */
 export const SETTLEMENT_INTERVAL_MS = 5_000;
-/** Lotes vencidos por varredura; o que sobrar fica para o ciclo seguinte (um servidor parado por dias acorda devagar, não de uma vez). */
+/** Lotes vencidos por varredura; a posição avança mesmo quando algum lote falha. */
 export const SETTLEMENT_BATCH = 100;
 
 export interface SettlementJobDeps {
@@ -39,16 +39,25 @@ export function makeSettlementJob(deps: SettlementJobDeps): SettlementJob {
   const inFlight = new Set<Promise<unknown>>();
   let timer: ReturnType<typeof setInterval> | undefined;
   let ticking = false;
+  let cursor: { endsAt: Date; number: number } | null = null;
 
   async function run(publisher: Publisher): Promise<SettleOutcome[]> {
     const outcomes: SettleOutcome[] = [];
     try {
+      const eligible = { endsAt: { lte: clock.now() }, settledAt: null, cancelledAt: null };
       const candidates = await db.lot.findMany({
-        where: { endsAt: { lte: clock.now() }, settledAt: null, cancelledAt: null },
+        where: cursor ? {
+          ...eligible,
+          OR: [{ endsAt: { gt: cursor.endsAt } }, { endsAt: cursor.endsAt, number: { gt: cursor.number } }],
+        } : eligible,
         orderBy: [{ endsAt: "asc" }, { number: "asc" }],
         take: SETTLEMENT_BATCH,
-        select: { id: true },
+        select: { id: true, endsAt: true, number: true },
       });
+      if (candidates.length === 0) {
+        cursor = null;
+        return outcomes;
+      }
       for (const { id } of candidates) {
         try {
           const outcome = await settlement.settleLot(id);
@@ -65,6 +74,9 @@ export function makeSettlementJob(deps: SettlementJobDeps): SettlementJob {
           logger.error({ err, lotId: id }, "falha ao liquidar o lote; tenta de novo no próximo ciclo");
         }
       }
+      const last = candidates.at(-1)!;
+      cursor = { endsAt: last.endsAt, number: last.number };
+      if (candidates.length < SETTLEMENT_BATCH) cursor = null;
     } catch (err) {
       // Listagem de candidatos (banco caindo, conexão perdida): o ciclo termina e o próximo tick tenta de novo.
       logger.error({ err }, "falha ao listar os lotes vencidos");

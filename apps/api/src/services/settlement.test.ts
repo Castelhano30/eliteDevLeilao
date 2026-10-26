@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { EVENTS, RECEIPT_TOKEN_PATTERN, lotStatus } from "@lanceauto/shared";
 import { FakeClock } from "../infra/clock";
 import { createLogger } from "../infra/logger";
-import { makeSettlementJob } from "../infra/settlement-job";
+import { makeSettlementJob, SETTLEMENT_BATCH } from "../infra/settlement-job";
 import { makeTestApp } from "../../test/helpers/app";
 import { RecordingPublisher, assertLotInvariants, makeUser, postBid, type TestUser } from "../../test/helpers/bids";
 import { createTestPrisma, testDatabaseUrl, truncateAll } from "../../test/helpers/db";
@@ -275,6 +275,29 @@ describe.skipIf(!testDatabaseUrl)("fechamento e liquidação (integração, DATA
   });
 
   describe("rotina", () => {
+    it("avança além de 100 lotes quebrados e volta a tentá-los no ciclo seguinte", async () => {
+      const ids = Array.from({ length: SETTLEMENT_BATCH + 1 }, (_, index) => `lote-${index}`);
+      const attempts: string[] = [];
+      const job = makeSettlementJob({
+        db: { lot: { findMany: async ({ where, take }: { where: { OR?: [{ endsAt: { gt: Date } }, { endsAt: Date; number: { gt: number } }] }; take: number }) => {
+          const after = where.OR?.[1].number.gt ?? 0;
+          return ids.slice(after, after + take).map((id, index) => ({ id, endsAt: new Date(NOW_MS), number: after + index + 1 }));
+        } } } as never,
+        clock,
+        settlement: { settleLot: async (id) => {
+          attempts.push(id);
+          if (id !== ids.at(-1)) throw new Error("falha isolada");
+          return { result: "UNSOLD", events: [] } as never;
+        } },
+        publisher,
+        logger: createLogger("info", { write: () => undefined }),
+      });
+      await Promise.all([job.sweep(), job.sweep()]);
+      await job.sweep();
+      expect(attempts).toContain(ids.at(-1));
+      await job.sweep();
+      expect(attempts.filter((id) => id === ids[0]).length).toBeGreaterThan(1);
+    });
     it("AC-5.10: um lote quebrado não impede os outros, é logado e tentado de novo no ciclo seguinte", async () => {
       const lots = [await live({ title: "Um" }), await live({ title: "Dois" }), await live({ title: "Tres" })];
       await bid(ana, lots[0]!.id, 2_000_000);
