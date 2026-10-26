@@ -388,4 +388,4 @@ Perguntas abertas (nada bloqueia a fatia; o build seguiu com a sugestão marcada
 - [x] Nenhum link para a Auditoria foi adicionado (fica para a S08); sem links quebrados (conferido no Painel e na Vitrine).
 - [x] README: nota do fechamento e de `settledAt` × `endsAt`. A nota de hibernação não se aplica ao Railway; o texto final fica na S09.
 - [x] Deploy atualizado e smoke no link público: lote 008 (5 min) criado, lances de Ana e Bruno pela interface em dois navegadores, fechamento ao vivo sem recarregar. Detalhes no diário, itens 70 e 71.
-- [ ] **Pendente do Felipe (não é desta fatia técnica):** leitor de tela na Sala encerrada e no Comprovante (AC-5.20 a 5.30 cobrem o que o Chrome automatizado consegue ver), e a conferência com dois aparelhos reais.
+- [x] **Conferido pelo Felipe em 26/10/2026 (relato dele):** leitor de tela na Sala encerrada e no Comprovante (AC-5.20 a 5.30 cobrem o que o Chrome automatizado consegue ver), e a conferência com dois aparelhos reais.

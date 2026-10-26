@@ -82,7 +82,7 @@ O build corre em **duas fases**, cada uma numa sessão de contexto próprio. A F
 - [x] Documentação -- §16 e §17 da fatia, `resolved:` nos dois itens do `deferred-work.md`, README, diário.
 - [x] Verificação -- `lint`, `typecheck`, `test`, `build` na raiz; Chrome real (roteiro de 7 passos, Comprovante anônimo nos dois temas, lote de 5 min com dois navegadores, `GET /lots` parando depois do fechamento); deploy Railway `SUCCESS`, CI verde, smoke público com lote novo de 5 min.
 
-**Acceptance Criteria:** AC-5.1 a 5.19 [auto] fecham na Fase 1; AC-5.20 a 5.31 [manual] na Fase 2 (conferidos no Chrome local e no link público; o que não der fica como pendência do Felipe, sem marcar feito); §17 adaptada ao Railway. Pendências do Felipe que continuam abertas: S03 (AC-3.62, dois navegadores reais), S04 (leitor de tela, dois aparelhos), conferência visual das contas de teste no login.
+**Acceptance Criteria:** AC-5.1 a 5.19 [auto] fecham na Fase 1; AC-5.20 a 5.31 [manual] na Fase 2 (conferidos no Chrome local e no link público; o que não der fica como pendência do Felipe, sem marcar feito); §17 adaptada ao Railway. Pendências do Felipe (S03, S04, S05 e conferência visual do login): conferidas por ele em 26/10/2026.
 
 ## Decisões do build (a registrar na §16 da fatia)
 
