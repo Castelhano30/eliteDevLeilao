@@ -18,6 +18,15 @@ export interface DataTableProps<Row> {
   rowKey: (row: Row) => string;
   /** `min-width` da tabela, em px (560 a 780). */
   minWidth?: number;
+  /** Realce por linha: borda esquerda de 6 px, fundo e opacidade (a Auditoria usa para o veredito de cada linha). */
+  rowAccent?: (row: Row) => RowAccent | undefined;
+}
+
+export interface RowAccent {
+  /** Cor da borda esquerda, como valor CSS (`var(--c-verde)`). */
+  borderColor: string;
+  background?: string;
+  opacity?: number;
 }
 
 function edge(index: number, total: number): string {
@@ -27,7 +36,7 @@ function edge(index: number, total: number): string {
 }
 
 /** Tabela com legenda e `th scope="col"`; a rolagem horizontal fica só dentro do contêiner. */
-export function DataTable<Row>({ caption, captionHidden = false, columns, rows, rowKey, minWidth = 560 }: DataTableProps<Row>) {
+export function DataTable<Row>({ caption, captionHidden = false, columns, rows, rowKey, minWidth = 560, rowAccent }: DataTableProps<Row>) {
   return (
     <div role="region" tabIndex={0} aria-label={caption} className="overflow-x-auto pb-2 pr-2">
       <table
@@ -51,18 +60,27 @@ export function DataTable<Row>({ caption, captionHidden = false, columns, rows, 
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={rowKey(row)} className="border-t-2 border-dashed border-tracejado first:border-t-0">
-              {columns.map((column, index) => (
-                <td
-                  key={column.key}
-                  className={`py-[14px] ${column.align === "right" ? "text-right" : "text-left"} ${edge(index, columns.length)}`}
-                >
-                  {column.render(row)}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {rows.map((row) => {
+            const accent = rowAccent?.(row);
+            return (
+              <tr
+                key={rowKey(row)}
+                className="border-t-2 border-dashed border-tracejado first:border-t-0"
+                style={accent ? { background: accent.background, opacity: accent.opacity } : undefined}
+              >
+                {columns.map((column, index) => (
+                  <td
+                    key={column.key}
+                    className={`py-[14px] ${column.align === "right" ? "text-right" : "text-left"} ${edge(index, columns.length)}`}
+                    // A borda esquerda de 6 px é uma sombra interna: a borda de <tr> não é confiável com border-collapse.
+                    style={accent && index === 0 ? { boxShadow: `inset 6px 0 0 ${accent.borderColor}` } : undefined}
+                  >
+                    {column.render(row)}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
