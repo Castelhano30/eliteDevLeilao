@@ -71,7 +71,8 @@ export function Cronometro({ status, startsAt, endsAt, originalEndsAt, size, lab
   // Leitor de tela: a cada 10 s, não a cada segundo.
   const spoken = formatCountdown(Math.ceil(state.remainingMs / 10_000) * 10_000);
   const ariaLabel = closed ? "Tempo restante 00:00" : `${scheduled ? "Abre em" : "Tempo restante"} ${spoken}`;
-  const digits = size === "sala" ? 44 : 24;
+  // Sem quebra de linha, "26d 10:18:34" a 44 px passa do painel da Sala em telas estreitas: a fonte encolhe com a largura.
+  const digits = size === "sala" ? "clamp(32px, 10vw, 44px)" : 24;
 
   return (
     <div

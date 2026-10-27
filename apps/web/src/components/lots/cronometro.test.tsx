@@ -59,8 +59,8 @@ describe("Cronometro: mostrador fantasma", () => {
     expect(html.match(/la-pulsa/g)).toHaveLength(1);
   });
 
-  it("os tamanhos sala e cartão mudam só a fonte", () => {
-    expect(render(9 * MIN, "sala")).toContain("font-size:44px");
+  it("os tamanhos sala e cartão mudam só a fonte (a da sala encolhe em tela estreita, para não passar do painel)", () => {
+    expect(render(9 * MIN, "sala")).toContain("font-size:clamp(32px, 10vw, 44px)");
     expect(render(9 * MIN, "cartao")).toContain("font-size:24px");
   });
 
