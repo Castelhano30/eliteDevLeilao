@@ -551,24 +551,45 @@ Conflitos resolvidos (por precedência):
 | EXPERIENCE: P30 "retrato vs tempo real" | Retrato com `verifiedAt` e "Verificar de novo" (recomendação autorizada) |
 | EXPERIENCE: aside "calculadora de SHA-256" | Reescrito para HMAC com chave só do servidor (decisão do usuário) |
 
+Decisões do build (S08, 27/10/2026; `spec-s08-auditoria.md`):
+
+1. **Railway** no lugar de Neon, Render e Vercel; `trust proxy` já vinha ligado em produção. Sem migração.
+2. **Layout real do repo** no lugar de `modules/audit/`: `domain/audit-chain.ts` (+ `verifyChain`), `services/audit.service.ts`, `routes/audit.ts`, testes em `routes/audit.test.ts` e `routes/audit.rate-limit.test.ts`, helper em `test/helpers/tamper.ts`.
+3. **404 sem validar UUID:** os ids são TEXT; `abc` não encontra lote e cai no mesmo `NOT_FOUND` (nunca `VALIDATION`). `no-store` vale também no 404.
+4. **Rate limit** com a chave padrão por IP (o `express-rate-limit` 8 pede o helper de IPv6 para chave própria; cada limitador já tem a sua contagem). O AC-8.40 mora num arquivo só dele, com `RATE_LIMIT_DISABLED` removido durante o arquivo.
+5. **`receiptChecked`** = há `Receipt` **ou** `consistencyIssue = RECEIPT_MISSING`; `okCount` = linhas `OK`.
+6. **Retrato da leitura provado de forma determinística:** um `prisma.$extends` deixa um lance entrar entre a leitura do lote e a das linhas; sob `RepeatableRead` o veredito segue `OK`, sob `ReadCommitted` vira `SEAL_MISMATCH`. As 20 auditorias paralelas (AC-8.15) não provam isso sozinhas.
+7. **Frases que a tabela da §8 não cobria:** selo fora com 0 linhas ("Não há linhas na corrente, mas o selo do lote …") e 1 linha ("A única linha … confere"); verbo no singular com N = 1 ("1 de 1 lance confere"). Todas "(a revisar)".
+8. **Rota em grupo `(auditoria)`** com layout próprio (o `(publico)` fixa a legenda do Comprovante). Título da aba "Auditoria do lote NNN · LanceAuto" definido no cliente quando a resposta chega (a página é renderizada no cliente, §9).
+9. **"Ver comprovante do lote"** só para licitante logado cujo `GET /lots/:id` devolve `myReceiptToken`.
+10. **Mínimo de 400 ms** no "Verificando" (pergunta 2) com a espera correndo junto da chamada, e **clique repetido** = uma chamada só (`refetch({ cancelRefetch: false })`; sem isso o segundo clique cancelaria e refaria a chamada).
+11. **Contraste (§9, "verificar nos dois temas"):** o `.85` de opacidade no elo quebrado derrubava o rótulo ferrugem para 4,26:1 no claro e 3,79:1 na noite. Agora o `.85` vale só para os dados da linha e a Situação fica a 100%. "NÃO CONFERE" ficou em tinta (ícone e borda em ferrugem): ferrugem sobre o fundo `falha` dava 3,80:1 na noite. Medidos no Chrome: todos ≥ 4,5:1 nos dois temas.
+12. **Ordem do veredito:** carimbo e frase, depois a hora e "Verificar de novo", depois os contadores; o Tab segue a leitura (links do lote → Verificar de novo → hashes do veredito → tabela → "ver inteiro" das linhas → aside). A fatia lista os "ver inteiro" depois da tabela; os dois do veredito vêm antes porque estão antes na tela.
+13. **`DataTable`** ganhou `rowAccent` opcional (borda esquerda de 6 px por sombra interna, porque a borda de `<tr>` não é confiável com `border-collapse`, e fundo); os outros usos não mudam.
+14. **Texto da técnica no README** já nesta fatia (a §17 permite); a revisão final do README é da S09. O `psql` do exemplo usa `lanceauto`, que é o padrão do `.env.example`.
+15. **Cancelado sem lances** também tem a linha CANCEL (a S06 a grava) e audita `OK`; a frase "cancelado antes do primeiro lance" só aparece se a cadeia vier sem nenhuma linha.
+16. **Cartão Encerrado → auditoria** por decisão do Felipe (pergunta 5, **SIM**). No Painel, o cartão Encerrado também vai à auditoria e ganhou, ao lado, "Auditoria do lote" e "Ver sala".
+
 Perguntas abertas (sugestão marcada):
 
 1. ~~Rate limit em `GET /lots/:id/audit`~~ **Decidido: entra** (60 req/min/IP, R-8.17, AC-8.40), com `trust proxy` = 1 em produção.
 2. **Tempo mínimo de 400 ms no estado "Verificando".** Sugestão para o estado ser perceptível (EXPERIENCE diz "por um instante"). Pode ser removido sem afetar contratos.
 3. **S06 grava linha `CANCEL` em cancelamento sem lances?** Esta fatia aceita os dois casos; a frase de "cancelado sem lances" é "texto a revisar". Alinhar com a S06.
 4. **Lotes com milhares de lances:** sem requisito; sem paginação. Sugestão: nenhuma ação (o seed e a avaliação têm dezenas de lances).
-5. **Cartão Encerrado da Vitrine vai direto para a auditoria (AC-8.34)?** É coerente com o protótipo, mas o PRD descreve Vitrine → Sala, e a Sala encerrada (S05) mostra resultado e comprovante. Sugestão atual: manter o cartão indo para a auditoria só se o usuário confirmar; senão, o cartão Encerrado vai para a Sala e a Sala já traz "Auditar este lote". **Pergunta para o usuário.** Se a resposta for "Sala", AC-8.34 e a linha `lotCardHref` de §15 deixam de valer.
+5. ~~**Cartão Encerrado da Vitrine vai direto para a auditoria (AC-8.34)?**~~ **Decidido pelo Felipe em 27/10/2026: SIM, vai para a auditoria.** Texto original: É coerente com o protótipo, mas o PRD descreve Vitrine → Sala, e a Sala encerrada (S05) mostra resultado e comprovante. Sugestão atual: manter o cartão indo para a auditoria só se o usuário confirmar; senão, o cartão Encerrado vai para a Sala e a Sala já traz "Auditar este lote". **Pergunta para o usuário.** Se a resposta for "Sala", AC-8.34 e a linha `lotCardHref` de §15 deixam de valer.
 
 ## 17. Definition of Done
 
-- [ ] `verifyChain` com todos os casos de §14 verdes; `domain/` continua puro (sem Prisma, Express, `Date.now`).
-- [ ] `GET /lots/:id/audit` público, `no-store`, leitura `RepeatableRead`, DTO sem identificadores de usuário **e sem o token do comprovante**, com rate limit de 60/min/IP.
-- [ ] Testes de adulteração via SQL cru cobrindo A1–A4 e a prova negativa de A5; helper de adulteração numa única transação; teste de sanidade do trigger (inclusive "trigger habilitado depois de cada caso").
-- [ ] `consistencyIssue` (R-8.16) implementado e testado (AC-8.37 a AC-8.39).
-- [ ] Teste de privacidade em todos os endpoints públicos (AC12).
-- [ ] Tela T9 completa nos dois temas e a 390px; estados de §9 conferidos.
-- [ ] Retrofits de links de §15 feitos e conferidos manualmente.
-- [ ] Seed inteiro audita `OK` localmente e no deploy.
-- [ ] Texto da técnica (§15) copiado para o README (ou deixado para a S09 com a pendência anotada).
-- [ ] Sem nova migração; deploy da API e do web feitos; smoke no link público: abrir a auditoria do lote arrematado do seed = Íntegro.
-- [ ] Commits atômicos em pt-BR; entrada no `progresso.md`.
+- [x] `verifyChain` com todos os casos de §14 verdes (76 casos); `domain/` continua puro (sem Prisma, Express, `Date.now`). Mutação: 13 de 13 mortas.
+- [x] `GET /lots/:id/audit` público, `no-store`, leitura `RepeatableRead` (provada por teste), DTO sem identificadores de usuário **e sem o token do comprovante**, com rate limit de 60/min/IP. Mutação no servidor e na rota: 13 de 13 mortas.
+- [x] Testes de adulteração via SQL cru cobrindo A1–A4 e a prova negativa de A5; helper de adulteração numa única transação; teste de sanidade do trigger (inclusive "trigger habilitado depois de cada caso", num `afterEach` do arquivo).
+- [x] `consistencyIssue` (R-8.16) implementado e testado (AC-8.37 a AC-8.39).
+- [x] Teste de privacidade em todos os endpoints públicos (AC12).
+- [x] Tela T9 completa nos dois temas e a 390px; estados de §9 conferidos no Chrome real (85 verificações, ver o diário). Mutação no web: 13 de 13 mortas.
+- [x] Retrofits de links de §15 feitos e conferidos (Vitrine, Sala em todos os estados, Comprovante, Painel, Meus arremates).
+- [ ] Seed inteiro audita `OK` localmente (AC-8.14) e no deploy (Vitrine inteira = `OK`).
+- [x] Texto da técnica (§15) copiado para o README.
+- [ ] Sem nova migração; deploy da API e do web feitos; smoke no link público: auditoria do lote arrematado do seed = Íntegro.
+- [x] Commits atômicos em pt-BR; entrada no `progresso.md`.
+- [ ] **Pendência do Felipe:** leitor de tela (AC-8.29: "Veredito: …" uma vez, banner como alerta, nome acessível dos "ver inteiro").
+- [ ] **Pendência do Felipe:** aparelho real (toque e 390px de verdade).

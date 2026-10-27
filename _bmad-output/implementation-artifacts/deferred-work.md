@@ -111,6 +111,7 @@
   summary: Botão "Conferir na auditoria" nos ingressos Perdido e Cancelado (`/lotes/{id}/auditoria`).
   evidence: Oculto de propósito até a S08 (sem botão vazio nem link quebrado); `myBidView` devolve `actions: []` nesses estados e há teste que impede qualquer ação com "auditoria" antes da hora.
   alvo: S08
+  resolved: S08, `myBidView` devolve `Conferir na auditoria` nos ingressos Perdido e Cancelado e os testes foram atualizados (spec-s08-auditoria.md).
 - source_spec: `_bmad-output/implementation-artifacts/spec-s07-meus-arremates.md`
   summary: Revisão de voz dos textos "(a revisar)" da §8 (frases de Ganhando, Arrematado, Perdido, Cancelado, aba vazia, faixa de desatualizado, anúncios) e picote (`Perforation`) do ingresso.
   evidence: Escritos na fatia por falta de texto nas fontes; o ingresso nasceu com a linha tracejada simples, como a §9 manda ("o picote é acabamento se sobrar tempo"). O ingresso também não usa `CarPhoto`: a §9 não põe foto no ingresso.
@@ -119,3 +120,15 @@
   summary: Anunciar a volta a "Você está ganhando" na região viva.
   evidence: A §8 lista só quatro anúncios e `transitionAnnouncement` devolve `null` para `LEADING` (decisão do build 7). Quem está com leitor de tela só ouve quando perde, não quando recupera a frente.
   alvo: S09 (decisão do Felipe)
+- source_spec: `_bmad-output/implementation-artifacts/spec-s08-auditoria.md`
+  summary: Teste de DOM da `AuditScreen` (clique repetido em "Verificar de novo" = uma chamada; foco e `aria-expanded` do "ver inteiro").
+  evidence: Só há SSR estático e lógica pura; `refetch({ cancelRefetch: false })` e a troca de foco só foram provados no Chrome real (AC-8.24, AC-8.28). Sem jsdom nem Playwright no repositório.
+  alvo: S09 (junto do teste de DOM dos hooks da S04, S06 e S07)
+- source_spec: `_bmad-output/implementation-artifacts/spec-s08-auditoria.md`
+  summary: Revisão de voz dos textos "(a revisar)" da §8 da S08 (frases de selo, comprovante e cancelamento, banners, "Como a gente confere") e a decisão de contraste do rótulo "NÃO CONFERE".
+  evidence: Escritos na fatia por falta de texto nas fontes. Duas frases saíram da tabela da fatia por falta de caso: "Não há linhas na corrente, mas o selo do lote …" (selo fora com 0 linhas) e "A única linha … confere" (1 linha). "NÃO CONFERE" ficou em tinta com ícone e borda em ferrugem, porque ferrugem sobre o fundo `falha` da linha dá 3,8:1 na noite.
+  alvo: S09
+- source_spec: `_bmad-output/implementation-artifacts/spec-s08-auditoria.md`
+  summary: Verificar com leitor de tela que a região viva da auditoria anuncia "Veredito: …" uma única vez e que o banner `role="alert"` é anunciado (AC-8.29), e conferir 390 px em aparelho real.
+  evidence: O Chrome headless confirma a região viva (um anúncio) e o banner, mas não substitui leitor de tela nem aparelho.
+  alvo: Felipe

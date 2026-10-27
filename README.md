@@ -116,7 +116,59 @@ O licitante vê em `/arremates` (item "Meus arremates" no cabeçalho) todos os l
 - **Apurando:** entre o fim do relógio e a liquidação o `state` segue Ganhando/Superado, mas a tela troca o selo por "APURANDO" e a frase "Martelo batido. Apurando o resultado…", sem posição e sem "Cobrir lance" (o lance já está bloqueado). Só esse rótulo é derivado no navegador, com `lotStatus` e o relógio do servidor; quando a liquidação sai, o `showcase:lot` refaz a lista e o ingresso vira Arrematado ou Perdido.
 - **Posição:** "é o 2º maior de 3" conta licitantes distintos pelo maior lance de cada um (o mesmo `rankFrom` da Sala). O token do comprovante só vem no ingresso Arrematado e só do próprio `Receipt`; "Ver comprovante" abre em outra guia e "Copiar link" copia `{origem}/c/{token}`.
 - **Tempo real:** a lista só muda com a resposta do `GET`. Evento de lote que não está na lista é ignorado, versão velha é descartada, rajadas viram uma consulta (300 ms), e `wallet:updated` e a reconexão do socket também refazem. Os anúncios da região viva ("Lote 018: você foi superado.") só saem entre duas respostas do servidor, nunca na carga inicial.
-- Na Carteira, cada lote de "Travado onde você lidera" leva ao ingresso (`/arremates#lote-018`). A linha CANCEL e os links "Conferir na auditoria" dos ingressos Perdido e Cancelado ficam para a S08.
+- Na Carteira, cada lote de "Travado onde você lidera" leva ao ingresso (`/arremates#lote-018`). Os ingressos Perdido e Cancelado têm "Conferir na auditoria" (`/lotes/<id>/auditoria`).
+
+## Como o histórico de lances é protegido contra adulteração
+
+Cada lote tem uma **cadeia de hashes assinada com HMAC-SHA256**. A chave fica só numa variável de ambiente do servidor (`AUDIT_HMAC_KEY`), nunca no banco.
+
+**Como funciona**
+
+1. Cada lance guarda: número de sequência no lote (1, 2, 3…), pseudônimo do licitante, valor em centavos, horário (UTC), o hash do lance anterior e o próprio hash. O cancelamento de um lote também entra na cadeia como uma linha própria.
+2. O hash de cada linha é `HMAC-SHA256(chave, "v1|entry|{lote}|{seq}|{tipo}|{pseudônimo}|{valor}|{horário}|{hash anterior}")`. O primeiro lance usa um hash inicial (genesis) derivado dos dados do lote: `HMAC(chave, "v1|genesis|{lote}|{início}|{lance inicial}|{incremento}")`.
+3. O lote guarda a quantidade de linhas e o último hash, com um **selo** `HMAC(chave, "v1|seal|{lote}|{quantidade}|{último hash}")`.
+4. Ao fechar o lote, o hash final é gravado também no comprovante.
+5. A página de auditoria (`/lotes/<id>/auditoria`, pública, sem login) pede ao servidor que **refaça a conta** do primeiro ao último lance e compare com o que está gravado, com o selo do lote e com o hash do comprovante. A verificação roda no servidor porque só ele tem a chave.
+
+| Adulteração feita direto no banco | Como é detectada |
+|---|---|
+| Alterar valor, horário ou licitante de um lance | O hash daquela linha deixa de bater |
+| Remover um lance do meio | A sequência pula e o encadeamento da linha seguinte quebra |
+| Inserir um lance | A sequência ou o hash da linha inserida não fecha (sem a chave não há hash válido) |
+| Remover os últimos lances | A contagem e o último hash deixam de bater com o selo do lote (e, em lotes encerrados, o hash final deixa de bater com o comprovante) |
+| Recalcular a cadeia inteira | Não dá sem a chave secreta |
+
+Um SHA-256 simples (sem chave) não bastaria: quem tem acesso ao banco recalcularia a cadeia inteira e ninguém perceberia. O que impede isso é a chave estar fora do banco.
+
+Veredito possível: **íntegro**, **adulterado na linha N** (primeiro registro com problema), **selo do lote não confere** (faltam ou sobram registros no fim) e **comprovante não confere**. A verificação também confere o que o hash não alcança: lote vendido sem comprovante, valor do comprovante diferente do último lance e cancelamento que a cadeia não registra. A página nunca mostra o valor "original" de um registro adulterado, porque o hash não permite recuperá-lo.
+
+A rota é `GET /lots/:id/audit`: pública, sem cache (`Cache-Control: no-store`), com lote, linhas e comprovante lidos numa única transação (`RepeatableRead`) para que um lance que entre durante a verificação não gere um falso alarme. Nada é gravado: o veredito é recalculado a cada chamada. A resposta nunca traz o token do comprovante, `userId`, nome nem e-mail.
+
+Reforços no código: um trigger do PostgreSQL rejeita `UPDATE` e `DELETE` na tabela de lances (os testes o desativam de propósito, numa única transação, para simular quem tem acesso ao banco). Dá para reproduzir a detecção à mão. Com o Docker Compose, abra o `psql` dentro do serviço do banco (usuário e banco do seu `.env`; os do `.env.example` são `lanceauto`):
+
+```bash
+docker compose exec db psql -U lanceauto -d lanceauto
+```
+
+O `id` do lote é o UUID que aparece na URL da Sala (`/lotes/<id>`), ou sai de `SELECT id, number, title FROM "Lot" ORDER BY number;`. Depois:
+
+```sql
+ALTER TABLE "Bid" DISABLE TRIGGER bid_no_update_delete;
+UPDATE "Bid" SET "amountCents" = "amountCents" + 100 WHERE "lotId" = '<id>' AND seq = 3;
+ALTER TABLE "Bid" ENABLE TRIGGER bid_no_update_delete;
+-- agora abra /lotes/<id>/auditoria: "Adulterado", linha 03
+```
+
+**Limitações**
+
+- Quem tem a chave (o próprio servidor) poderia forjar uma cadeia nova e consistente.
+- Restaurar um backup antigo **e completo** do banco não seria detectado em lotes ainda abertos (o selo do backup também é válido). Em lotes já encerrados, o hash impresso no comprovante compartilhado denuncia a troca.
+- Trocar `AUDIT_HMAC_KEY` depois de existirem lotes invalida todas as cadeias (todas passam a aparecer como adulteradas).
+- Evolução possível: assinar com Ed25519 e publicar a chave pública, para verificar no próprio navegador.
+- Reforço possível: o usuário do banco usado pela aplicação pode ficar sem permissão de `UPDATE`/`DELETE` na tabela de lances.
+- O pseudônimo tem 4 caracteres hexadecimais; dois licitantes do mesmo lote podem, raramente, ter o mesmo pseudônimo.
+- O dono de um lance (`bidderId`) e o líder atual do lote ficam fora do hash: trocar o dono de um lance direto no banco não é detectado pela cadeia (o pseudônimo, que está no hash, não muda). A auditoria cobre o histórico de lances, não a contabilidade (saldos e extrato).
+- A auditoria é pública e recalcula a cadeia a cada chamada, então tem limite de 60 requisições por minuto por IP. Atrás de proxy (Railway) o IP vem de `X-Forwarded-For` (`trust proxy` = 1). Quem avalia de uma rede corporativa com IP compartilhado pode, raramente, receber "muitas requisições": basta esperar um minuto.
 
 ## Catálogo: Tabela FIPE e Wikipedia
 
