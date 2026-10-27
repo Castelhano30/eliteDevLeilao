@@ -271,3 +271,12 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - LED do cronômetro mantido âmbar (`#f2b92b`, 10,39:1 sobre o painel): é o LCD de bomba de gasolina e a metáfora pede luz quente. O azul sobre o painel daria 1,75:1.
 - Após a troca não resta `#E2A514`, `#E8AE22` nem `226, 165` em `apps/` e `packages/`. Typecheck e 418 testes do web verdes.
 - Prints antes/depois em `.tmp/repag/` (ignorado pelo git), banco local descartável `lanceauto_visual`.
+
+## 27/10/2026 — Repaginação visual, etapa 2: etiqueta do lote sem sobreposição
+- Causa: o laço do `LotTag` saía da caixa (`left -22`, `top -26`) e o cartão da Vitrine pendurava a etiqueta a `-55%` do topo, em cima da foto e da faixa entre o cabeçalho da seção e a grade. O carimbo "ARREMATADO" tinha largura fixa de 184 px, menor que o texto de 26 px.
+- `LotTag` agora desenha o laço dentro da própria caixa (sem deslocamento negativo à esquerda) e a caixa reserva o espaço do laço e da inclinação. Os usos não precisam mais compensar: tirei o `pt-6` da Sala e da Auditoria, o `pl-6 pt-7` do `BidTicket` e o `!pt-6` do `Recibo`. Novo `size="compacto"` (número de 36 px) para o cartão.
+- Cartão da Vitrine: a etiqueta ganhou uma faixa própria acima da foto, com o carimbo AO VIVO ou o chip de abertura ao lado (quebra para baixo da etiqueta em cartão estreito, sem cobrir nada). A foto fica só com o carimbo de encerrado, centralizado. Espaços entre seção e grade caíram de 40 para 24 px, já que nada sobressai.
+- `Stamp` ganhou `size="pequeno"` (20 px, sem quebra). No cartão, "ARREMATADO" e "SEM LANCES" cabem inteiros, sem largura fixa.
+- Não mexi no carimbo do Comprovante, que já descia para a linha de baixo no "antes".
+- Conferido no Chrome real a 360, 768 e 1280 px, claro e noite: Ao vivo, Agendados e Encerrados, com título de 1 e 2 linhas (Uno Mille Way, Gol GTI 1996). Também Sala, Meus arremates, Auditoria e Comprovante.
+- Testes novos: `lot-card.test.tsx` (faixa, chip e carimbo fora da foto, carimbo pequeno) e `ui.test.tsx` (laço dentro da caixa, tamanho compacto, `Stamp` pequeno). Lint limpo.
