@@ -36,6 +36,7 @@
   --sh-cartao: 0 1px 2px rgba(0, 30, 99, 0.06), 0 4px 14px -8px rgba(0, 30, 99, 0.22);
   --sh-elevada: 0 8px 24px -12px rgba(0, 30, 99, 0.4);
   --sh-modal: 0 24px 48px -20px rgba(0, 30, 99, 0.45);
+  --sh-rodape: 0 -6px 18px -10px rgba(0, 30, 99, 0.35);
 }
 
 /* ---------- Tokens: tema noite ----------
@@ -73,6 +74,7 @@
 --sh-cartao: 0 0 #0000;
 --sh-elevada: 0 8px 24px -12px rgba(0, 0, 0, 0.6);
 --sh-modal: 0 24px 48px -16px rgba(0, 0, 0, 0.7);
+--sh-rodape: 0 0 #0000;
 }
 
 /* Sistema em modo escuro, a menos que o usuário tenha escolhido "claro". */
@@ -110,6 +112,7 @@
   --sh-cartao: 0 0 #0000;
   --sh-elevada: 0 8px 24px -12px rgba(0, 0, 0, 0.6);
   --sh-modal: 0 24px 48px -16px rgba(0, 0, 0, 0.7);
+  --sh-rodape: 0 0 #0000;
   }
 }
 
@@ -154,22 +157,39 @@ body {
   font-family: var(--font-manrope);
   font-size: 16px;
   line-height: 1.45;
+  /* Coluna: o rodapé encosta no pé da janela em página curta (o `main` cresce com `flex-1`). */
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 a {
   color: var(--c-tinta);
 }
-a:hover {
-  color: var(--c-ferrugem);
+/* Link em texto corrido (filho direto de parágrafo, item de lista ou legenda, sem classe): azul e sempre sublinhado, porque o azul
+   sozinho não o distingue do texto. Links com classe (botão, navegação, cartão) e títulos-link escolhem a própria cor. */
+:where(p, li, figcaption) > a:not([class]) {
+  color: var(--c-ocre-texto);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+:where(p, li, figcaption) > a:not([class]):hover {
+  color: var(--c-ocre-hover);
+}
+[data-theme="noite"] :where(p, li, figcaption) > a:not([class]):hover {
+  color: var(--c-tinta);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="claro"]) :where(p, li, figcaption) > a:not([class]):hover {
+    color: var(--c-tinta);
+  }
 }
 
-/* Foco global: nunca remover. */
+/* Foco global: nunca remover. Anel azul de 3px, afastado 2px do controle. */
 :focus-visible,
 label:has(input:focus-visible) {
-  outline: 3px solid var(--c-tinta);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 3px var(--c-papel);
+  outline: 3px solid var(--c-foco);
+  outline-offset: 2px;
 }
 
 /* ---------- Tipografia (.t-<nome>) ---------- */
@@ -182,8 +202,17 @@ label:has(input:focus-visible) {
 .t-display-secao { font-size: clamp(30px, 4vw, 48px); font-weight: 800; line-height: 1; text-transform: uppercase; }
 .t-cartaz-cartao { font-size: 26px; font-weight: 700; line-height: 1; text-transform: uppercase; }
 .t-cartaz-subtitulo { font-size: 26px; font-weight: 700; line-height: 1; text-transform: uppercase; }
-.t-botao-primario { font-size: 20px; font-weight: 600; line-height: 1; letter-spacing: 0.01em; text-transform: uppercase; }
-.t-botao { font-size: 18px; font-weight: 600; line-height: 1; letter-spacing: 0.01em; text-transform: uppercase; }
+.t-botao-primario { font-size: 16px; font-weight: 600; line-height: 1; letter-spacing: 0; }
+.t-botao { font-size: 15px; font-weight: 600; line-height: 1; letter-spacing: 0; }
+.t-rotulo-campo { font-size: 13px; font-weight: 600; line-height: 1.2; letter-spacing: 0; color: var(--c-tinta2); }
+.t-filtro { font-size: 14px; font-weight: 600; line-height: 1; letter-spacing: 0; }
+.t-titulo-cartao { font-size: 20px; font-weight: 700; line-height: 1.2; }
+.t-meta-cartao { font-size: 13px; font-weight: 500; line-height: 1.3; color: var(--c-tinta2); }
+.t-rotulo-cartao { font-size: 12px; font-weight: 700; line-height: 1; letter-spacing: 0.06em; text-transform: uppercase; color: var(--c-tinta2); }
+.t-lance-cartao { font-size: 28px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.t-rodape-titulo { font-size: 12px; font-weight: 700; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase; }
+.t-rodape-link { font-size: 14px; font-weight: 500; line-height: 1.3; }
+.t-rodape-legal { font-size: 13px; font-weight: 400; line-height: 1.45; color: var(--c-tinta2); }
 .t-carimbo { font-size: 26px; font-weight: 800; line-height: 1; letter-spacing: 0.04em; text-transform: uppercase; }
 .t-placar { font-size: 30px; font-weight: 800; line-height: 1; text-transform: uppercase; }
 .t-numero-lote { font-size: 52px; font-weight: 800; line-height: 1; }
@@ -225,9 +254,34 @@ dialog::backdrop {
   background: rgba(5, 12, 32, 0.6);
 }
 
+/* ---------- Logo no cabeçalho e no rodapé ----------
+   As duas faixas são espelhadas e o logo faz o inverso delas: placa escura na faixa clara, placa clara na escura. */
+.cabecalho,
+.rodape {
+  --h-logo-sombra: 0 2px 6px rgba(0, 30, 99, 0.25);
+  --f-logo-papel: #14181f;
+  --f-logo-tinta: #f5f7fb;
+}
+[data-theme="noite"] .cabecalho,
+[data-theme="noite"] .rodape {
+  --h-logo-sombra: 0 0 0 1px #3d6dff, 0 0 16px rgba(61, 109, 255, 0.35);
+  --f-logo-papel: #f5eedf;
+  --f-logo-tinta: #1e1c19;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="claro"]) .cabecalho,
+  :root:not([data-theme="claro"]) .rodape {
+    --h-logo-sombra: 0 0 0 1px #3d6dff, 0 0 16px rgba(61, 109, 255, 0.35);
+    --f-logo-papel: #f5eedf;
+    --f-logo-tinta: #1e1c19;
+  }
+}
+.cabecalho .logo-placa,
+.rodape .logo-placa { box-shadow: var(--h-logo-sombra); }
+
 /* ---------- Cabeçalho: claro por padrão, escuro no tema noite ----------
    Cores, botões e divisores vêm dos tokens globais; só ficam aqui os valores que o cabeçalho mantém próprios (linha, sombra,
-   fundo suave no noite, avatar e logo). O logo faz o inverso da barra (placa escura na clara, placa clara na escura), para sempre contrastar. */
+   fundo suave no noite e avatar). */
 .cabecalho {
   --c-linha: #8fa3cf;
   --c-sombra: #c9d5ee;
@@ -245,9 +299,6 @@ dialog::backdrop {
   --h-avatar-fundo: var(--f-azul);
   --h-avatar-borda: var(--f-azul);
   --h-avatar-texto: #ffffff;
-  --h-logo-sombra: 0 2px 6px rgba(0, 30, 99, 0.25);
-  --f-logo-papel: #14181f;
-  --f-logo-tinta: #f5f7fb;
   color-scheme: light;
   background: var(--c-fundo);
   color: var(--c-tinta);
@@ -265,9 +316,6 @@ dialog::backdrop {
   --h-avatar-fundo: var(--f-azul-profundo);
   --h-avatar-borda: var(--c-destaque);
   --h-avatar-texto: var(--c-tinta);
-  --h-logo-sombra: 0 0 0 1px #3d6dff, 0 0 16px rgba(61, 109, 255, 0.35);
-  --f-logo-papel: #f5eedf;
-  --f-logo-tinta: #1e1c19;
   color-scheme: dark;
   box-shadow: none;
   border-bottom: 2px solid var(--h-azul);
@@ -284,15 +332,11 @@ dialog::backdrop {
     --h-avatar-fundo: var(--f-azul-profundo);
     --h-avatar-borda: var(--c-destaque);
     --h-avatar-texto: var(--c-tinta);
-    --h-logo-sombra: 0 0 0 1px #3d6dff, 0 0 16px rgba(61, 109, 255, 0.35);
-    --f-logo-papel: #f5eedf;
-    --f-logo-tinta: #1e1c19;
     color-scheme: dark;
     box-shadow: none;
     border-bottom: 2px solid var(--h-azul);
   }
 }
-.cabecalho .logo-placa { box-shadow: var(--h-logo-sombra); }
 .cabecalho-divisor { display: none; flex: 0 0 auto; width: 1px; height: 28px; background: var(--h-divisor); }
 @media (min-width: 768px) {
   .cabecalho-divisor { display: block; }

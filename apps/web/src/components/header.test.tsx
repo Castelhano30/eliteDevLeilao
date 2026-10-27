@@ -42,9 +42,13 @@ describe("cabeçalho: claro por padrão, escuro no tema noite", () => {
   });
 
   it("o logo inverte com a barra: placa escura na clara, placa clara na escura", () => {
-    expect(light).toMatch(/--f-logo-papel:\s*#14181f/);
-    expect(light).toMatch(/--f-logo-tinta:\s*#f5f7fb/);
-    for (const scope of [dark, system]) {
+    // As variáveis do logo são compartilhadas com o rodapé (`.cabecalho, .rodape`).
+    const logoClaro = block("\n.cabecalho,\n.rodape");
+    const logoNoite = block('\n[data-theme="noite"] .cabecalho,\n[data-theme="noite"] .rodape');
+    const logoSistema = block('\n  :root:not([data-theme="claro"]) .cabecalho,\n  :root:not([data-theme="claro"]) .rodape');
+    expect(logoClaro).toMatch(/--f-logo-papel:\s*#14181f/);
+    expect(logoClaro).toMatch(/--f-logo-tinta:\s*#f5f7fb/);
+    for (const scope of [logoNoite, logoSistema]) {
       expect(scope).toMatch(/--f-logo-papel:\s*#f5eedf/);
       expect(scope).toMatch(/--f-logo-tinta:\s*#1e1c19/);
     }

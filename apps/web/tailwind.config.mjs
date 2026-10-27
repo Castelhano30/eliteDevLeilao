@@ -63,6 +63,7 @@ const config = {
         chip: "0 0 #0000",
         painel: "var(--sh-elevada)",
         modal: "var(--sh-modal)",
+        rodape: "var(--sh-rodape)",
       },
       fontFamily: {
         sans: ["var(--font-manrope)"],

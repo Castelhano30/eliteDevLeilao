@@ -7,7 +7,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <SiteHeader />
-      <main id="conteudo">
+      <main id="conteudo" className="flex-1">
         <Suspense fallback={null}>
           <AvisoPapel />
         </Suspense>
