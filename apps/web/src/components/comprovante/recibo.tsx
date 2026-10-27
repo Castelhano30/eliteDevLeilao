@@ -23,11 +23,12 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
  * O hash é o HMAC-SHA256 completo, selecionável e que quebra em qualquer ponto; o código de barras é decorativo.
  */
 export function Recibo({ receipt }: { receipt: ReceiptDTO }) {
+  // 8 px a menos de largura: a sombra deslocada e a rotação de -1° cabem na coluna e a página não ganha rolagem lateral.
   const { car } = receipt;
   return (
     <article
       aria-label={`Recibo ${receipt.receiptCode}`}
-      className="mx-auto w-full max-w-[760px]"
+      className="mx-auto w-[calc(100%-8px)] max-w-[760px]"
       style={{ transform: "rotate(-1deg)", filter: "drop-shadow(8px 8px 0 var(--c-sombra))" }}
     >
       <div className={`${BAND} flex flex-wrap items-center justify-between gap-4 border-2 !pt-6`}>
