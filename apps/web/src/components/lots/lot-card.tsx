@@ -100,20 +100,21 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
 
   const body = (
     <>
-      <span className="absolute left-5 top-0 z-[3]" style={{ transform: "translateY(-55%)" }}>
-        <LotTag number={preview ? "NOVO" : card.number} tone={ended ? "papel" : "ocre"} rotate={ROTATE[status]} />
-      </span>
-      <div className="relative">
-        <CarPhoto imageUrl={card.imageUrl} title={card.title} size="cartao" dimmed={ended} noReferrer={preview} />
-        {live && status === "LIVE" ? <Stamp variant="ao-vivo" className="absolute right-3 top-3 bg-papel" /> : null}
-        {ended ? (
-          <span className="absolute inset-0 flex items-center justify-center">
-            <Stamp variant={status === "SOLD" ? "arrematado" : "sem-lances"} className="w-[184px] justify-center bg-papel" />
+      {/* Faixa própria: a etiqueta fica fora da foto e o carimbo/chip de data ao lado dela, sem cobrir nada. */}
+      <div className="flex flex-wrap items-start justify-between gap-x-3 px-4 pt-1">
+        <LotTag number={preview ? "NOVO" : card.number} tone={ended ? "papel" : "ocre"} rotate={ROTATE[status]} size="compacto" />
+        {live && status === "LIVE" ? <Stamp variant="ao-vivo" size="pequeno" className="mr-1 mt-4 bg-papel" /> : null}
+        {status === "SCHEDULED" ? (
+          <span className="t-mono mt-4 border-2 border-linha bg-papel px-2 py-1 text-[12px]">
+            {validStart ? opensLabel(card.startsAt) : "ABRE —"}
           </span>
         ) : null}
-        {status === "SCHEDULED" ? (
-          <span className="t-mono absolute right-3 top-3 border-2 border-linha bg-papel px-2 py-1 text-[12px]">
-            {validStart ? opensLabel(card.startsAt) : "ABRE —"}
+      </div>
+      <div className="relative">
+        <CarPhoto imageUrl={card.imageUrl} title={card.title} size="cartao" dimmed={ended} noReferrer={preview} />
+        {ended ? (
+          <span className="absolute inset-0 flex items-center justify-center">
+            <Stamp variant={status === "SOLD" ? "arrematado" : "sem-lances"} size="pequeno" className="max-w-[calc(100%-24px)] justify-center bg-papel" />
           </span>
         ) : null}
       </div>

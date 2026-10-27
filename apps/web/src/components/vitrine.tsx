@@ -231,7 +231,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
                 if (lots.length === 0) return null;
                 return (
                   <section key={group} aria-labelledby={`secao-${group}`} className="mb-8">
-                    <div className="mb-10 flex flex-wrap items-end justify-between gap-3 border-b-[3px] border-linha pb-3">
+                    <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b-[3px] border-linha pb-3">
                       <div>
                         <h2 id={`secao-${group}`} className="t-display-secao">
                           {title}
@@ -240,7 +240,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
                       </div>
                       <p className="t-mono-dado">{lotCountLabel(lots.length)}</p>
                     </div>
-                    <div className="grid gap-x-6 gap-y-10" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 330px), 1fr))" }}>
+                    <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 330px), 1fr))" }}>
                       {lots.map((lot) => (
                         <LotCard key={lot.id} card={lot} serverTime={serverTime} />
                       ))}
