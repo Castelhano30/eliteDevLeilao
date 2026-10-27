@@ -286,7 +286,6 @@ export function PainelScreen() {
                     <LotCard card={lot} serverTime={data.serverTime} resultado={lot.resultado} />
                     <span className="flex flex-wrap gap-2">
                       <AuditLink lot={lot} />
-                      <SeeRoom lot={lot} />
                     </span>
                   </div>
                 ))}

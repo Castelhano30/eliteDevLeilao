@@ -77,12 +77,10 @@ describe("useServerClock (store)", () => {
 });
 
 describe("lotCardHref, assetUrl, safeHref e rótulos", () => {
-  it("ao vivo, agendado, apurando e cancelado levam à Sala; o encerrado leva à auditoria (S08 AC-8.34)", () => {
-    for (const status of ["LIVE", "SCHEDULED", "CLOSING", "CANCELLED"] as const) {
+  it("todo cartão leva à Sala, inclusive o encerrado: a auditoria é um link dentro da Sala (decisão do Felipe)", () => {
+    for (const status of ["LIVE", "SCHEDULED", "CLOSING", "CANCELLED", "SOLD", "UNSOLD"] as const) {
       expect(lotCardHref({ id: "abc", status })).toBe("/lotes/abc");
     }
-    expect(lotCardHref({ id: "abc", status: "SOLD" })).toBe("/lotes/abc/auditoria");
-    expect(lotCardHref({ id: "abc", status: "UNSOLD" })).toBe("/lotes/abc/auditoria");
   });
   it("prefixa o caminho relativo com a URL da API", () => {
     expect(assetUrl("/items/1/image")).toMatch(/^https?:\/\/.+\/items\/1\/image$/);
