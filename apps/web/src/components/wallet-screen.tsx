@@ -20,6 +20,7 @@ import { PageShell } from "@/components/ui/page-shell";
 import { RefusalMessage } from "@/components/ui/refusal-message";
 import { apiGet, apiPost } from "@/lib/api-client";
 import { describeMovement, formatWhen, lotNumberLabel } from "@/lib/format";
+import { anchorId } from "@/lib/my-bids-events";
 import { WALLET_LEDGER_KEY, WALLET_SUMMARY_KEY } from "./auth-provider";
 import { useWalletSummary } from "./balance-chip";
 import { MoneyField } from "./money-field";
@@ -175,10 +176,12 @@ export function WalletScreen() {
               <ul className="space-y-1">
                 {leadingLots.map((lot) => (
                   <li key={lot.lotId} className="t-mono-dado">
-                    <Link href={`/lotes/${lot.lotId}`}>
-                      Lote {lotNumberLabel(lot.number)} · {lot.title}
-                    </Link>{" "}
-                    · {formatBRL(lot.committedCents)}
+                    <Link
+                      href={`/arremates#${anchorId(lot.number)}`}
+                      aria-label={`Ver o lote ${lotNumberLabel(lot.number)}, ${lot.title}, no Meus arremates`}
+                    >
+                      Lote {lotNumberLabel(lot.number)} · {lot.title} · {formatBRL(lot.committedCents)}
+                    </Link>
                   </li>
                 ))}
               </ul>
