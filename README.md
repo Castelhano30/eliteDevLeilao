@@ -2,19 +2,115 @@
 
 Casa de leilões online de carros: leiloeiros montam lotes a partir de carros da tabela FIPE, licitantes com saldo simulado disputam cada lote com lances ao vivo, o vencedor recebe um comprovante compartilhável e qualquer pessoa pode auditar o histórico de um lote. Teste técnico Elite Dev (Verzel).
 
-## Stack
+## Índice
+
+1. [Visão geral e contas de teste](#1-visão-geral-e-contas-de-teste)
+2. [Stack e decisões](#2-stack-e-decisões)
+3. [Pré-requisitos e variáveis](#3-pré-requisitos-e-variáveis)
+4. [Banco de dados e seed](#4-banco-de-dados-e-seed)
+5. [Como rodar](#5-como-rodar)
+6. [Testes](#6-testes)
+7. [Anti-adulteração do histórico](#7-anti-adulteração-do-histórico)
+8. [Comportamentos inesperados e limitações](#8-comportamentos-inesperados-e-limitações)
+
+Entre os itens 6 e 8 ficam as seções de detalhe: lances, tempo real, fechamento, cancelamento, Meus arremates, catálogo e deploy.
+
+## 1. Visão geral e contas de teste
+
+- **Web:** https://lanceautoweb-production.up.railway.app
+- **API:** https://lanceautoapi-production.up.railway.app (teste em `/health`)
+
+Contas de teste (senha de todas: `lance1234`, pública de propósito: é dado de teste):
+
+| Papel | E-mail | Saldo inicial |
+|---|---|---|
+| Leiloeiro | leiloeiro@lanceauto.test | — (recebe os créditos das vendas) |
+| Licitante | ana@lanceauto.test | R$ 500.000,00 |
+| Licitante | bruno@lanceauto.test | R$ 300.000,00 |
+
+Na tela de entrar, a aba "Entrar" lista as três contas: um clique preenche e-mail e senha.
+
+**Roteiro de 5 passos para testar**
+
+1. Abra a Vitrine, sem login. Ela mostra lotes ao vivo, agendado e encerrados (os cancelados nunca aparecem). Alterne o tema claro/noite no cabeçalho.
+2. Entre como **Ana**, abra o lote ao vivo (Fiat Uno Mille Way 2010) e dê um lance. A Ana entra "superada": o Bruno lidera.
+3. Em outra janela anônima, entre como **Bruno** na mesma Sala. O lance da Ana aparece sem recarregar, e o valor do lance dela fica comprometido no saldo, voltando ao disponível quando ela é superada.
+4. Entre como **leiloeiro**, crie um lote (Painel → Criar lote, com a tabela FIPE), veja-o no Painel e cancele.
+5. Sem login, abra o comprovante do lote arrematado (Ana → Meus arremates → "Ver comprovante") e a auditoria do lote (link "Auditar este lote" na Sala). A auditoria deve dizer "íntegro".
+
+## 2. Stack e decisões
 
 - Web: Next.js (App Router), React, TypeScript, Tailwind, TanStack Query, Socket.IO client
 - API: Node, Express, Socket.IO, Prisma, zod
-- Banco: PostgreSQL
-- Monorepo com npm workspaces: `apps/web`, `apps/api`, `packages/shared`
-- Testes: Vitest
+- Banco: PostgreSQL 16
+- Monorepo com npm workspaces: `apps/web`, `apps/api`, `packages/shared` (contratos zod, tipos e textos canônicos; o web nunca importa a API)
+- Testes: Vitest. Hospedagem: Railway (web, API e Postgres no mesmo projeto)
 
-## Como rodar
+Decisões de produto e de engenharia:
 
-Pré-requisitos: Node 22.12 ou superior (testado no 24), npm e Docker.
+- **Prorrogação:** lance nos últimos 2 minutos leva o fim a *hora do lance + 2 min*, sem teto.
+- **Posição:** o maior lance de cada licitante, contado uma vez ("2º de 4").
+- **Cancelamento com lances:** o líder é estornado e o cancelamento entra no histórico (linha CANCEL na cadeia).
+- **Sem edição de lote agendado:** só cancelar. Depósito máximo de R$ 10.000.000,00 por operação.
+- **Imagem:** sugerida pela Wikipedia, editável pelo leiloeiro; baixada na criação e guardada no banco.
+- **Dinheiro em centavos inteiros** (`BigInt` no banco, `number` nas bordas); a interface mostra reais inteiros. **Datas em UTC**, exibidas em Brasília.
+- **Pseudônimo por lote:** "Licitante 7F3A" muda de lote para lote; nenhuma resposta pública traz nome, e-mail ou id de usuário.
+- **Autenticação:** JWT em `localStorage` (7 dias), um papel por conta, autorização no back-end.
+- **Monólito modular, um processo:** a API serve REST e Socket.IO juntos. O servidor é a verdade de tempo, saldo e valor: sem atualização otimista.
 
-### Com Docker Compose
+## 3. Pré-requisitos e variáveis
+
+Node 22.12 ou superior (testado no 24), npm, Docker (opcional, para o Compose e o banco local) e PostgreSQL 16 ou superior. Copie `.env.example` para `.env` e ajuste: `cp .env.example .env`. O `.env` nunca é versionado.
+
+| Variável | Para que serve |
+|---|---|
+| `DATABASE_URL` | Conexão do Prisma com o Postgres. No Railway: URL privada do serviço de banco |
+| `DIRECT_URL` | Igual à anterior (conexão direta, usada nas migrações) |
+| `DATABASE_URL_TEST` | Banco só dos testes de integração da API; sem ela esses testes são pulados |
+| `JWT_SECRET` | Assina os tokens de login (mín. 32 caracteres). Trocar desloga todo mundo |
+| `AUDIT_HMAC_KEY` | Chave da cadeia HMAC da auditoria (mín. 32 caracteres). Trocar invalida todos os históricos |
+| `PORT` | Porta da API (padrão 4000) |
+| `WEB_ORIGIN` | Origem exata do web (CORS e Socket.IO), com `https` e sem barra no final |
+| `NEXT_PUBLIC_API_URL` | Endereço da API visto pelo navegador; embutido no build do web |
+| `INTERNAL_API_URL` | Opcional: endereço da API visto pelo SSR do web (no Compose, `http://api:4000`) |
+| `WEB_PORT` | Porta do web no Compose (padrão 3000) |
+| `FIPE_BASE_URL`, `FIPE_TOKEN` | Tabela FIPE v2; o token é opcional e aumenta a cota |
+| `WIKI_USER_AGENT`, `WIKIPEDIA_BASE_URL` | Identificação e endereço da Wikipedia (imagem sugerida) |
+| `AUTH_RATE_LIMIT_MAX` | Limite de login/cadastro por minuto e por IP (padrão 30) |
+| `RATE_LIMIT_DISABLED` | `1` desliga todos os limites (usado nos testes) |
+
+Gere segredos fortes com `openssl rand -hex 32`. O [.env.example](.env.example) está completo e comentado, com valores de desenvolvimento que funcionam com o Compose.
+
+## 4. Banco de dados e seed
+
+Com o Docker: `docker compose up -d db` (Postgres na porta 5433 do host). Sem Docker, crie um banco e aponte `DATABASE_URL` e `DIRECT_URL` para ele. Depois:
+
+```bash
+npm run prisma:generate -w apps/api   # gera o client do Prisma
+npm run migrate:deploy -w apps/api    # aplica as migrações
+npm run seed                          # contas e lotes de demonstração
+npm run seed:demo                     # (opcional) mais um lote ao vivo
+```
+
+`npm run seed` cria, **só pelos services da aplicação e sem nenhuma requisição de rede** (usa [apps/api/prisma/fipe-fixture.json](apps/api/prisma/fipe-fixture.json)), as três contas com os saldos da tabela acima e cinco lotes, numerados na ordem de criação:
+
+| Lote | Estado | O que mostra |
+|---|---|---|
+| 001 | Encerrado, arrematado pela Ana | 4 lances, o último nos 2 minutos finais (prorrogou); comprovante, "Meus arremates" e total recebido |
+| 002 | Encerrado, sem lances | Carimbo "Sem lances" e auditoria sem corrente |
+| 003 | Cancelado | Bruno liderava: estorno no extrato e linha CANCEL na auditoria; some da Vitrine |
+| 004 | Agendado | Abre em 2 dias |
+| 005 | Ao vivo por 30 dias | 5 lances de Ana e Bruno; o Bruno termina na frente, então a Ana entra "superada" e pode cobrir |
+
+O passado é fabricado com um relógio simulado e `createLot({ allowPast })`, que só o seed usa. Por isso as cadeias de hash nascem válidas e a auditoria responde "íntegro" em todos.
+
+- **Seguro a cada deploy:** se já existem usuários, o seed não faz nada, imprime `seed ignorado: já existem usuários` e sai com código 0. Nunca apaga dados. Duas execuções ao mesmo tempo não se atropelam (`pg_advisory_lock`).
+- **`npm run seed:demo`** cria um lote ao vivo **novo** (30 dias, 5 lances de Ana e Bruno) sem tocar nos demais e, se o saldo disponível de um deles estiver abaixo de R$ 100.000,00, deposita a diferença (aparece no extrato como depósito). Imprime o número e a URL do lote. Rode quando o lote ao vivo expirar.
+- **Defina `AUDIT_HMAC_KEY` e `JWT_SECRET` uma vez, antes do primeiro seed.** Trocar a chave HMAC depois faz todos os históricos aparecerem como adulterados.
+
+## 5. Como rodar
+
+**Com Docker Compose** (sobe banco, API e web; migrações e seed rodam no primeiro start da API):
 
 ```bash
 cp .env.example .env
@@ -24,47 +120,48 @@ docker compose up --build
 - Web: http://localhost:3000 (mude com `WEB_PORT` e ajuste `WEB_ORIGIN` no `.env` para a mesma porta, senão o CORS recusa a API)
 - API: http://localhost:4000, teste em `/health` (muda com `PORT`)
 - Postgres: `localhost:5433`
+- Para parar: `docker compose down`. Para apagar também o banco: `docker compose down -v`.
 
-### Sem Docker para a aplicação
+**Sem Docker para a aplicação** (só o banco no Docker):
 
 ```bash
 cp .env.example .env
-docker compose up -d db        # só o banco
+docker compose up -d db
 npm ci
 npm run build -w packages/shared
 npm run prisma:generate -w apps/api
 npm run migrate:deploy -w apps/api
+npm run seed
 npm run dev                    # shared em watch, API e web
 ```
-
-### Contas de teste
-
-`npm run seed` cria as três contas abaixo pelos mesmos services da API (confere cada uma pelo e-mail e cria só as que faltam). Senha de todas: `lance1234`.
-
-| Papel | E-mail | Saldo |
-|---|---|---|
-| Leiloeiro | leiloeiro@lanceauto.test | — |
-| Licitante | ana@lanceauto.test | R$ 500.000,00 |
-| Licitante | bruno@lanceauto.test | R$ 300.000,00 |
-
-### Lotes de demonstração
-
-O mesmo `npm run seed` cria dois lotes do leiloeiro, **sem rede**, a partir de [apps/api/prisma/fipe-fixture.json](apps/api/prisma/fipe-fixture.json) e pelo mesmo serviço de criação da API (com genesis e selo válidos): um **ao vivo** (Fiat Uno Mille Way 2010, aberto há 1 h, fecha em 30 dias) e um **agendado** (Toyota Corolla XEi 2015, abre em 2 dias). Só cria se o banco ainda não tiver lote nenhum, então é seguro a cada deploy. `npm run seed:demo` cria mais um lote ao vivo de 30 dias com datas relativas a agora. O seed também dá **5 lances alternados** no lote ao vivo (Bruno, Ana, Bruno, Ana, Bruno, cada um no mínimo corrente), pelo mesmo `placeBid` da API, então a cadeia de hashes nasce válida e o Bruno termina liderando. Essa parte roda em todo deploy e só age se o lote ao vivo ainda não tiver lance, o que a faz alcançar um banco já populado sem repetir. Esses lotes são provisórios: o seed final (lotes 001 a 005, um em cada estado) chega no polimento.
-
-As fotos do seed usam a ilustração padrão do pátio (`image: null` no fixture); para usar uma foto, coloque o arquivo em `apps/api/prisma/seed-images/` e aponte `image`, `imageCredit` e `imageCreditUrl` no fixture.
-
-### Comandos
 
 | Comando | O que faz |
 |---|---|
 | `npm run dev` | shared (watch), API e web em modo desenvolvimento |
 | `npm run build` | build na ordem shared, api, web |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | compila o shared e checa os tipos dos três pacotes |
-| `npm test` | compila o shared e roda os testes (a API usa `DATABASE_URL_TEST`) |
-| `npm run seed` / `npm run seed:demo` | contas de teste e lotes de demonstração (ver acima) |
+| `npm run lint` / `npm run typecheck` | ESLint; tipos dos três pacotes |
+| `npm test` | testes dos três pacotes |
+| `npm run seed` / `npm run seed:demo` | ver o item 4 |
 
-## Lances
+## 6. Testes
+
+`npm test` na raiz roda o Vitest dos três pacotes. Os testes de integração da API precisam de um Postgres próprio em `DATABASE_URL_TEST` (o Compose cria o banco `lanceauto_test`; as migrações são aplicadas sozinhas antes da suíte). Sem ela, eles são pulados. O CI (GitHub Actions) roda lint, typecheck, testes e build a cada push.
+
+O que a suíte cobre:
+
+- **Regras de lance:** ordem de validação, mínimo, líder que reenvia, papel, saldo, prorrogação.
+- **Concorrência:** dez lances iguais ao mesmo tempo resultam num só líder; rodadas embaralhadas (a ordem de chegada usa uma semente; `TEST_SEED=<n>` repete uma falha); lances cruzados sem deadlock.
+- **Saldo e extrato:** comprometido, liberado, estorno e liquidação batem com a carteira.
+- **Liquidação única** e **cancelamento com estorno**, inclusive disputando o lock do lote.
+- **Adulteração direto no banco:** o teste desliga o trigger de `Bid`, altera, apaga ou insere linhas e confere que a auditoria aponta a linha exata.
+- **Seed:** estados dos cinco lotes, auditoria `OK`, saldos, idempotência e execução simultânea.
+- **Resiliência:** com FIPE e Wikipedia fora do ar as telas públicas respondem do banco.
+- **Privacidade:** nenhuma resposta pública traz `userId`, nome, e-mail ou o token do comprovante.
+- **Voz do pátio:** os textos do shared não têm exclamação nem emoji.
+
+Para rodar só uma parte: `npm test -w apps/api -- bids` (por exemplo).
+
+## Lances (regras e transação)
 
 Cada lance é uma única transação no Postgres: o lote é travado (`FOR UPDATE`) e só depois as carteiras, em ordem de `userId`, o que evita deadlock entre lances cruzados. O relógio é lido depois do lock, o saldo vem da própria query que trava, e os eventos (`bid:placed`, `showcase:lot`, `wallet:updated`) só são entregues depois do commit.
 
@@ -95,7 +192,7 @@ Quando o relógio chega ao fim, o lote fecha sozinho. Uma rotina na API (`settle
 - **`endsAt` × `settledAt`:** o martelo mostrado (Sala e comprovante) é sempre o `endsAt`, já com as prorrogações. `settledAt` é só quando a rotina liquidou e pode ser bem depois (a API ficou parada, ou um deploy atravessou o fim do lote): a varredura do boot liquida o que venceu enquanto ela estava fora, e é por isso que o lote que já estava vencido numa base antiga é liquidado na primeira subida depois do deploy da rotina.
 - **Comprovante** (`/c/{token}`, público e sem login): recibo com lote, carro, valor, martelo com segundos, pseudônimo daquele lote e o HMAC-SHA256 final da cadeia (a liquidação não escreve na cadeia, então é o mesmo `lastHash` do lote). Nenhuma resposta traz nome, e-mail ou `userId`. O token só aparece para o vencedor logado (`myReceiptToken` em `GET /lots/:id`) e na própria URL; nenhum evento nem lista pública o carrega. A página é renderizada no servidor com timeout de 8 s e `noindex`; se a API não responder, o cliente tenta de novo, e só um 404 da API vira "Comprovante não encontrado".
 - **Quem venceu** é decidido pelo servidor (`myReceiptToken`), nunca comparando pseudônimos no navegador.
-- **Seed:** além do lote ao vivo e do agendado, `npm run seed` cria, pelos mesmos services e com relógio simulado, um lote **arrematado** pela Ana (4 lances, o último a menos de 2 minutos do fim, então prorrogado) e um **encerrado sem lances**, e imprime o link do comprovante de demonstração (`Comprovante de demonstração: /c/…`). Entre como Ana, abra o lote arrematado na Vitrine e use "Ver comprovante".
+- **Seed:** `npm run seed` cria, pelos mesmos services e com relógio simulado, o lote 001 **arrematado** pela Ana (4 lances, o último a menos de 2 minutos do fim, então prorrogado) e o 002 **encerrado sem lances**, e imprime o link do comprovante de demonstração (`Comprovante de demonstração: /c/…`). Entre como Ana, abra o lote arrematado em Meus arremates e use "Ver comprovante" (ver o item 4).
 - **Vitrine apurando:** um cartão cujo fim passou e que o servidor ainda não encerrou fica em "Ao vivo" com "Apurando o resultado…"; a lista é refeita a cada 3 s, com teto de 20 respostas, e o `showcase:lot` do fechamento o move para "Encerrados" e zera a conta.
 
 ## Cancelamento com estorno e linha CANCEL na auditoria
@@ -106,7 +203,7 @@ O leiloeiro dono cancela qualquer lote seu **agendado ou ao vivo, com ou sem lan
 - **Corrida do diálogo (`confirmEntryCount`):** o diálogo mostra "Cancelar o lote 019 com 2 lances?" e envia essa contagem. Se entrou lance enquanto o leiloeiro decidia, o servidor responde `LOT_CHANGED` com a contagem real e **nada muda**; o mesmo diálogo se atualiza e pede a confirmação de novo, e o estorno vai para o líder novo. Cancelar × lance serializam pelo lock do lote: ou o lance entra antes (e o cancelamento recebe `LOT_CHANGED`) ou o cancelamento entra antes (e o lance recebe `LOT_CANCELLED`, sem `HOLD`). Nunca sobra saldo comprometido em lote cancelado.
 - **O que cada tela vê:** o lote some da Vitrine por `showcase:lot` (nunca vem em `GET /lots`); a Sala continua respondendo pela URL e vira "Cancelado" sem recarregar, sem formulário; o chip e a Carteira de quem liderava voltam ao disponível por `wallet:updated`; no Painel a linha só muda para "Cancelados" quando o servidor confirma (sem atualização otimista), com o estorno e o horário. O job de fechamento nunca liquida lote cancelado.
 - **Rede ambígua:** se a resposta do cancelamento se perde, o diálogo não reenvia sozinho; ao tentar de novo ele primeiro refaz `GET /my/lots` e, se o lote já está cancelado, trata como sucesso.
-- **Seed:** `npm run seed` cria, pelos mesmos services e com relógio simulado, um lote ao vivo "cancelado de demonstração" (dois lances e cancelamento com `confirmEntryCount = 2`, estorno ao líder, linha CANCEL `seq = 3`). O comprometido de cada carteira continua igual à soma dos lances dos lotes ao vivo que ela lidera.
+- **Seed:** o lote 003 é cancelado pelos mesmos services (Ana abre, Bruno cobre e lidera, cancelamento com `confirmEntryCount = 2`): estorno ao Bruno e linha CANCEL `seq = 3`. O comprometido de cada carteira continua igual à soma dos lances dos lotes ao vivo que ela lidera.
 
 ## Meus arremates
 
@@ -118,7 +215,7 @@ O licitante vê em `/arremates` (item "Meus arremates" no cabeçalho) todos os l
 - **Tempo real:** a lista só muda com a resposta do `GET`. Evento de lote que não está na lista é ignorado, versão velha é descartada, rajadas viram uma consulta (300 ms), e `wallet:updated` e a reconexão do socket também refazem. Os anúncios da região viva ("Lote 018: você foi superado.") só saem entre duas respostas do servidor, nunca na carga inicial.
 - Na Carteira, cada lote de "Travado onde você lidera" leva ao ingresso (`/arremates#lote-018`). Os ingressos Perdido e Cancelado têm "Conferir na auditoria" (`/lotes/<id>/auditoria`).
 
-## Como o histórico de lances é protegido contra adulteração
+## 7. Anti-adulteração do histórico
 
 Cada lote tem uma **cadeia de hashes assinada com HMAC-SHA256**. A chave fica só numa variável de ambiente do servidor (`AUDIT_HMAC_KEY`), nunca no banco.
 
@@ -200,7 +297,7 @@ Build e start ficam gravados no próprio serviço do Railway (painel, campos Cus
 - Health check: `/health`
 - Porta pública: 8080 (o Railway injeta `PORT=8080`)
 
-Migrações novas são aplicadas sozinhas a cada start. O seed também roda no start: cria só as contas que faltam e os lotes de demonstração só se ainda não houver lote, então é seguro a cada deploy; uma falha nele não derruba a API.
+Migrações novas são aplicadas sozinhas a cada start. O seed também roda no start, ao lado do `migrate deploy`: com o banco sem usuários ele cria as contas e os lotes 001 a 005; com usuários ele não faz nada (`seed ignorado: já existem usuários`) e sai com código 0. Uma falha nele não derruba a API. A hospedagem não hiberna, então não há "acordar" a API.
 
 **Tempo real no Railway:** a API é uma instância só e não hiberna, então não há cold start de socket. Um deploy da API reinicia o processo e derruba os sockets; os navegadores reconectam sozinhos (atraso de 1 s crescendo até 5 s), entram de novo nas salas e refazem o `GET`, e a Sala mostra "De volta ao pátio" por 4 s. O Railway repassa WebSocket pelo mesmo domínio público da API.
 
@@ -231,6 +328,33 @@ Os valores ficam só no painel do Railway, nunca no repositório. Os nomes estã
 3. Web, com `NEXT_PUBLIC_API_URL` apontando para o domínio da API; domínio público na porta 8080.
 4. De volta à API: `WEB_ORIGIN` com o domínio do web.
 
-## Variáveis de ambiente
+### Checklist de deploy
 
-Todas estão comentadas em [.env.example](.env.example). O `.env` nunca é versionado.
+1. Lockfile commitado e versões confirmadas (Node 24, Next, Prisma 6).
+2. Serviço de banco com as variáveis do próprio Railway; `DATABASE_URL` e `DIRECT_URL` iguais, pela rede privada.
+3. API com todas as variáveis da tabela do item 3; `WEB_ORIGIN` igual à origem exata do web; comando de start com `migrate deploy` e seed; `trust proxy` ativo em produção.
+4. Web com `NEXT_PUBLIC_API_URL` apontando para o domínio público da API.
+5. `JWT_SECRET` e `AUDIT_HMAC_KEY` fortes, definidos **antes** do primeiro seed e guardados em local seguro.
+6. `GET /health` devolve `{"ok":true,"db":true}`.
+7. Smoke pelo link público: login como Ana, Bruno e leiloeiro, lance, Sala ao vivo em duas janelas, comprovante, auditoria e Criar lote com a FIPE real.
+8. Console do navegador sem erro de CORS nem de WebSocket.
+
+## 8. Comportamentos inesperados e limitações
+
+1. **Prorrogação:** o novo fim é o horário do lance + 2 min (interpretação adotada do enunciado), sem teto de prorrogações.
+2. **Hospedagem sem hibernação:** a API roda no Railway como processo contínuo, então não há cold start de socket. Um deploy ou reinício derruba os sockets por alguns segundos; os navegadores reconectam sozinhos. Se a API ficar parada, o timer de fechamento para, e a varredura de boot liquida o atraso. Para quem hospedar num plano que dorme, um ping externo (UptimeRobot e semelhantes) em `/health` evita a hibernação; não está configurado aqui.
+3. **Limite da FIPE:** 500 requisições por dia sem token (mais com um token gratuito); por isso o cache de 24 h, em memória (zera a cada reinício da API). Se o cache esvaziar e a FIPE cair, o Criar lote mostra erro e o resto do app segue.
+4. **Carros sem imagem:** nem todo modelo tem artigo ou foto na Wikipedia; o nome da FIPE é simplificado para buscar; sem foto usa a ilustração padrão; as imagens têm licença Creative Commons, com crédito.
+5. **Auditoria:** limites listados no item 7 (quem tem a chave, backup antigo e completo, troca de `AUDIT_HMAC_KEY`).
+6. **Apuração:** o fechamento roda a cada 5 s, então entre `00:00` e o resultado podem aparecer alguns segundos de "Apurando o resultado…".
+7. **Pseudônimo:** 4 caracteres hexadecimais; colisão entre dois licitantes do mesmo lote é rara, mas possível.
+8. **Uma instância da API:** Socket.IO sem adaptador; escalar para mais instâncias exigiria Redis.
+9. **Autenticação:** sem recuperação de senha (por escolha); JWT de 7 dias em `localStorage`; um papel por conta.
+10. **Saldo simulado:** sem pagamento real; depósito máximo de R$ 10.000.000,00 por operação.
+11. **Valores e horários:** a interface mostra reais inteiros e horários de Brasília; internamente são centavos e UTC.
+12. **Lote agendado não pode ser editado**, só cancelado.
+13. **Segredos:** trocar `AUDIT_HMAC_KEY` invalida os históricos; trocar `JWT_SECRET` desloga todos.
+14. **Rede restrita:** se o WebSocket for bloqueado, o Socket.IO usa long-polling e a Sala segue pelo snapshot HTTP.
+15. **Limites de requisição:** login e cadastro (30/min por IP), lances (30/min por usuário), criação de lote (10/min por leiloeiro) e auditoria (60/min por IP). Atrás do proxy do Railway o IP vem de `X-Forwarded-For` (`trust proxy` = 1); numa rede corporativa com IP compartilhado, o avaliador pode, raramente, receber "muitas requisições" e deve esperar um minuto. Corpo de requisição acima de 100 KB volta 413.
+16. **Limites da auditoria:** o dono de um lance (`bidderId`) e a contabilidade (saldos e extrato) ficam fora do hash; ver o item 7.
+17. **Seed e produção:** o seed só age em banco sem usuários. Para recomeçar do zero é preciso esvaziar o banco (por exemplo `docker compose down -v` no Compose); `seed:demo` nunca recria lotes antigos.
