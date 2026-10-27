@@ -2,7 +2,7 @@
 title: 'S07 — Meus arremates'
 type: 'feature'
 created: '2026-10-27'
-status: 'ready-for-dev'
+status: 'in-progress'
 baseline_commit: '0356ac462c51487f97c55fe546986914cc9307cf'
 route: 'dispatch'
 review_loop_iteration: 0
