@@ -145,6 +145,9 @@ label:has(input:focus-visible) {
 .t-mono-dado { font-size: 14px; font-weight: 500; line-height: 1.3; }
 .t-mono-rotulo { font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
 .t-mono-rotulo-pequeno { font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
+/* Algarismos de largura fixa: o fantasma "8" tem a mesma largura do dígito real e os dois alinham dígito a dígito. */
+.la-mostrador { font-variant-numeric: tabular-nums; }
+.la-segmentos-apagados { white-space: nowrap; }
 .la-segmentos-apagados::before { content: attr(data-ghost); opacity: 0.1; color: var(--c-led); }
 .t-cronometro { font-size: 40px; font-weight: 700; line-height: 1; }
 
