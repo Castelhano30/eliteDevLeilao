@@ -8,6 +8,8 @@ import { copyLink, copyLinkLabel, receiptUrl, type CopyState } from "@/lib/copy-
 export interface BotaoCopiarLinkProps {
   token: string;
   lotNumber: number;
+  /** Nome acessível inteiro, com o título do lote (Meus arremates); sem ele vale "Copiar link do comprovante do lote NNN". */
+  ariaLabel?: string;
   className?: string;
 }
 
@@ -16,7 +18,7 @@ export interface BotaoCopiarLinkProps {
  * transferência: a mensagem de copiar à mão e um campo somente leitura com o link já selecionado. A região
  * aria-live anuncia o resultado; o nome acessível só carrega o lote enquanto o botão diz "Copiar link".
  */
-export function BotaoCopiarLink({ token, lotNumber, className = "" }: BotaoCopiarLinkProps) {
+export function BotaoCopiarLink({ token, lotNumber, ariaLabel, className = "" }: BotaoCopiarLinkProps) {
   const [state, setState] = useState<CopyState>("idle");
   const [url, setUrl] = useState("");
   const field = useRef<HTMLInputElement>(null);
@@ -44,7 +46,7 @@ export function BotaoCopiarLink({ token, lotNumber, className = "" }: BotaoCopia
       <button
         type="button"
         onClick={() => void copy()}
-        aria-label={state === "idle" ? copyLinkAriaLabel(lotNumber) : undefined}
+        aria-label={state === "idle" ? (ariaLabel ?? copyLinkAriaLabel(lotNumber)) : undefined}
         className={buttonClasses("secundario")}
       >
         {copyLinkLabel(state)}
