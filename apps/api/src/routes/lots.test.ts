@@ -182,6 +182,18 @@ describe.skipIf(!testDatabaseUrl)("lotes (integração)", () => {
       expect(await prisma.item.count()).toBe(0);
     });
 
+    it("S09: leiloeiro apagado com token ainda válido → 401, nada é gravado (P2003)", async () => {
+      const { app } = appWith();
+      const { auth, id } = await auctioneer(app);
+      await prisma.$executeRaw`DELETE FROM "Wallet" WHERE "userId" = ${id}`;
+      await prisma.$executeRaw`DELETE FROM "User" WHERE "id" = ${id}`;
+      const res = await request(app).post("/lots").set("Authorization", auth).send(body());
+      expect(res.status, JSON.stringify(res.body)).toBe(401);
+      expect(res.body.error.code).toBe("UNAUTHENTICATED");
+      expect(await prisma.lot.count()).toBe(0);
+      expect(await prisma.item.count()).toBe(0);
+    });
+
     it("AC-2.16: FIPE fora e sem cache → 503 sem gravar; erro de data vem antes, sem chamada externa", async () => {
       const deadFipe = await startFakeServer();
       const { app } = appWith(deadFipe.url);

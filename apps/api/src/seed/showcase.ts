@@ -74,7 +74,7 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   ".gif": "image/gif",
 };
 
-async function readFixtureImage(baseDir: string, car: FixtureCar): Promise<DownloadedImage | null> {
+export async function readFixtureImage(baseDir: string, car: FixtureCar): Promise<DownloadedImage | null> {
   if (!car.image) return null;
   const mime = MIME_BY_EXTENSION[path.extname(car.image).toLowerCase()];
   if (!mime) return null;
