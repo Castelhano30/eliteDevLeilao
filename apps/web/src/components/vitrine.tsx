@@ -3,6 +3,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { formatBrasiliaClock, showcaseGroup, type LotCard as LotCardDto, type LotListResponse, type ShowcaseGroup, GLOBAL_TEXT } from "@lanceauto/shared";
+import { CarrosselDestaques } from "@/components/carrossel-destaques";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { Button } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
@@ -56,7 +57,7 @@ function useRefetchAtNextDeadline(lots: LotCardDto[], now: number, refetch: () =
   useOnReach(next, now, refetch);
 }
 
-/** Vitrine (§9.1): barra "Pátio aberto", hero, "Como funciona", filtros e seções. SSR + hidratação. */
+/** Vitrine (§9.1): barra "Pátio aberto", carrossel de destaques, "Como funciona", filtros e seções. SSR + hidratação. */
 export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
   const [filters, setFilters] = useState<VitrineFilters>(DEFAULT_FILTERS);
   const [search, setSearch] = useState("");
@@ -138,15 +139,17 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
         <ConnectionBanner view={banner} lastSyncedAt={connection.lastSyncedAt} />
       </div>
 
-      <section className="py-8" aria-labelledby={`${searchId}-hero`}>
-        <h1 id={`${searchId}-hero`} className="t-display-hero">
+      <CarrosselDestaques />
+
+      <section className="sr-only" aria-labelledby={`${searchId}-hero`}>
+        <h1 id={`${searchId}-hero`}>
           Quem dá mais, leva.
         </h1>
-        <p className="t-body mt-4">Quem hesita, assiste.</p>
-        <p className="t-body-lead mt-6 max-w-[760px]">
+        <p>Quem hesita, assiste.</p>
+        <p>
           Lotes montados a partir da Tabela FIPE, lances ao vivo com saldo de mentira e um comprovante que qualquer pessoa confere. Até quem não tem conta.
         </p>
-        <p className="t-body-nota mt-3">Referência: Tabela FIPE. Nenhum carro de verdade troca de dono aqui.</p>
+        <p>Referência: Tabela FIPE. Nenhum carro de verdade troca de dono aqui.</p>
       </section>
 
       <section id="como-funciona" className="scroll-mt-6 pb-8" aria-labelledby="como-funciona-titulo">
