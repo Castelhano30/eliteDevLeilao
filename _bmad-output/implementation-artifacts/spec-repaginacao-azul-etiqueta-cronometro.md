@@ -2,7 +2,7 @@
 title: 'Repaginação: azul da marca, etiqueta do lote sem sobreposição e cronômetro sem fantasma'
 type: 'feature'
 created: '2026-10-27'
-status: 'in-progress'
+status: 'done'
 route: 'dispatch'
 baseline_commit: 'd994e619c2d86588c38edf4ba7f6e5cee35af9db'
 review_loop_iteration: 0
@@ -49,11 +49,11 @@ context: []
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `globals.css`, `tailwind.config.mjs` -- `--c-ocre` e `--f-faixa-placa` = `#0033A0`; `--c-sobre-ocre` = papel nos dois temas; novo `--c-ocre-texto` (claro `#0033A0`, noite clara da mesma matiz, ≥ 4,5:1 sobre `--c-papel`/`--c-fundo`); `canhoto`, `verifying-indicator` e `la-marca` passam ao token de texto; medir razões com `node` e registrar -- etapa 1
-- [ ] `lot-tag.tsx`, `lot-card.tsx`, `vitrine.tsx` e os outros usos -- reservar espaço e reancorar etiqueta e laço sem tocar subtítulo, foto nem chip; carimbo menor, sem corte -- etapa 2
-- [ ] `cronometro.tsx`, `globals.css` -- confirmar a causa no Chrome real; `tabular-nums` nos dois textos e `white-space: nowrap` no fantasma -- etapa 3
-- [ ] `cronometro.test.tsx` -- teste que trava o fantasma (mesmo comprimento do texto, `aria-hidden`, `role="timer"` intacto) -- etapa 3
-- [ ] `_bmad-output/progresso.md` -- um registro por etapa; push e deploy pendentes de aprovação
+- [x] `globals.css`, `tailwind.config.mjs` -- `--c-ocre` e `--f-faixa-placa` = `#0033A0`; `--c-sobre-ocre` = papel nos dois temas; novo `--c-ocre-texto` (claro `#0033A0`, noite clara da mesma matiz, ≥ 4,5:1 sobre `--c-papel`/`--c-fundo`); `canhoto`, `verifying-indicator` e `la-marca` passam ao token de texto; medir razões com `node` e registrar -- etapa 1
+- [x] `lot-tag.tsx`, `lot-card.tsx`, `vitrine.tsx` e os outros usos -- reservar espaço e reancorar etiqueta e laço sem tocar subtítulo, foto nem chip; carimbo menor, sem corte -- etapa 2
+- [x] `cronometro.tsx`, `globals.css` -- confirmar a causa no Chrome real; `tabular-nums` nos dois textos e `white-space: nowrap` no fantasma -- etapa 3
+- [x] `cronometro.test.tsx` -- teste que trava o fantasma (mesmo comprimento do texto, `aria-hidden`, `role="timer"` intacto) -- etapa 3
+- [x] `_bmad-output/progresso.md` -- um registro por etapa; push e deploy pendentes de aprovação
 
 **Acceptance Criteria:**
 - Given o tema claro ou noite, when qualquer botão, etiqueta, selo ou faixa ocre aparece, then o texto sobre ele tem ≥ 4,5:1 e não resta `#E2A514`, `#E8AE22` nem `rgba(226,165,20)` em `apps/` e `packages/`.
@@ -69,3 +69,21 @@ context: []
 
 **Manual checks (if no CLI):**
 - Chrome real, aplicação local: Vitrine, Sala, Painel, Meus lances, Auditoria e Comprovante em claro e noite, com prints antes e depois.
+
+## Implementation Notes
+
+- Etapa 1: `--c-ocre` e `--f-faixa-placa` = `#0033A0`; `--c-sobre-ocre` = papel nos dois temas; novo `--c-ocre-texto` (`#0033A0` no claro, `#6B93FF` no noite, 4,80:1 a 6,29:1). `#4D7BFF` descartado (4,13:1 sobre o papel do noite). LED âmbar mantido (10,39:1; o azul daria 1,75:1). `la-marca` usava `rgba(226,165,20)`, que o grep por hex não achava.
+- Etapa 2: laço do `LotTag` dentro da caixa, com espaço reservado; `size="compacto"`; `Stamp size="pequeno"`; cartão da Vitrine com faixa própria para etiqueta, carimbo AO VIVO e chip de data.
+- Etapa 3: hipótese confirmada no Chrome (texto 267,4 px, fantasma 276,2 px, caixa presa a 267,4 px, `white-space: normal`). `.la-mostrador` (tabular-nums) e `.la-segmentos-apagados` (nowrap). Fonte da Sala em `clamp(32px, 10vw, 44px)`, porque o nowrap fazia o mostrador passar do painel em 360 px.
+- Commits na branch local `repaginacao-visual`. Sem push e sem deploy.
+- A revisão foi feita pela própria Amelia lendo o diff; os três revisores independentes do `bmad-build` não rodaram (não houve pedido de subagentes).
+
+## Review Triage Log
+
+| Achado | Veredito | Evidência |
+|--------|----------|-----------|
+| Sala em 360 px: mostrador de 44 px passa da borda do painel com o nowrap | medium (corrigido) | Print `sala-360-noite`; a caixa media ≈305 px. Corrigido com `clamp`; medido de 320 a 1280 px, folga ≥ 31 px e sem rolagem lateral. |
+| Selo "+2 MIN" cobre parte do rótulo "ÚLTIMOS 2 MIN" no cartão | low (defer) | `cartao-prorrogado-noite.png`; a geometria do selo não mudou nesta repaginação. Registrado em `deferred-work.md`. |
+| `color-mix` no keyframe `la-marca` em navegador sem suporte | false | Sem suporte o valor inicial é inválido e só some o flash; Chrome, Safari 16.2+ e Firefox 113+ suportam. |
+| Chip de abertura quebra para baixo da etiqueta em cartão estreito | low (aceito) | Em 360 e 768 px ele cai abaixo da etiqueta sem cobrir nada; o objetivo da spec é "nada sobrepõe". |
+| Carimbo "ARREMATADO" do Comprovante desce para a linha de baixo | false | O mesmo acontecia no "antes" (`antes/comprovante-1280-claro.png`); não vem desta mudança. |
