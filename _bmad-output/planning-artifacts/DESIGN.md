@@ -267,7 +267,7 @@ Convenção: "papel" = `papel`, "fio" = 1px `borda`. Classes entre crases são s
 | **Carregando** | mantém a variante, largura fixa, spinner de 16px antes do texto de `loadingText`, `aria-busy`, `cursor: progress` | sem mudança | ignora clique |
 
 - **Medidas**: padrão 44px de altura, `rounded-lg`, `px-5`. **Compacto** 40px (cabeçalho, tabelas), `px-4`, 14px. **Sala** ("Dar lance") 56px, `rounded-xl`, largura total, 18px/700. Com `pointer: coarse`, o compacto sobe para 44px (decidido).
-- **Perigo sólido** só no passo final de confirmação (ex.: "Cancelar lote"). Ele ocupa o lugar do primário daquela camada, então a regra de um único primário continua valendo.
+- **Perigo sólido** fica no kit, mas **não é usado em "Cancelar lote"**: a decisão C9 do SPEC manda o confirmar do cancelamento em azul (primário) e deixa a `ferrugem` só no aviso do diálogo. Se um fluxo futuro pedir confirmação destrutiva em vermelho, o perigo sólido ocupa o lugar do primário daquela camada.
 - **Foco**: ver 6.2. Anel `foco` de 3px com 2px de afastamento, em todas as variantes.
 - **Links-botão** (`<a>`) usam as mesmas classes. O `!` nas cores continua necessário por causa da regra global `a { color }`.
 - **Botão de atalho** ("+ R$ 500"): pílula de 44px, fio `linha`, texto `tinta`, `tabular-nums`. Selecionado: fundo `selecionado`, borda `ocre`/`ocreTexto`, `aria-pressed`.
@@ -357,7 +357,7 @@ Todos são o mesmo bloco: `rounded-xl`, borda 1px, padding `12px 16px`, ícone d
 
 ### 4.10 Diálogos
 
-`<dialog>` nativo: `papel`, fio `borda`, `rounded-2xl`, nível 3, largura máxima 560px, margem lateral mínima 16px, padding 24px. Título 20px/800; corpo 16px; ações alinhadas à direita e empilhadas no celular, com o primário (ou perigo sólido) por último. Fundo (`::backdrop`): `rgba(5, 12, 32, 0.60)`, sem blur. O conteúdo sob o diálogo fica inerte (comportamento no EXPERIENCE.md). O menu do perfil é um popover pequeno: `rounded-xl`, nível 2, itens de 44px com hover `suave`.
+`<dialog>` nativo: `papel`, fio `borda`, `rounded-2xl`, nível 3, largura máxima 560px, margem lateral mínima 16px, padding 24px. Título 20px/800; corpo 16px; ações alinhadas à direita e empilhadas no celular, com o primário por último ("Cancelar lote" é primário azul; o aviso de irreversibilidade e de estorno usa `ferrugem`, como no SPEC C9). Fundo (`::backdrop`): `rgba(5, 12, 32, 0.60)`, sem blur. O conteúdo sob o diálogo fica inerte (comportamento no EXPERIENCE.md). O menu do perfil é um popover pequeno: `rounded-xl`, nível 2, itens de 44px com hover `suave`.
 
 ### 4.11 Sala de lances
 
