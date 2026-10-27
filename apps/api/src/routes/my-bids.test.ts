@@ -397,6 +397,14 @@ describe.skipIf(!testDatabaseUrl)("GET /me/bids (integração, DATABASE_URL_TEST
       }
     });
 
+    it("defesa em profundidade (T9): mesmo com o lote liquidado a meu favor, o token de um Receipt que não é meu não sai", async () => {
+      const lot = await live();
+      await bid(ana, lot.id, 2_000_000);
+      await settle(lot.id);
+      await prisma.receipt.update({ where: { lotId: lot.id }, data: { winnerId: bruno.id } });
+      expect(await itemOf(ana, lot.id)).toMatchObject({ state: "WON", receiptToken: null });
+    });
+
     it("receiptToken só existe em WON", async () => {
       const lots = [await live(), await live(), await live()];
       for (const lot of lots) {
