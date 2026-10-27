@@ -47,8 +47,8 @@ export function BidTicket({ entry, nowMs }: BidTicketProps) {
   return (
     <li id={anchorId(lot.number)} tabIndex={-1} className="scroll-mt-6 list-none">
       <article aria-labelledby={titleId} className="@container rounded-nenhum border-[3px] border-linha bg-papel p-6 shadow-cartao">
-        <div className="grid gap-5 @[44rem]:grid-cols-[auto_minmax(0,1fr)_auto] @[44rem]:gap-6">
-          <div className="min-w-[112px] pl-6 pt-7 @[44rem]:border-r-[3px] @[44rem]:border-dashed @[44rem]:border-tracejado @[44rem]:pr-6">
+        <div className="grid gap-5 @[44rem]:grid-cols-[192px_minmax(0,1fr)_200px] @[44rem]:gap-6">
+          <div className="pl-6 pt-7 @[44rem]:border-r-[3px] @[44rem]:border-dashed @[44rem]:border-tracejado @[44rem]:pr-6">
             <LotTag number={lot.number} tone="papel" />
           </div>
 
