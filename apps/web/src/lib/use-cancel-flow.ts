@@ -5,7 +5,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { CANCEL_TEXT, cancelDoneMessage, type LotState, type MyLotCard, type MyLotsResponse } from "@lanceauto/shared";
 import { apiPost } from "@/lib/api-client";
 import { canCancel } from "@/lib/panel-sections";
-import { cancelDialogReducer, confirmCountOf, describeCancelFailure, initialCancelDialog } from "@/lib/cancel-dialog";
+import { cancelDialogReducer, confirmCountOf, describeCancelFailure, dialogLot, initialCancelDialog } from "@/lib/cancel-dialog";
 
 /** `id` do botão "Cancelar" de uma linha: o foco volta a ele quando o diálogo fecha sem cancelar. */
 export const cancelButtonId = (lotId: string) => `cancelar-${lotId}`;
@@ -134,5 +134,8 @@ export function useCancelFlow(query: UseQueryResult<MyLotsResponse>) {
     }
   }, [target, dialog, query, succeed, closeWithNotice]);
 
-  return { target, open, dialog, notice, announce, begin, close, confirm, focusCancelled, clearFocusCancelled: () => setFocusCancelled(false) };
+  // O diálogo mostra a linha viva (lance atual acompanha a contagem), não a foto do clique.
+  const lot = dialogLot(target, query.data?.lots);
+
+  return { target, lot, open, dialog, notice, announce, begin, close, confirm, focusCancelled, clearFocusCancelled: () => setFocusCancelled(false) };
 }

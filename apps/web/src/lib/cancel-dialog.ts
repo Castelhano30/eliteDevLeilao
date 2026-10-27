@@ -1,4 +1,4 @@
-import { CANCEL_TEXT, lotChangedMessage, newBidMessage, type ErrorEnvelope } from "@lanceauto/shared";
+import { CANCEL_TEXT, lotChangedMessage, newBidMessage, type ErrorEnvelope, type MyLotCard } from "@lanceauto/shared";
 
 /** Estados do diálogo de cancelamento (S06 §10). `changed`: o servidor viu outra contagem e pede nova confirmação. */
 export type CancelDialogStatus = "idle" | "submitting" | "changed" | "error";
@@ -42,6 +42,15 @@ export function cancelDialogReducer(state: CancelDialogState, action: CancelDial
     case "failed":
       return { status: "error", bidCount: state.bidCount, message: action.message };
   }
+}
+
+/**
+ * O lote que o diálogo mostra: a linha viva da lista, para o "lance atual" acompanhar a contagem que sobe por evento.
+ * Sem a linha (lista carregando ou lote removido), fica o lote que foi clicado.
+ */
+export function dialogLot(target: MyLotCard | null, rows: MyLotCard[] | undefined): MyLotCard | null {
+  if (!target) return null;
+  return rows?.find((row) => row.id === target.id) ?? target;
 }
 
 /** O que vai no corpo: sempre a contagem que o diálogo está mostrando. */

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CANCEL_TEXT, lotChangedMessage } from "@lanceauto/shared";
-import { cancelDialogReducer, confirmCountOf, describeCancelFailure, initialCancelDialog, isDismissible } from "./cancel-dialog";
+import type { MyLotCard } from "@lanceauto/shared";
+import { cancelDialogReducer, confirmCountOf, describeCancelFailure, dialogLot, initialCancelDialog, isDismissible } from "./cancel-dialog";
 
 describe("estado do diálogo de cancelamento (S06 §10)", () => {
   const open = (bidCount: number) => initialCancelDialog(bidCount);
@@ -101,5 +102,31 @@ describe("mapeamento do erro do cancelamento para a mensagem da §8", () => {
     expect(
       describeCancelFailure(400, envelope("VALIDATION", "Confira os campos.", { fields: { confirmEntryCount: "Informe a contagem de lances que você viu." } })),
     ).toEqual({ kind: "error", message: "Informe a contagem de lances que você viu." });
+  });
+});
+
+describe("lote mostrado no diálogo (S06 §10)", () => {
+  const lot = (over: Partial<MyLotCard>) => ({ id: "a", number: 19, title: "Hilux SRX 2020", bidCount: 2, currentBidCents: 2_050_000, ...over }) as MyLotCard;
+
+  it("usa a linha viva da lista, para o lance atual acompanhar a contagem", () => {
+    const clicked = lot({});
+    const fresh = lot({ bidCount: 3, currentBidCents: 2_100_000 });
+    expect(dialogLot(clicked, [lot({ id: "b" }), fresh])?.currentBidCents).toBe(2_100_000);
+  });
+
+  it("de 0 para 1 lance, passa a ter lance atual", () => {
+    const clicked = lot({ bidCount: 0, currentBidCents: null });
+    const fresh = lot({ bidCount: 1, currentBidCents: 2_000_000 });
+    expect(dialogLot(clicked, [fresh])?.currentBidCents).toBe(2_000_000);
+  });
+
+  it("sem a linha na lista (ainda carregando ou removida), fica o lote que foi clicado", () => {
+    const clicked = lot({});
+    expect(dialogLot(clicked, [])).toBe(clicked);
+    expect(dialogLot(clicked, undefined)).toBe(clicked);
+  });
+
+  it("sem lote escolhido, nada a mostrar", () => {
+    expect(dialogLot(null, [lot({})])).toBeNull();
   });
 });

@@ -287,7 +287,7 @@ export function PainelScreen() {
           ) : null}
         </>
       )}
-      <CancelDialog open={cancel.open} lot={cancel.target} state={cancel.dialog} onConfirm={() => void cancel.confirm()} onClose={cancel.close} />
+      <CancelDialog open={cancel.open} lot={cancel.lot} state={cancel.dialog} onConfirm={() => void cancel.confirm()} onClose={cancel.close} />
     </PageShell>
   );
 }
