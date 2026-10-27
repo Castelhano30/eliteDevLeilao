@@ -6,27 +6,21 @@ export interface CanhotoProps {
   children: ReactNode;
 }
 
-/**
- * Cartão-canhoto do "Como funciona" (§10.6), versão simples: numeral grande em ocre com contorno, título e texto,
- * rodapé tracejado "CANHOTO / Nº 0X". O picote fica para a S09 (T12).
- */
+/** Cartão compacto do "Como funciona" (§10.6): numeral, título e texto numa linha curta. O picote fica para a S09 (T12). */
 export function Canhoto({ number, title, children }: CanhotoProps) {
   const label = String(number).padStart(2, "0");
   return (
-    <article className="flex flex-col rounded-nenhum border-2 border-linha bg-papel p-4 shadow-cartao">
-      <span
-        aria-hidden="true"
-        className="font-extrabold leading-none"
-        style={{ fontSize: 56, color: "var(--c-ocre-texto)", WebkitTextStroke: "2px var(--c-linha)" }}
-      >
+    <article className="flex items-start gap-3 rounded-xl border border-borda bg-papel p-3 shadow-cartao">
+      <span aria-hidden="true" className="text-[24px] font-extrabold leading-none tabular-nums text-ocreTexto">
         {label}
       </span>
-      <h3 className="t-cartaz-subtitulo mt-3">
-        <span className="sr-only">{label} · </span>
-        {title}
-      </h3>
-      <p className="t-body mt-3 flex-1">{children}</p>
-      <p className="t-mono-rotulo-pequeno mt-6 border-t-2 border-dashed border-tracejado pt-3 text-tinta2">CANHOTO / Nº {label}</p>
+      <div className="min-w-0">
+        <h3 className="text-[14px] font-bold leading-tight">
+          <span className="sr-only">{label} · </span>
+          {title}
+        </h3>
+        <p className="mt-1 text-[14px] leading-snug text-tinta2">{children}</p>
+      </div>
     </article>
   );
 }

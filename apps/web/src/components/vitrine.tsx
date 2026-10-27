@@ -57,7 +57,7 @@ function useRefetchAtNextDeadline(lots: LotCardDto[], now: number, refetch: () =
   useOnReach(next, now, refetch);
 }
 
-/** Vitrine (§9.1): barra "Pátio aberto", carrossel de destaques, "Como funciona", filtros e seções. SSR + hidratação. */
+/** Vitrine (§9.1): carrossel de destaques, "Como funciona", barra "Pátio aberto", filtros e seções. SSR + hidratação. */
 export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
   const [filters, setFilters] = useState<VitrineFilters>(DEFAULT_FILTERS);
   const [search, setSearch] = useState("");
@@ -114,7 +114,40 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
 
   return (
     <div className="mx-auto pb-8" style={{ width: "min(100% - 2 * var(--gutter-lateral), 1320px)" }}>
-      <p className="t-mono-rotulo flex flex-wrap items-center gap-x-3 gap-y-1 border-b-2 border-dashed border-tracejado py-3">
+      <div className="pt-6">
+        <ConnectionBanner view={banner} lastSyncedAt={connection.lastSyncedAt} />
+      </div>
+
+      <CarrosselDestaques />
+
+      <section className="sr-only" aria-labelledby={`${searchId}-hero`}>
+        <h1 id={`${searchId}-hero`}>
+          Quem dá mais, leva.
+        </h1>
+        <p>Quem hesita, assiste.</p>
+        <p>
+          Lotes montados a partir da Tabela FIPE, lances ao vivo com saldo de mentira e um comprovante que qualquer pessoa confere. Até quem não tem conta.
+        </p>
+        <p>Referência: Tabela FIPE. Nenhum carro de verdade troca de dono aqui.</p>
+      </section>
+
+      <section id="como-funciona" className="scroll-mt-6 py-6" aria-labelledby="como-funciona-titulo">
+        <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h2 id="como-funciona-titulo" className="text-[18px] font-extrabold uppercase leading-none">
+            Como funciona
+          </h2>
+          <p className="t-body-legenda text-tinta2">3 passos, nenhum formulário de 12 páginas</p>
+        </div>
+        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))" }}>
+          {STEPS.map((step, index) => (
+            <Canhoto key={step.title} number={index + 1} title={step.title}>
+              {step.text}
+            </Canhoto>
+          ))}
+        </div>
+      </section>
+
+      <p className="t-mono-rotulo flex flex-wrap items-center gap-x-3 gap-y-1 mb-6 border-b border-borda pb-3">
         <span className="inline-flex items-center gap-2">
           <span aria-hidden="true" className="inline-block h-[10px] w-[10px] rounded-circulo bg-ferrugem" style={{ animation: "la-pulsa 1.2s infinite" }} />
           Pátio aberto
@@ -134,37 +167,6 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
           </>
         ) : null}
       </p>
-
-      <div className="pt-6">
-        <ConnectionBanner view={banner} lastSyncedAt={connection.lastSyncedAt} />
-      </div>
-
-      <CarrosselDestaques />
-
-      <section className="sr-only" aria-labelledby={`${searchId}-hero`}>
-        <h1 id={`${searchId}-hero`}>
-          Quem dá mais, leva.
-        </h1>
-        <p>Quem hesita, assiste.</p>
-        <p>
-          Lotes montados a partir da Tabela FIPE, lances ao vivo com saldo de mentira e um comprovante que qualquer pessoa confere. Até quem não tem conta.
-        </p>
-        <p>Referência: Tabela FIPE. Nenhum carro de verdade troca de dono aqui.</p>
-      </section>
-
-      <section id="como-funciona" className="scroll-mt-6 pb-8" aria-labelledby="como-funciona-titulo">
-        <h2 id="como-funciona-titulo" className="t-display-secao">
-          Como funciona
-        </h2>
-        <p className="t-body-nota mb-6 mt-2">3 passos, nenhum formulário de 12 páginas</p>
-        <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))" }}>
-          {STEPS.map((step, index) => (
-            <Canhoto key={step.title} number={index + 1} title={step.title}>
-              {step.text}
-            </Canhoto>
-          ))}
-        </div>
-      </section>
 
       <section aria-label="Filtros" className="flex flex-wrap items-end gap-4 pb-8">
         <div className="min-w-[min(100%,260px)] flex-1">
