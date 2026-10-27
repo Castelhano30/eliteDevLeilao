@@ -3,7 +3,11 @@ import type { Logger } from "./logger";
 
 /** A fonte externa não respondeu (rede, timeout, 5xx) ou recusou por cota (429). Nunca entra no cache (R-2.1). */
 export class ExternalUnavailableError extends Error {
-  constructor(readonly reason: "UNAVAILABLE" | "RATE_LIMITED" = "UNAVAILABLE") {
+  /** `status`: o HTTP recebido (401/403 de token, 5xx esgotado); ausente em falha de rede ou timeout. */
+  constructor(
+    readonly reason: "UNAVAILABLE" | "RATE_LIMITED" = "UNAVAILABLE",
+    readonly status?: number,
+  ) {
     super(reason === "RATE_LIMITED" ? "fonte externa recusou por limite de requisições" : "fonte externa indisponível");
     this.name = "ExternalUnavailableError";
   }

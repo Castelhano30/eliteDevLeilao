@@ -108,6 +108,7 @@ export function composeApp({
       token: env.FIPE_TOKEN || undefined,
       cache: new ExternalCache({ clock, logger, source: "FIPE" }),
       timeoutMs: external.timeoutMs,
+      logger,
     });
   const images =
     external.images ??

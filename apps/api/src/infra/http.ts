@@ -23,6 +23,7 @@ export async function getJson(
   url: string,
   { headers = {}, timeoutMs = EXTERNAL_TIMEOUT_MS, attempts = 2 }: GetJsonOptions = {},
 ): Promise<CachedResult<unknown>> {
+  let lastStatus: number | undefined;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     let res: Response;
     try {
@@ -36,15 +37,16 @@ export async function getJson(
     }
     if (res.status === 429) {
       await discard(res);
-      throw new ExternalUnavailableError("RATE_LIMITED");
+      throw new ExternalUnavailableError("RATE_LIMITED", 429);
     }
     if (res.status >= 500) {
+      lastStatus = res.status;
       await discard(res);
       continue;
     }
     if (!res.ok) {
       await discard(res);
-      throw new ExternalUnavailableError();
+      throw new ExternalUnavailableError("UNAVAILABLE", res.status);
     }
     try {
       return { found: true, value: (await res.json()) as unknown };
@@ -52,5 +54,5 @@ export async function getJson(
       throw new ExternalUnavailableError();
     }
   }
-  throw new ExternalUnavailableError();
+  throw new ExternalUnavailableError("UNAVAILABLE", lastStatus);
 }

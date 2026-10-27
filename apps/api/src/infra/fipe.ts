@@ -2,6 +2,7 @@ import { CATALOG_TEXT, cleanBrand, parseBRL, parseReferenceMonth, type CatalogCa
 import { AppError } from "../errors";
 import { ExternalUnavailableError, type ExternalCache } from "./external-cache";
 import { EXTERNAL_TIMEOUT_MS, getJson } from "./http";
+import type { Logger } from "./logger";
 
 export interface CarDetail {
   car: CatalogCar;
@@ -27,6 +28,8 @@ export interface FipeOptions {
   token?: string;
   cache: ExternalCache;
   timeoutMs?: number;
+  /** Registra o motivo (cota 429, token recusado, rede) antes de a falha virar 503. */
+  logger?: Logger;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
@@ -65,7 +68,7 @@ export function normalizeFipeDetail(body: unknown, yearId: string): CatalogCar {
 }
 
 /** Adaptador da FIPE v2 (`/cars/...`), com cache, timeout de 4 s e uma repetição (R-2.1, R-2.2). */
-export function makeFipeCatalog({ baseUrl, token, cache, timeoutMs = EXTERNAL_TIMEOUT_MS }: FipeOptions): CatalogPort {
+export function makeFipeCatalog({ baseUrl, token, cache, timeoutMs = EXTERNAL_TIMEOUT_MS, logger }: FipeOptions): CatalogPort {
   const base = baseUrl.replace(/\/+$/, "");
   const headers: Record<string, string> = token ? { "X-Subscription-Token": token } : {};
   const seg = (value: string) => encodeURIComponent(value);
@@ -77,7 +80,10 @@ export function makeFipeCatalog({ baseUrl, token, cache, timeoutMs = EXTERNAL_TI
       if (!hit.result.found) throw carNotFound();
       return { body: hit.result.value, fetchedAt: hit.fetchedAt };
     } catch (err) {
-      if (err instanceof ExternalUnavailableError) throw fipeUnavailable();
+      if (err instanceof ExternalUnavailableError) {
+        logger?.warn({ source: "FIPE", path, reason: err.reason, status: err.status }, "FIPE indisponível; devolvendo 503");
+        throw fipeUnavailable();
+      }
       throw err;
     }
   }

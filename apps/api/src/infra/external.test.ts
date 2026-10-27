@@ -163,6 +163,28 @@ describe("adaptador da FIPE", () => {
     expect(fipe.hits).toHaveLength(3);
   });
 
+  it("S09: a falha da FIPE é logada com o motivo (429, 401, 5xx, rede) antes de virar 503", async () => {
+    const lines: string[] = [];
+    const logger = createLogger("warn", { write: (line: string) => void lines.push(line) });
+    const logged = async (handler: Parameters<typeof startFakeServer>[0]) => {
+      lines.length = 0;
+      const fipe = await server(handler);
+      const catalog = makeFipeCatalog({ baseUrl: fipe.url, cache: newCache(), logger });
+      expect(await codeOf(catalog.brands())).toBe(`EXTERNAL_UNAVAILABLE:{"source":"FIPE"}`);
+      const entry = lines.map((line) => JSON.parse(line)).find((row) => row.msg === "FIPE indisponível; devolvendo 503");
+      return entry as { source: string; path: string; reason: string; status?: number };
+    };
+    expect(await logged((_req, res) => json(res, 429, {}))).toMatchObject({ source: "FIPE", path: "/cars/brands", reason: "RATE_LIMITED", status: 429 });
+    expect(await logged((_req, res) => json(res, 401, {}))).toMatchObject({ reason: "UNAVAILABLE", status: 401 });
+    expect(await logged((_req, res) => json(res, 503, {}))).toMatchObject({ reason: "UNAVAILABLE", status: 503 });
+    lines.length = 0;
+    const dead = makeFipeCatalog({ baseUrl: await deadUrl(), cache: newCache(), logger, timeoutMs: 300 });
+    await codeOf(dead.brands());
+    const row = lines.map((line) => JSON.parse(line)).find((r) => r.msg === "FIPE indisponível; devolvendo 503");
+    expect(row).toMatchObject({ reason: "UNAVAILABLE" });
+    expect(row.status).toBeUndefined();
+  });
+
   it("timeout conta como falha e repete uma vez", async () => {
     const fipe = await server(() => undefined); // nunca responde
     const catalog = makeFipeCatalog({ baseUrl: fipe.url, cache: newCache(), timeoutMs: 150 });
