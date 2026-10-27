@@ -276,6 +276,13 @@ describe("verifyChain (S08, R-8.4 a R-8.16)", () => {
       expect(run(count)).toMatchObject({ verdict: "SEAL_MISMATCH", foundCount: 5, registeredCount: 4 });
     });
 
+    it("selo recalculado com a chave certa para outra contagem (entryCount menor que as linhas) → SEAL_MISMATCH", () => {
+      const built = build(5);
+      built.lot.entryCount = 4;
+      built.lot.seal = sealHash(KEY, LOT_ID, 4, built.lot.lastHash);
+      expect(run(built)).toMatchObject({ verdict: "SEAL_MISMATCH", foundCount: 5, registeredCount: 4, firstBad: null });
+    });
+
     it("o atacante reduz entryCount e lastHash sem recalcular o selo → SEAL_MISMATCH; trocar o selo por hex qualquer também", () => {
       const built = build(5);
       built.rows.splice(3, 2);
@@ -284,6 +291,14 @@ describe("verifyChain (S08, R-8.4 a R-8.16)", () => {
       expect(run(built).verdict).toBe("SEAL_MISMATCH");
       built.lot.seal = HEX;
       expect(run(built).verdict).toBe("SEAL_MISMATCH");
+    });
+
+    it("selo recalculado com a chave certa para um lastHash que não é a ponta da cadeia → SEAL_MISMATCH", () => {
+      // Só quem tem a chave faria isto; a regra "lastHash == hash gravado da última linha" ainda assim denuncia.
+      const built = build(5);
+      built.lot.lastHash = HEX;
+      built.lot.seal = sealHash(KEY, LOT_ID, 5, HEX);
+      expect(run(built)).toMatchObject({ verdict: "SEAL_MISMATCH", sealOk: false, firstBad: null });
     });
 
     it("lote sem linhas: lastHash diferente do genesis ou parâmetros do lote alterados → SEAL_MISMATCH", () => {
@@ -342,15 +357,15 @@ describe("verifyChain (S08, R-8.4 a R-8.16)", () => {
       expect(run(rowOnly)).toMatchObject({ verdict: "SEAL_MISMATCH", consistencyIssue: "CANCEL_FLAG" });
     });
 
-    it("CANCEL fora da última posição → CANCEL_FLAG", () => {
-      // Assinaturas todas legítimas, mas com um CANCEL no meio: só a regra de posição pega.
+    it("duas linhas CANCEL (a primeira fora da última posição) com cancelledAt coerente com a última → CANCEL_FLAG", () => {
+      // Assinaturas todas legítimas e a bandeira bate com a última linha: só a regra "CANCEL é só a última" pega.
       const rows: AuditRow[] = [];
       let prev = genesisHash(KEY, baseLot);
-      (["CANCEL", "BID"] as const).forEach((kind, i) => {
+      (["CANCEL", "CANCEL"] as const).forEach((kind, i) => {
         const seq = i + 1;
         const at = new Date(startsAt.getTime() + seq * 1_000);
-        const pseudonym = kind === "BID" ? "Licitante AAAA" : null;
-        const amountCents = kind === "BID" ? 1_000_000 : null;
+        const pseudonym = null as string | null;
+        const amountCents = null as number | null;
         const hash = entryHash(KEY, { lotId: LOT_ID, seq, kind, pseudonym, amountCents, at, prevHash: prev });
         rows.push({ seq, kind, pseudonym, amountCents, at, prevHash: prev, hash });
         prev = hash;
@@ -360,7 +375,7 @@ describe("verifyChain (S08, R-8.4 a R-8.16)", () => {
         entryCount: 2,
         lastHash: prev,
         seal: sealHash(KEY, LOT_ID, 2, prev),
-        bidCount: 1,
+        bidCount: 0,
         settledAt: null,
         cancelledAt: rows[1]!.at,
       };

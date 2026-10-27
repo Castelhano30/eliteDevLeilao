@@ -5,7 +5,9 @@ import request from "supertest";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AuditView } from "@lanceauto/shared";
 import { entryHash, genesisHash, sealHash } from "../domain/audit-chain";
+import type { PrismaClient } from "@prisma/client";
 import { FakeClock } from "../infra/clock";
+import { makeAuditService } from "../services/audit.service";
 import { seedCancelledLot, seedClosedLots, seedLiveBids, seedShowcaseLots, type FixtureCar } from "../seed/showcase";
 import { TEST_JWT_SECRET, makeTestApp, registerUser, testEnv } from "../../test/helpers/app";
 import { FORBIDDEN_KEYS, collectKeys, makeUser, postBid, type TestUser } from "../../test/helpers/bids";
@@ -422,6 +424,38 @@ describe.skipIf(!testDatabaseUrl)("GET /lots/:id/audit (integração, DATABASE_U
         expect(view.verdict.code).toBe("OK");
         expect(view.verdict.foundCount).toBe(view.verdict.registeredCount);
       }
+    });
+  });
+
+  describe("snapshot da leitura (R-8.3)", () => {
+    it("um lance que entra entre a leitura do lote e a das linhas não vira falso SEAL_MISMATCH", async () => {
+      const lot = await liveWithBids(3);
+      // Cliente cujo findMany de Bid, na hora de ler as linhas, deixa antes um lance novo entrar e comitar por outra conexão.
+      let injected = 0;
+      const racing = prisma.$extends({
+        query: {
+          bid: {
+            async findMany({ args, query }) {
+              if (injected === 0) {
+                injected++;
+                clock.advance(1_000);
+                const res = await postBid(app, bruno, lot.id, LIVE.startingBidCents + 3 * LIVE.minIncrementCents, LIVE.startingBidCents + 2 * LIVE.minIncrementCents);
+                expect(res.status, JSON.stringify(res.body)).toBe(201);
+              }
+              return query(args);
+            },
+          },
+        },
+      });
+      const service = makeAuditService({ db: racing as unknown as PrismaClient, clock, auditKey: testEnv.AUDIT_HMAC_KEY });
+
+      const during = await service.verify(lot.id, null);
+      expect(injected).toBe(1);
+      // O retrato é o do instante em que a verificação começou: 3 linhas, selo de 3, tudo OK.
+      expect(during.verdict).toMatchObject({ code: "OK", foundCount: 3, registeredCount: 3 });
+      // O lance novo aparece no "Verificar de novo".
+      const after = await service.verify(lot.id, null);
+      expect(after.verdict).toMatchObject({ code: "OK", foundCount: 4, registeredCount: 4 });
     });
   });
 
