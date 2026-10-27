@@ -15,6 +15,7 @@ const config = {
         sombra: "var(--c-sombra)",
         tracejado: "var(--c-tracejado)",
         ocre: "var(--c-ocre)",
+        ocreTexto: "var(--c-ocre-texto)",
         sobreOcre: "var(--c-sobre-ocre)",
         ferrugem: "var(--c-ferrugem)",
         verde: "var(--c-verde)",

@@ -17,7 +17,7 @@ export function Canhoto({ number, title, children }: CanhotoProps) {
       <span
         aria-hidden="true"
         className="font-extrabold leading-none"
-        style={{ fontSize: 56, color: "var(--c-ocre)", WebkitTextStroke: "2px var(--c-linha)" }}
+        style={{ fontSize: 56, color: "var(--c-ocre-texto)", WebkitTextStroke: "2px var(--c-linha)" }}
       >
         {label}
       </span>

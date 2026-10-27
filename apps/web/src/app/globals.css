@@ -13,8 +13,9 @@
   --c-linha: #1e1c19;
   --c-sombra: #1e1c19;
   --c-tracejado: #8a8273;
-  --c-ocre: #e2a514;
-  --c-sobre-ocre: #1e1c19;
+  --c-ocre: #0033a0;
+  --c-ocre-texto: #0033a0;
+  --c-sobre-ocre: #f5eedf;
   --c-ferrugem: #a43c1e;
   --c-verde: #2e6a3e;
   --c-sobre-cor: #f5eedf;
@@ -35,8 +36,9 @@
   --c-linha: #cfc5b0;
   --c-sombra: #3a362f;
   --c-tracejado: #6e675c;
-  --c-ocre: #e8ae22;
-  --c-sobre-ocre: #161513;
+  --c-ocre: #0033a0;
+  --c-ocre-texto: #6b93ff;
+  --c-sobre-ocre: #f5eedf;
   --c-ferrugem: #e36a43;
   --c-verde: #74b585;
   --c-sobre-cor: #161513;
@@ -58,8 +60,9 @@
     --c-linha: #cfc5b0;
     --c-sombra: #3a362f;
     --c-tracejado: #6e675c;
-    --c-ocre: #e8ae22;
-    --c-sobre-ocre: #161513;
+    --c-ocre: #0033a0;
+    --c-ocre-texto: #6b93ff;
+    --c-sobre-ocre: #f5eedf;
     --c-ferrugem: #e36a43;
     --c-verde: #74b585;
     --c-sobre-cor: #161513;
@@ -72,7 +75,7 @@
 
 /* Literais fixos: iguais nos dois temas. */
 :root {
-  --f-faixa-placa: #e2a514;
+  --f-faixa-placa: #0033a0;
   --f-brasil-texto: #ffffff;
   --f-digito-placa: #f5eedf;
   --f-linha-central-placa: #000000;
@@ -154,7 +157,7 @@ label:has(input:focus-visible) {
 }
 @keyframes la-mais { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes la-entra { from { transform: translateY(-16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-@keyframes la-marca { from { background-color: rgba(226, 165, 20, 0.55); } to { background-color: transparent; } }
+@keyframes la-marca { from { background-color: color-mix(in srgb, var(--c-ocre-texto) 40%, transparent); } to { background-color: transparent; } }
 
 /* Nenhum estado depende de animação para ser percebido. */
 @media (prefers-reduced-motion: reduce) {
