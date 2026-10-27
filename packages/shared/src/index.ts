@@ -6,6 +6,7 @@ export * from "./cancel";
 export * from "./catalog";
 export * from "./errors";
 export * from "./events";
+export * from "./global-states";
 export * from "./lots";
 export * from "./money";
 export * from "./my-bids";
