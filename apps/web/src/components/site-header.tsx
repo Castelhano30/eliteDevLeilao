@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useSyncExternalStore, type ReactNode } from "react";
 import { BalanceChip } from "@/components/balance-chip";
 import { ProfileMenu } from "@/components/profile-menu";
-import { buttonClasses } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { ThemeSwitch } from "@/components/ui/theme-switch";
 import { useAuth } from "./auth-provider";
@@ -13,6 +12,12 @@ import { useAuth } from "./auth-provider";
 // `!`: a regra global `a { color }` fica fora de layer e venceria a utility sem ele.
 const LINK =
   "relative inline-flex min-h-alvo items-center text-[13px] font-bold uppercase tracking-[0.08em] !text-tinta2 no-underline hover:!text-tinta after:absolute after:inset-x-0 after:bottom-[6px] after:h-[3px] after:rounded-full after:bg-transparent";
+// Botões da conta (visitante): compactos, cantos arredondados, com hover, foco e leve "afundar" ao clicar.
+// `!` nas cores: a regra global `a { color }` e `a:hover` ficam fora de layer e venceriam a utility.
+const BOTAO =
+  "inline-flex h-10 items-center justify-center whitespace-nowrap rounded-lg border px-4 text-[14px] font-semibold leading-none no-underline transition-colors duration-150 active:translate-y-px";
+const BOTAO_ENTRAR = `${BOTAO} border-[var(--h-botao-borda)] bg-transparent !text-[var(--h-botao-texto)] hover:border-[var(--h-azul)] hover:bg-suave hover:!text-[var(--h-botao-texto)]`;
+const BOTAO_CRIAR = `${BOTAO} border-transparent bg-[var(--h-cta)] !text-white shadow-sm hover:bg-[var(--h-cta-hover)] hover:!text-white`;
 const wideHeader = () => window.matchMedia("(min-width: 1200px)").matches;
 function subscribeWidth(listener: () => void) {
   const media = window.matchMedia("(min-width: 1200px)");
@@ -23,7 +28,7 @@ function subscribeWidth(listener: () => void) {
 function NavLink({ href, children, exact = false }: { href: string; children: ReactNode; exact?: boolean }) {
   const pathname = usePathname();
   const active = href === "/" || exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
-  return <Link href={href} aria-current={active ? "page" : undefined} className={`${LINK} ${active ? "!text-tinta after:!bg-[var(--h-azul)]" : ""}`}>{children}</Link>;
+  return <Link href={href} aria-current={active ? "page" : undefined} className={`${LINK} ${active ? "!text-[var(--h-ativo-texto)] after:!bg-[var(--h-azul)]" : ""}`}>{children}</Link>;
 }
 
 export function SiteHeader() {
@@ -55,8 +60,8 @@ export function SiteHeader() {
               <ProfileMenu />
             </> : <>
               <span aria-hidden="true" className="cabecalho-divisor" />
-              <Link href="/entrar?aba=entrar" className={`${buttonClasses("secundario")} !border-linha !shadow-none hover:!border-tinta`}>Entrar</Link>
-              <Link href="/entrar" className={`${buttonClasses("primario")} !border-[var(--h-azul)] !shadow-none`}>Criar conta</Link>
+              <Link href="/entrar?aba=entrar" className={BOTAO_ENTRAR}>Entrar</Link>
+              <Link href="/entrar" className={BOTAO_CRIAR}>Criar conta</Link>
             </>}
           </div>
         ) : null}
