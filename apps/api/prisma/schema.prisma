@@ -148,6 +148,7 @@ model Bid {
 
   @@unique([lotId, seq])
   @@index([lotId, bidderId])
+  @@index([bidderId])
 }
 
 /// Comprovante público do arremate (um por lote arrematado). `winnerId` nunca sai em DTO público (INV-13).
