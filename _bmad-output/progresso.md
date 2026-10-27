@@ -280,3 +280,11 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - Não mexi no carimbo do Comprovante, que já descia para a linha de baixo no "antes".
 - Conferido no Chrome real a 360, 768 e 1280 px, claro e noite: Ao vivo, Agendados e Encerrados, com título de 1 e 2 linhas (Uno Mille Way, Gol GTI 1996). Também Sala, Meus arremates, Auditoria e Comprovante.
 - Testes novos: `lot-card.test.tsx` (faixa, chip e carimbo fora da foto, carimbo pequeno) e `ui.test.tsx` (laço dentro da caixa, tamanho compacto, `Stamp` pequeno). Lint limpo.
+
+## 27/10/2026 — Repaginação visual, etapa 3: cronômetro sem o "88:88:88" duplicado
+- Hipótese confirmada no Chrome real, com `26d 10:07:43` na Sala: o texto real mede 267,4 px; o fantasma (`88d 88:88:88`) mediria 276,2 px, porque o "8" é mais largo que o "1" na Manrope. A caixa do fantasma é `absolute inset-0` e fica presa a 267,4 px, e como `white-space` era `normal` ele quebrava no espaço ("88d" em cima, "88:88:88" embaixo).
+- Correção: `.la-mostrador { font-variant-numeric: tabular-nums }` no `role="timer"` (vale para o texto e para o fantasma, que herdam) e `.la-segmentos-apagados { white-space: nowrap }`. Nenhuma mudança em `aria-label`, `role` nem `aria-hidden`.
+- Conferido em 20 combinações (claro/noite × sala/cartão × `26d 10:18:00`, horas, `09:05`, últimos 2 min pulsando e prorrogado): fantasma numa linha, sem estourar a largura do texto, `tabular-nums` ativo e `aria-label` igual ao de antes.
+- `cronometro.test.tsx` ganhou 10 testes: formatos `26d`, horas e `09:05` nos dois tamanhos (fantasma com os dígitos trocados por 8 e mesmo comprimento), últimos 2 min, acessibilidade intacta, selo +2 MIN e as duas regras de CSS. Reintroduzi o defeito de propósito (`normal` no lugar de `tabular-nums` e `nowrap`) e os dois testes de CSS falharam; restaurei.
+- **Achado fora do escopo, não corrigido:** no cartão, em "últimos 2 min" prorrogado, o selo "+2 MIN" (`right -14`, `top -14`) cobre parte do rótulo "ÚLTIMOS 2 MIN". Já era assim antes desta repaginação.
+- Verificação da raiz: `npm run typecheck` e `npm run lint` exit 0; `npm test` exit 0 (shared 154, API 501, web 436).
