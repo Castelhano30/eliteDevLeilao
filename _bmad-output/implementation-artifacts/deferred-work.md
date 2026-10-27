@@ -161,3 +161,7 @@
   summary: Verificar com leitor de tela (NVDA) a Sala, Carteira, Comprovante, Criar lote e Auditoria (§9.1 A5, A6, A8, A17) e conferir 390 px e toque em aparelho real.
   evidence: O Chrome headless cobriu axe, teclado, foco, 320/390/640/1440 e os dois temas; leitor de tela e aparelho real não se automatizam aqui.
   alvo: Felipe
+- source_spec: `_bmad-output/implementation-artifacts/spec-s09-polimento-entrega.md`
+  summary: O mostrador do cronômetro desenha os segmentos apagados ("88d 88:88:88", a 10% de opacidade) e, em larguras de até 390 px com lote de 30 dias, esse fantasma quebra de linha e aparece sob os dígitos acesos.
+  evidence: Visto no link público e no Chrome local a 390 px. O fantasma e os dígitos têm larguras diferentes (o 8 é mais largo que 1, 2 e 3 em Manrope), então quebram em pontos diferentes. Tentei `nowrap` + `tabular-nums`: o fantasma passou a estourar a página em 18 px a 320 px e o tentativa foi desfeita. Correção real: dimensionar o mostrador (ou o texto) para não quebrar. É decoração; o axe não acusa.
+  alvo: Felipe (cosmético; decidir se vale mexer no design do mostrador)

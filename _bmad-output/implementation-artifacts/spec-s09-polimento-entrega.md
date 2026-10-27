@@ -2,7 +2,7 @@
 title: 'S09 — Polimento, responsivo, seed final, README e entrega'
 type: 'feature'
 created: '2026-10-27'
-status: 'in-progress'
+status: 'done'
 baseline_commit: '1a412d34d9ccb2e81eb3366dca4da585df16c2ab'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -74,21 +74,21 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `apps/api/src/seed/showcase.ts`, `apps/api/prisma/seed.ts` -- seed final 001–005, `buildLiveDemoLot`, `runSeed`/`runSeedDemo`, advisory lock em transação interativa de longa duração, `seed:demo` com recomposição de saldo -- R-9.1 a R-9.5, R-9.12
-- [ ] `apps/api/src/seed/seed.test.ts`, `my-bids.seed.test.ts`, `showcase.test.ts` -- AC-9.1 a 9.8; varredura de privacidade da S08 sobre o banco semeado -- §14.1 e §14.4
-- [ ] `apps/api/src/errors.ts`, `packages/shared/src/errors.ts` (+ testes) -- 413 no envelope
-- [ ] `apps/api/src/routes/lots.ts` (+ teste) -- limite de `POST /lots`
-- [ ] `apps/api/src/infra/fipe.ts`, `app.ts` (+ teste) -- log `warn` do motivo da falha da FIPE
-- [ ] `apps/api/src/services/lot.service.ts` (+ teste) -- histórico/rank do `GET /lots/:id`
-- [ ] `apps/api/src/routes/bids.test.ts` -- semente nos testes de concorrência
-- [ ] `apps/api/src/routes/resilience.test.ts` (novo) -- AC-9.10 a 9.12
-- [ ] `apps/web/src/app/not-found.tsx`, `error.tsx`, `packages/shared` -- 404 e erro globais (R-9.8); conferir estados §9.4 por tela e `/kit`
-- [ ] `packages/shared/src/*.ts` (+ teste de varredura) -- revisão de voz dos "(a revisar)", AC-9.21
-- [ ] Chrome real (banco descartável, API e web locais) -- varreduras §9.1, §9.2 (320, 390, 1440, zoom 200%), §9.3 em todas as telas; axe-core fora do repositório; correções nos componentes donos; B1 e B2 da S06 se couberem
-- [ ] `README.md`, `.env.example`, `slice-09` §16, `SPEC.md`, `rastreabilidade.md` -- D1–D8 relidos para Railway; Q1–Q8 registradas
-- [ ] `deferred-work.md` -- triagem (feitos com `resolved:`, os demais "segue adiado" com motivo); `npm audit --omit=dev` de novo
-- [ ] frontmatter de `spec-s03-…` e `spec-s05-…` -- 'done' depois de confirmar
-- [ ] `progresso.md`, rascunho do relato de IA (D10) só com fatos do diário
+- [x] `apps/api/src/seed/showcase.ts`, `apps/api/prisma/seed.ts` -- seed final 001–005, `buildLiveDemoLot`, `runSeed`/`runSeedDemo`, advisory lock em transação interativa de longa duração, `seed:demo` com recomposição de saldo -- R-9.1 a R-9.5, R-9.12
+- [x] `apps/api/src/seed/seed.test.ts`, `my-bids.seed.test.ts`, `showcase.test.ts` -- AC-9.1 a 9.8; varredura de privacidade da S08 sobre o banco semeado -- §14.1 e §14.4
+- [x] `apps/api/src/errors.ts`, `packages/shared/src/errors.ts` (+ testes) -- 413 no envelope
+- [x] `apps/api/src/routes/lots.ts` (+ teste) -- limite de `POST /lots`
+- [x] `apps/api/src/infra/fipe.ts`, `app.ts` (+ teste) -- log `warn` do motivo da falha da FIPE
+- [x] (avaliado e recusado, ver Implementation Notes) `apps/api/src/services/lot.service.ts` (+ teste) -- histórico/rank do `GET /lots/:id`
+- [x] `apps/api/src/routes/bids.test.ts` -- semente nos testes de concorrência
+- [x] `apps/api/src/routes/resilience.test.ts` (novo) -- AC-9.10 a 9.12
+- [x] `apps/web/src/app/not-found.tsx`, `error.tsx`, `packages/shared` -- 404 e erro globais (R-9.8); conferir estados §9.4 por tela e `/kit`
+- [x] `packages/shared/src/*.ts` (+ teste de varredura) -- revisão de voz dos "(a revisar)", AC-9.21
+- [x] Chrome real (banco descartável, API e web locais) -- varreduras §9.1, §9.2 (320, 390, 1440, zoom 200%), §9.3 em todas as telas; axe-core fora do repositório; correções nos componentes donos; B1 e B2 da S06 se couberem
+- [x] `README.md`, `.env.example`, `slice-09` §16, `SPEC.md`, `rastreabilidade.md` -- D1–D8 relidos para Railway; Q1–Q8 registradas
+- [x] `deferred-work.md` -- triagem (feitos com `resolved:`, os demais "segue adiado" com motivo); `npm audit --omit=dev` de novo
+- [x] frontmatter de `spec-s03-…` e `spec-s05-…` -- 'done' depois de confirmar
+- [x] `progresso.md`, rascunho do relato de IA (D10) só com fatos do diário
 - [ ] Deploy e AC1–AC15 (§15) -- local/Compose completos; link público só leitura até o Felipe autorizar escrita e decidir os dados de produção
 
 **Acceptance Criteria:**
@@ -100,9 +100,27 @@ context:
 
 ## Implementation Notes
 
+- **Implementado direto** (sem subagent), na ordem do spec, em commits atômicos. Base verde → final verde: shared 150 → 154, api 495 → 501, web 416 → 418; lint, typecheck e build exit 0.
+- **Histórico/rank de `GET /lots/:id` não foi feito** (decisão do build): a Sala conta lances por `bids.length` e `computeMyStanding` calcula a posição no navegador com o histórico inteiro; limitar mudaria o contrato, e o `groupBy` sozinho soma uma consulta. "Segue adiado" no `deferred-work.md`.
+- **Achado fora do spec, corrigido:** com a API parada a Vitrine dizia "Não consegui trazer os lotes." em vez do texto canônico da §8 ("Não deu para carregar agora."). Textos de erro de carga agora vêm de `GLOBAL_TEXT` em Vitrine, Painel, Sala e na sessão.
+- **Achados da varredura corrigidos:** carimbo "Arrematado" da Sala (rolagem lateral a 320/390 px), "88:88" do cronômetro como pseudo-elemento (axe), recibo a 320 px, alvos de toque de 44 px. Exceção documentada (A14): "BRASIL" sobre a faixa da placa.
+- **AC1–AC15 no ambiente local** (banco descartável + Chrome real): AC1 a AC4, AC6 a AC10, AC12 a AC14 por roteiro de API contra o servidor local; AC7 por três navegadores; AC11 com o SQL do README e a auditoria no Chrome; AC5 pelo teste (`bids.test.ts`). Os verificadores de AC1a e AC2 acusaram falha por defeito do meu regex (a mensagem de AC1a traz minutos, "14h23", como a slice-03 permite; a de AC2 é a esperada); o texto foi conferido à mão.
+- **Pendente de aval do Felipe:** AC1–AC15 no link público (exigem escrita em produção) e a decisão de manter ou recriar os dados de produção.
+
 ## Spec Change Log
 
 ## Review Triage Log
+
+Revisão feita por mim sobre o diff `1a412d3..cd8b533` (os três revisores independentes do BMad exigem subagentes e o Felipe não os autorizou nesta sessão; **não houve revisão cega nem de casos de borda por terceiros**). Uma linha por achado:
+
+| # | Achado | Veredito | Evidência |
+|---|---|---|---|
+| 1 | Os verificadores de AC1a e AC2 falharam | false | A mensagem de AC1a traz minutos ("14h23"), permitido por `slice-03` §8 ("{H}h{mm se ≠ 00}"); a de AC2 é exatamente "Seu lance precisa ser de pelo menos R$ 14.500,00."; o defeito era meu regex |
+| 2 | Primeira tentativa de "melhorar" o fantasma do cronômetro (nowrap + tabular-nums) criou 18 px de rolagem a 320 px | high (corrigido) | Medido no Chrome local; desfeito antes do commit (`git checkout` dos dois arquivos, que só tinham essa edição) |
+| 3 | O "88:88:88" apagado do cronômetro quebra de linha e aparece sob os dígitos em ≤ 390 px com lote de 30 dias | low (adiado) | Visto no link público (10% de opacidade); a geometria do original (span absoluto com o mesmo texto) é a mesma, então é anterior à S09, mas não medi a versão antiga. Registrado no `deferred-work.md` |
+| 4 | O seed segura uma transação de até 300 s com o lock; se travasse, o start da API esperaria | low (aceito) | O start tolera falha do seed, o Prisma derruba a transação no timeout e o seed leva ~20 s; em produção só faz `COUNT` e sai |
+| 5 | AC-9.17b: com a API de volta, o botão "Tentar novamente" já tinha sumido | false | A Vitrine recarregou sozinha quando o socket reconectou (melhor que clicar); o caminho do clique foi provado em 9.14 (Criar lote) e o texto/botão de erro em 9.17a |
+| 6 | O seed final não recria nada em produção | medium (informação) | R-9.4 manda ignorar bancos com usuários; decisão de manter ou recriar os dados de produção é do Felipe |
 
 ## Design Notes
 
