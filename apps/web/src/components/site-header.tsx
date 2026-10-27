@@ -10,7 +10,9 @@ import { Logo } from "@/components/ui/logo";
 import { ThemeSwitch } from "@/components/ui/theme-switch";
 import { useAuth } from "./auth-provider";
 
-const LINK = "inline-flex min-h-alvo items-center border-b-2 border-transparent text-[12px] font-semibold uppercase tracking-[0.06em] text-tinta no-underline";
+// `!`: a regra global `a { color }` fica fora de layer e venceria a utility sem ele.
+const LINK =
+  "relative inline-flex min-h-alvo items-center text-[13px] font-bold uppercase tracking-[0.08em] !text-tinta2 no-underline hover:!text-tinta after:absolute after:inset-x-0 after:bottom-[6px] after:h-[3px] after:rounded-full after:bg-transparent";
 const wideHeader = () => window.matchMedia("(min-width: 1200px)").matches;
 function subscribeWidth(listener: () => void) {
   const media = window.matchMedia("(min-width: 1200px)");
@@ -21,7 +23,7 @@ function subscribeWidth(listener: () => void) {
 function NavLink({ href, children, exact = false }: { href: string; children: ReactNode; exact?: boolean }) {
   const pathname = usePathname();
   const active = href === "/" || exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
-  return <Link href={href} aria-current={active ? "page" : undefined} className={`${LINK} ${active ? "!border-tinta" : ""}`}>{children}</Link>;
+  return <Link href={href} aria-current={active ? "page" : undefined} className={`${LINK} ${active ? "!text-tinta after:!bg-[var(--h-azul)]" : ""}`}>{children}</Link>;
 }
 
 export function SiteHeader() {
@@ -31,7 +33,7 @@ export function SiteHeader() {
   const wide = useSyncExternalStore(subscribeWidth, wideHeader, () => false);
   const ready = status !== "loading" && status !== "error";
   const nav = !ready ? null : (
-    <nav key="nav" aria-label={user?.role === "AUCTIONEER" ? "Leiloeiro" : user ? "Principal" : "Visitante"} className="site-nav flex flex-wrap items-center gap-x-5 gap-y-1">
+    <nav key="nav" aria-label={user?.role === "AUCTIONEER" ? "Leiloeiro" : user ? "Principal" : "Visitante"} className="site-nav flex flex-wrap items-center gap-x-8 gap-y-1">
       {user?.role === "AUCTIONEER" ? <><NavLink href="/painel" exact>Meus lotes</NavLink><NavLink href="/painel/criar-lote">Criar lote</NavLink></> : null}
       <NavLink href="/">Vitrine</NavLink>
       {user?.role === "BIDDER" ? <><NavLink href="/arremates">Meus arremates</NavLink><NavLink href="/carteira">Carteira</NavLink></> : null}
@@ -40,16 +42,21 @@ export function SiteHeader() {
   );
 
   return (
-    <header className="border-b-2 border-linha bg-papel">
+    <header className="cabecalho">
       <div className="site-header mx-auto" style={{ width: "min(100% - 2 * var(--gutter-lateral), 1320px)" }}>
         <div key="logo" className="site-logo"><Logo /></div>
         {wide ? nav : null}
         <div key="theme" className="site-theme"><ThemeSwitch /></div>
         {ready ? (
-          <div key="account" className="site-account flex min-w-0 flex-wrap items-center justify-end gap-2">
-            {user ? <>{user.role === "BIDDER" ? <BalanceChip /> : null}<ProfileMenu /></> : <>
-              <Link href="/entrar?aba=entrar" className={buttonClasses("secundario")}>Entrar</Link>
-              <Link href="/entrar" className={buttonClasses("primario")}>Criar conta</Link>
+          <div key="account" className="site-account flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-2 sm:gap-x-4">
+            {user ? <>
+              {user.role === "BIDDER" ? <><span aria-hidden="true" className="cabecalho-divisor" /><BalanceChip /></> : null}
+              <span aria-hidden="true" className="cabecalho-divisor" />
+              <ProfileMenu />
+            </> : <>
+              <span aria-hidden="true" className="cabecalho-divisor" />
+              <Link href="/entrar?aba=entrar" className={`${buttonClasses("secundario")} !border-linha !shadow-none hover:!border-tinta`}>Entrar</Link>
+              <Link href="/entrar" className={`${buttonClasses("primario")} !border-[var(--h-azul)] !shadow-none`}>Criar conta</Link>
             </>}
           </div>
         ) : null}

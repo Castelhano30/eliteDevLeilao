@@ -52,9 +52,14 @@ export function ProfileMenu() {
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen((previous) => !previous)}
-        className={`inline-flex min-h-alvo min-w-[44px] items-center justify-center gap-1 rounded-full border border-linha px-2 hover:bg-suave ${open ? "bg-suave" : "bg-fundo"}`}
+        className="group inline-flex min-h-alvo items-center gap-2 rounded-full text-tinta2 hover:text-tinta"
       >
-        <span aria-hidden="true" className="t-mono-dado flex h-7 w-7 items-center justify-center">{initials}</span>
+        <span
+          aria-hidden="true"
+          className={`flex h-11 w-11 items-center sm:h-12 sm:w-12 justify-center rounded-full border-2 border-[var(--h-azul)] text-[15px] font-extrabold text-tinta group-hover:bg-suave ${open ? "bg-suave" : "bg-papel"}`}
+        >
+          {initials}
+        </span>
         <HeaderIcon name="chevron" />
       </button>
       {open ? (

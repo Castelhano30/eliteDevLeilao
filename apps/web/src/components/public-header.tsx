@@ -8,13 +8,13 @@ export interface PublicHeaderProps {
 /** Cabeçalho mínimo das páginas públicas (Comprovante e Auditoria): igual para quem está logado ou não. */
 export function PublicHeader({ legend }: PublicHeaderProps) {
   return (
-    <header className="border-b-2 border-linha bg-papel">
+    <header className="cabecalho">
       <div
-        className="mx-auto flex flex-wrap items-center justify-between gap-3 py-3"
+        className="mx-auto flex flex-wrap items-center justify-between gap-3 py-[14px]"
         style={{ width: "min(100% - 2 * var(--gutter-lateral), 1320px)" }}
       >
         <Logo />
-        <p className="t-mono-rotulo">{legend}</p>
+        <p className="t-mono-rotulo text-tinta2">{legend}</p>
       </div>
     </header>
   );

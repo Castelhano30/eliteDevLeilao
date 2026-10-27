@@ -11,7 +11,7 @@ export function Logo({ size = "tela" }: LogoProps) {
   return (
     <Link href="/" aria-label="LanceAuto, vitrine" className="inline-block !text-logoTinta no-underline hover:!text-logoTinta">
       <span
-        className={`flex flex-col border-2 border-logoTinta bg-logoPapel ${
+        className={`logo-placa flex flex-col border-2 border-logoTinta bg-logoPapel ${
           manual ? "rounded-logo shadow-cartao" : "rounded-logo-tela shadow-chip"
         }`}
       >

@@ -178,8 +178,33 @@ dialog::backdrop {
   background: rgba(30, 28, 25, 0.65);
 }
 
+/* ---------- Cabeçalho: barra escura nos dois temas ----------
+   Os tokens são redefinidos só dentro dela, então tema, saldo, perfil e botões já nascem na paleta escura. */
+.cabecalho {
+  --c-fundo: #0f1216;
+  --c-papel: #151a21;
+  --c-suave: #1d242d;
+  --c-tinta: #f3f5f8;
+  --c-tinta2: #9ba7b8;
+  --c-linha: #5a6678;
+  --c-sombra: #05070a;
+  --c-ocre: #1d4ed8;
+  --c-ocre-texto: #6b93ff;
+  --h-azul: #3d6dff;
+  --h-divisor: #313a47;
+  color-scheme: dark;
+  background: var(--c-fundo);
+  color: var(--c-tinta);
+  border-bottom: 2px solid var(--h-azul);
+}
+.cabecalho .logo-placa { box-shadow: 0 0 0 1px var(--h-azul), 0 0 16px rgba(61, 109, 255, 0.35); }
+.cabecalho-divisor { display: none; flex: 0 0 auto; width: 1px; height: 28px; background: var(--h-divisor); }
+@media (min-width: 768px) {
+  .cabecalho-divisor { display: block; }
+}
+
 /* O estado visual acompanha o script inicial, antes da hidratação do toggle. */
-.site-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-block: 12px; }
+.site-header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding-block: 14px; }
 .site-logo { flex: 1 1 auto; min-width: 0; }
 .site-theme { flex: 0 0 auto; }
 .site-account { flex: 1 1 100%; }
