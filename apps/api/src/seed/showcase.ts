@@ -5,10 +5,12 @@ import { cleanBrand, formatLotNumber, type CatalogOption } from "@lanceauto/shar
 import { FakeClock, toDate, type Clock } from "../infra/clock";
 import { carNotFound, type CatalogPort } from "../infra/fipe";
 import type { DownloadedImage } from "../infra/image-store";
+import { makeAuthService } from "../services/auth.service";
 import { makeBidService } from "../services/bid.service";
 import { makeCancelService } from "../services/cancel.service";
 import { makeLotService } from "../services/lot.service";
 import { makeSettlementService } from "../services/settlement.service";
+import { makeWalletService } from "../services/wallet.service";
 
 /** Um carro do `prisma/fipe-fixture.json`, no formato do detalhe normalizado da FIPE (S8: sem rede). */
 export interface FixtureCar {
@@ -79,400 +81,333 @@ async function readFixtureImage(baseDir: string, car: FixtureCar): Promise<Downl
   return { data: await readFile(path.join(baseDir, car.image)), mime };
 }
 
-const HOUR = 60 * 60 * 1000;
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-/** Lotes PROVISÓRIOS da S02: a S09 reescreve o seed final (001 arrematado … 005 ao vivo). */
+export const SEED_PASSWORD = "lance1234";
+export const SEED_SKIPPED_MESSAGE = "seed ignorado: já existem usuários";
+/** Valor-base de `seed:demo`: Ana e Bruno ficam com pelo menos isto disponível antes dos lances (R-9.5). */
+export const DEMO_BASE_CENTS = 10_000_000;
+
+export const SEED_ACCOUNTS = {
+  auctioneer: { name: "Seu João", email: "leiloeiro@lanceauto.test", role: "AUCTIONEER" as const, depositCents: 0 },
+  ana: { name: "Ana", email: "ana@lanceauto.test", role: "BIDDER" as const, depositCents: 50_000_000 },
+  bruno: { name: "Bruno", email: "bruno@lanceauto.test", role: "BIDDER" as const, depositCents: 30_000_000 },
+};
+
+/** Chave fixa do `pg_advisory_xact_lock`: um seed por vez, em qualquer processo. */
+const ADVISORY_LOCK_KEY = 7_309_001;
+/** O seed cria 3 contas (bcrypt) e cinco lotes: folga larga para a transação que segura o lock. */
+const LOCK_TRANSACTION_MS = 300_000;
+
+const TITLES: Record<string, string> = {
+  "uno-2010": "Fiat Uno Mille Way 2010",
+  "civic-2012": "Honda Civic LXS 2012",
+  "corolla-2015": "Toyota Corolla XEi 2015",
+  "hilux-2017": "Toyota Hilux CD SRV 2017",
+  "gol-gti-1996": "Volkswagen Gol GTI 1996",
+  "onix-2020": "Chevrolet Onix 2020",
+  "hb20-2019": "Hyundai HB20 Comfort 2019",
+};
+const titleOf = (car: FixtureCar) => TITLES[car.key] ?? `${cleanBrand(car.brandName)} ${car.modelName} ${car.year}`;
+
+/** Lotes passados e o agendado: valores fixos, coerentes com a referência FIPE de cada carro. */
 const PLAN = {
-  live: { key: "uno-2010", title: "Fiat Uno Mille Way 2010", startsIn: -HOUR, endsIn: 30 * DAY, startingBidCents: 1_500_000, minIncrementCents: 50_000 },
-  scheduled: { key: "corolla-2015", title: "Toyota Corolla XEi 2015", startsIn: 2 * DAY, endsIn: 3 * DAY, startingBidCents: 6_000_000, minIncrementCents: 100_000 },
+  sold: { key: "civic-2012", daysAgo: 3, startingBidCents: 5_000_000, minIncrementCents: 250_000 },
+  unsold: { key: "gol-gti-1996", daysAgo: 2, startingBidCents: 4_000_000, minIncrementCents: 100_000 },
+  cancelled: { key: "onix-2020", startingBidCents: 2_000_000, minIncrementCents: 50_000 },
+  scheduled: { key: "corolla-2015", startingBidCents: 6_000_000, minIncrementCents: 100_000 },
+  live: { key: "uno-2010" },
 } as const;
 
-export interface SeedShowcaseDeps {
+/** Quantos lances o lote ao vivo recebe: alternados, número ímpar, então quem abre termina na frente. */
+const LIVE_BID_COUNT = 5;
+
+export interface SeedDeps {
   db: PrismaClient;
+  /** Relógio de verdade: o seed recua um `FakeClock` a partir dele para fabricar o passado. */
   clock: Clock;
   auditKey: string;
-  auctioneerId: string;
+  jwtSecret: string;
   cars: FixtureCar[];
   /** Pasta de onde saem as imagens do fixture (`prisma/`). */
   baseDir: string;
   log?: (message: string) => void;
 }
 
-/**
- * Cria os lotes de demonstração pelo `createLot` (genesis e selo válidos), com `allowPast` (T11).
- * `demo: false` (seed normal) só cria se ainda não houver lote nenhum: seguro a cada deploy.
- * `demo: true` (`npm run seed:demo`) cria um lote ao vivo novo, com datas relativas a agora.
- */
-export async function seedShowcaseLots(deps: SeedShowcaseDeps, { demo = false } = {}): Promise<number[]> {
-  const { db, clock, auditKey, auctioneerId, cars, baseDir, log = () => undefined } = deps;
-  if (!demo && (await db.lot.count()) > 0) {
-    log("Já existem lotes: o seed não cria os de demonstração.");
-    return [];
-  }
-  const lots = makeLotService({
-    db,
-    clock,
-    auditKey,
-    catalog: makeFixtureCatalog(cars, clock),
-    images: { suggest: async () => ({ status: "NOT_FOUND" }) },
-    imageStore: { download: async () => null },
-  });
-  const plans = demo ? [PLAN.live] : [PLAN.live, PLAN.scheduled];
-  const numbers: number[] = [];
-  for (const plan of plans) {
-    const car = cars.find((c) => c.key === plan.key);
-    if (!car) throw new Error(`fipe-fixture.json sem o carro ${plan.key}`);
-    const now = clock.now().getTime();
-    const created = await lots.createLot(
-      auctioneerId,
-      {
-        brandId: car.brandId,
-        modelId: car.modelId,
-        yearId: car.yearId,
-        title: plan.title,
-        startingBidCents: plan.startingBidCents,
-        minIncrementCents: plan.minIncrementCents,
-        startsAt: toDate(now + plan.startsIn).toISOString(),
-        endsAt: toDate(now + plan.endsIn).toISOString(),
-        imageCredit: car.imageCredit ?? undefined,
-        imageCreditUrl: car.imageCreditUrl ?? undefined,
-      },
-      { allowPast: true, image: await readFixtureImage(baseDir, car) },
-    );
-    numbers.push(created.response.lot.number);
-    log(`Lote ${formatLotNumber(created.response.lot.number)} criado: ${plan.title} (${created.response.lot.status})`);
-  }
-  return numbers;
-}
-
-export interface SeedLiveBidsDeps {
-  db: PrismaClient;
-  clock: Clock;
-  auditKey: string;
-  /** E-mails na ordem dos lances: o primeiro abre, o último termina liderando. */
-  bidderEmails: readonly string[];
-  log?: (message: string) => void;
-}
-
-/** Quantos lances o seed dá no lote ao vivo: alternados entre os dois licitantes, o segundo termina na frente. */
-const SEED_BID_COUNT = 5;
-
-/**
- * Dá 5 lances alternados no lote ao vivo do plano, pelo mesmo `placeBid` da API (a cadeia nasce válida).
- * Idempotente: só age se o lote existir, estiver ao vivo e ainda não tiver lance, o que também o faz chegar a um banco
- * já populado (o seed dos lotes só roda com o banco vazio). Recusa de lance aborta o seed com a mensagem do servidor.
- */
-export async function seedLiveBids(deps: SeedLiveBidsDeps): Promise<number> {
-  const { db, clock, auditKey, bidderEmails, log = () => undefined } = deps;
-  const lot = await db.lot.findFirst({ where: { title: PLAN.live.title }, orderBy: { number: "asc" } });
-  if (!lot) {
-    log(`Sem o lote "${PLAN.live.title}": o seed não dá lances.`);
-    return 0;
-  }
-  if (lot.bidCount > 0) {
-    log(`O lote ${formatLotNumber(lot.number)} já tem lances: o seed não repete.`);
-    return 0;
-  }
-  // Lote cancelado ou vencido recusaria o lance e derrubaria o seed: pula com aviso (deferred-work da S03).
-  if (lot.cancelledAt !== null) {
-    log(`O lote ${formatLotNumber(lot.number)} foi cancelado: o seed não dá lances.`);
-    return 0;
-  }
-  if (lot.endsAt.getTime() <= clock.now().getTime()) {
-    log(`O lote ${formatLotNumber(lot.number)} já encerrou: o seed não dá lances.`);
-    return 0;
-  }
-  const users = await db.user.findMany({ where: { email: { in: [...bidderEmails] } }, select: { id: true, email: true } });
-  const idByEmail = new Map(users.map((user) => [user.email, user.id]));
-  const bids = makeBidService({ db, clock, auditKey });
-  let expected: number | null = null;
-  let amount = Number(lot.startingBidCents);
-  for (let index = 0; index < SEED_BID_COUNT; index++) {
-    const email = bidderEmails[index % bidderEmails.length]!;
-    const userId = idByEmail.get(email);
-    if (!userId) throw new Error(`Seed de lances: a conta ${email} não existe.`);
-    try {
-      await bids.placeBid(userId, "BIDDER", lot.id, { amountCents: amount, expectedCurrentCents: expected });
-    } catch (err) {
-      const reason = err instanceof Error ? err.message : String(err);
-      throw new Error(`Seed de lances: ${email} deu ${amount} centavos no lote ${lot.number} e foi recusado (${reason}).`);
-    }
-    expected = amount;
-    amount += Number(lot.minIncrementCents);
-  }
-  log(`Lote ${formatLotNumber(lot.number)}: ${SEED_BID_COUNT} lances registrados pelo placeBid.`);
-  return SEED_BID_COUNT;
-}
-
-const MINUTE = 60_000;
-
-/** Lotes já encerrados do seed (S05 §11): um arrematado, com prorrogação, e um sem lances. */
-const CLOSED = {
-  sold: { key: "civic-2012", title: "Honda Civic LXS 2012", daysAgo: 3, startingBidCents: 5_000_000, minIncrementCents: 250_000 },
-  unsold: { key: "gol-gti-1996", title: "Volkswagen Gol GTI 1996", daysAgo: 2, startingBidCents: 4_000_000, minIncrementCents: 100_000 },
-} as const;
-
-export interface SeedClosedLotsDeps {
-  db: PrismaClient;
-  /** Relógio de verdade: o seed recua um `FakeClock` a partir dele. */
-  clock: Clock;
-  auditKey: string;
-  auctioneerId: string;
-  cars: FixtureCar[];
-  baseDir: string;
-  /** O rival abre e cobre os lances; o vencedor dá o último, dentro dos 2 minutos finais (prorroga). */
-  rivalEmail: string;
-  winnerEmail: string;
-  log?: (message: string) => void;
-}
-
-export interface SeedClosedLotsResult {
-  created: number;
-  /** Caminho do comprovante de demonstração (`/c/{token}`) do lote arrematado, se existir. */
+export interface SeedResult {
+  skipped: boolean;
+  /** Caminho do comprovante de demonstração (`/c/{token}`), quando o seed o criou. */
   receiptPath: string | null;
 }
 
-/**
- * Cria os lotes encerrados pelos MESMOS services da aplicação (create lot, bid, settle) com um `FakeClock` no
- * passado, nunca por insert direto: a cadeia HMAC nasce válida (PRD S9). Arrematado (3 dias atrás): 4 lances
- * alternados, o último a 40 s do fim, que prorroga em +2 min; depois o relógio passa do novo fim e `settleLot`
- * liquida. Sem lances (2 dias atrás): cria, avança o relógio e liquida como `UNSOLD`.
- * Retoma por título: valida o prefixo de lances gravado e completa as etapas pendentes.
- */
-export async function seedClosedLots(deps: SeedClosedLotsDeps): Promise<SeedClosedLotsResult> {
-  const { db, clock, auditKey, auctioneerId, cars, baseDir, log = () => undefined } = deps;
-  const fake = new FakeClock(clock.now());
-  const lots = makeLotService({
-    db,
-    clock: fake,
-    auditKey,
-    catalog: makeFixtureCatalog(cars, fake),
+/** Roda `work` com o advisory lock: o segundo processo espera aqui e vê o banco já semeado. */
+async function withSeedLock<T>(db: PrismaClient, work: () => Promise<T>): Promise<T> {
+  return db.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ADVISORY_LOCK_KEY})`;
+      return work();
+    },
+    { maxWait: LOCK_TRANSACTION_MS, timeout: LOCK_TRANSACTION_MS },
+  );
+}
+
+function lotServiceFor(deps: SeedDeps, clock: Clock) {
+  // Sem rede: o catálogo é o fixture e nenhuma imagem é buscada nem baixada.
+  return makeLotService({
+    db: deps.db,
+    clock,
+    auditKey: deps.auditKey,
+    catalog: makeFixtureCatalog(deps.cars, clock),
     images: { suggest: async () => ({ status: "NOT_FOUND" }) },
     imageStore: { download: async () => null },
   });
-  const bids = makeBidService({ db, clock: fake, auditKey });
-  const settlement = makeSettlementService({ db, clock: fake });
-  const realNow = clock.now().getTime();
-  let created = 0;
-
-  async function createPast(plan: (typeof CLOSED)[keyof typeof CLOSED]) {
-    const car = cars.find((c) => c.key === plan.key);
-    if (!car) throw new Error(`fipe-fixture.json sem o carro ${plan.key}`);
-    fake.set(toDate(realNow - plan.daysAgo * 24 * 60 * MINUTE));
-    const start = fake.now().getTime();
-    const { response } = await lots.createLot(
-      auctioneerId,
-      {
-        brandId: car.brandId,
-        modelId: car.modelId,
-        yearId: car.yearId,
-        title: plan.title,
-        startingBidCents: plan.startingBidCents,
-        minIncrementCents: plan.minIncrementCents,
-        startsAt: toDate(start).toISOString(),
-        endsAt: toDate(start + 60 * MINUTE).toISOString(),
-        imageCredit: car.imageCredit ?? undefined,
-        imageCreditUrl: car.imageCreditUrl ?? undefined,
-      },
-      { allowPast: true, image: await readFixtureImage(baseDir, car) },
-    );
-    created += 1;
-    return { id: response.lot.id, number: response.lot.number, start };
-  }
-
-  async function receiptPathOf(lotId: string): Promise<string | null> {
-    const receipt = await db.receipt.findUnique({ where: { lotId }, select: { token: true } });
-    return receipt ? `/c/${receipt.token}` : null;
-  }
-
-  const existingSold = await db.lot.findFirst({ where: { title: CLOSED.sold.title }, select: { id: true, number: true, startsAt: true, bidCount: true, settledAt: true } });
-  let receiptPath: string | null = null;
-  if (existingSold?.settledAt) {
-    receiptPath = await receiptPathOf(existingSold.id);
-    if (!receiptPath) throw new Error(`Seed dos encerrados: lote ${existingSold.number} liquidado sem comprovante.`);
-    log(`Lote ${formatLotNumber(existingSold.number)} (${CLOSED.sold.title}) já existe: o seed não refaz.`);
-  } else {
-    const users = await db.user.findMany({
-      where: { email: { in: [deps.rivalEmail, deps.winnerEmail] } },
-      select: { id: true, email: true },
-    });
-    const idOf = (email: string) => {
-      const id = users.find((user) => user.email === email)?.id;
-      if (!id) throw new Error(`Seed dos encerrados: a conta ${email} não existe.`);
-      return id;
-    };
-    const rival = idOf(deps.rivalEmail);
-    const winner = idOf(deps.winnerEmail);
-    const plan = CLOSED.sold;
-    const lot = existingSold
-      ? { id: existingSold.id, number: existingSold.number, start: existingSold.startsAt.getTime() }
-      : await createPast(plan);
-    const bid = async (userId: string, amountCents: number, expected: number | null, at: number) => {
-      fake.set(toDate(at));
-      try {
-        await bids.placeBid(userId, "BIDDER", lot.id, { amountCents, expectedCurrentCents: expected });
-      } catch (err) {
-        const reason = err instanceof Error ? err.message : String(err);
-        throw new Error(`Seed dos encerrados: lance de ${amountCents} centavos no lote ${lot.number} foi recusado (${reason}).`);
-      }
-    };
-    const step = plan.minIncrementCents;
-    const first = plan.startingBidCents;
-    const planned = [
-      { userId: rival, amount: first, expected: null, at: lot.start + 5 * MINUTE },
-      { userId: winner, amount: first + step, expected: first, at: lot.start + 15 * MINUTE },
-      { userId: rival, amount: first + 2 * step, expected: first + step, at: lot.start + 30 * MINUTE },
-      // A 40 s do fim: prorroga em +2 min.
-      { userId: winner, amount: first + 3 * step, expected: first + 2 * step, at: lot.start + 60 * MINUTE - 40_000 },
-    ];
-    const recorded = await db.bid.findMany({ where: { lotId: lot.id }, orderBy: { seq: "asc" }, select: { bidderId: true, amountCents: true } });
-    if (recorded.length > planned.length || recorded.some((row, index) => row.bidderId !== planned[index]!.userId || Number(row.amountCents) !== planned[index]!.amount)) {
-      throw new Error(`Seed dos encerrados: lances do lote ${lot.number} divergem do plano; revisão manual necessária.`);
-    }
-    for (const plannedBid of planned.slice(recorded.length)) {
-      await bid(plannedBid.userId, plannedBid.amount, plannedBid.expected, plannedBid.at);
-    }
-    const extended = await db.lot.findUniqueOrThrow({ where: { id: lot.id }, select: { endsAt: true } });
-    fake.set(toDate(extended.endsAt.getTime() + 1_000));
-    const outcome = await settlement.settleLot(lot.id);
-    if (outcome.result !== "SOLD") throw new Error(`Seed dos encerrados: o lote ${lot.number} não foi liquidado (${outcome.result}).`);
-    receiptPath = await receiptPathOf(lot.id);
-    log(`Lote ${formatLotNumber(lot.number)} arrematado: ${plan.title}.`);
-  }
-
-  const existingUnsold = await db.lot.findFirst({ where: { title: CLOSED.unsold.title }, select: { id: true, number: true, startsAt: true, settledAt: true, bidCount: true } });
-  if (existingUnsold?.settledAt) {
-    if (existingUnsold.bidCount !== 0) throw new Error(`Seed dos encerrados: lote ${existingUnsold.number} tem lances; revisão manual necessária.`);
-    log(`Lote "${CLOSED.unsold.title}" já existe: o seed não refaz.`);
-  } else {
-    const lot = existingUnsold
-      ? { id: existingUnsold.id, number: existingUnsold.number, start: existingUnsold.startsAt.getTime() }
-      : await createPast(CLOSED.unsold);
-    if (existingUnsold?.bidCount) throw new Error(`Seed dos encerrados: lote ${lot.number} tem lances; revisão manual necessária.`);
-    fake.set(toDate(lot.start + 60 * MINUTE + 1_000));
-    const outcome = await settlement.settleLot(lot.id);
-    if (outcome.result !== "UNSOLD") throw new Error(`Seed dos encerrados: o lote ${lot.number} não fechou sem lances (${outcome.result}).`);
-    log(`Lote ${formatLotNumber(lot.number)} encerrado sem lances: ${CLOSED.unsold.title}.`);
-  }
-
-  if (receiptPath) log(`Comprovante de demonstração: ${receiptPath}`);
-  return { created, receiptPath };
 }
 
-/** Lote "cancelado de demonstração" (S06 §11): ao vivo há 2 h, dois lances, cancelado com estorno ao líder. */
-const CANCELLED_DEMO = {
-  key: "onix-2020",
-  title: "Chevrolet Onix 2020",
-  startingBidCents: 2_000_000,
-  minIncrementCents: 50_000,
-} as const;
+function carOf(deps: SeedDeps, key: string): FixtureCar {
+  const car = deps.cars.find((c) => c.key === key);
+  if (!car) throw new Error(`fipe-fixture.json sem o carro ${key}`);
+  return car;
+}
 
-export interface SeedCancelledLotDeps {
-  db: PrismaClient;
-  /** Relógio de verdade: o seed recua um `FakeClock` a partir dele. */
-  clock: Clock;
-  auditKey: string;
-  auctioneerId: string;
-  cars: FixtureCar[];
-  baseDir: string;
-  /** Licitante 1: abre com o lance inicial e é superado. */
-  firstBidderEmail: string;
-  /** Licitante 2: cobre, lidera e é o estornado no cancelamento. */
-  leaderEmail: string;
-  log?: (message: string) => void;
+interface LotTerms {
+  startingBidCents: number;
+  minIncrementCents: number;
+}
+
+/** Lance inicial ≈ 60% da referência FIPE, arredondado a R$ 500; incremento R$ 500 (ou R$ 1.000 acima de R$ 30.000). */
+export function liveLotTerms(referencePriceCents: number): LotTerms {
+  const startingBidCents = Math.max(50_000, Math.round((referencePriceCents * 0.6) / 50_000) * 50_000);
+  return { startingBidCents, minIncrementCents: startingBidCents < 3_000_000 ? 50_000 : 100_000 };
+}
+
+async function createLotAt(
+  deps: SeedDeps,
+  lots: ReturnType<typeof lotServiceFor>,
+  auctioneerId: string,
+  car: FixtureCar,
+  terms: LotTerms,
+  window: { startsAt: number; endsAt: number },
+  allowPast: boolean,
+) {
+  const { response } = await lots.createLot(
+    auctioneerId,
+    {
+      brandId: car.brandId,
+      modelId: car.modelId,
+      yearId: car.yearId,
+      title: titleOf(car),
+      startingBidCents: terms.startingBidCents,
+      minIncrementCents: terms.minIncrementCents,
+      startsAt: toDate(window.startsAt).toISOString(),
+      endsAt: toDate(window.endsAt).toISOString(),
+      imageCredit: car.imageCredit ?? undefined,
+      imageCreditUrl: car.imageCreditUrl ?? undefined,
+    },
+    { allowPast, image: await readFixtureImage(deps.baseDir, car) },
+  );
+  return { id: response.lot.id, number: response.lot.number, title: response.lot.title };
+}
+
+/** Coloca o lance pelo `placeBid` da API; recusa aborta o seed com a mensagem do servidor. */
+async function placeSeedBid(
+  bids: ReturnType<typeof makeBidService>,
+  lot: { id: string; number: number },
+  bid: { userId: string; amountCents: number; expectedCurrentCents: number | null },
+) {
+  try {
+    await bids.placeBid(bid.userId, "BIDDER", lot.id, { amountCents: bid.amountCents, expectedCurrentCents: bid.expectedCurrentCents });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(`Seed: lance de ${bid.amountCents} centavos no lote ${formatLotNumber(lot.number)} foi recusado (${reason}).`);
+  }
+}
+
+interface Bidders {
+  /** Abre o lote ao vivo e, com 5 lances alternados, termina na frente. */
+  openerId: string;
+  /** Cobre o primeiro e fica superado. */
+  rivalId: string;
+}
+
+/** Deposita a diferença para o disponível chegar a `DEMO_BASE_CENTS` (entra no extrato como depósito). */
+async function topUpToBase(deps: SeedDeps, userId: string): Promise<number> {
+  const wallet = await deps.db.wallet.findUniqueOrThrow({ where: { userId } });
+  const available = Number(wallet.totalCents - wallet.committedCents);
+  if (available >= DEMO_BASE_CENTS) return 0;
+  const missing = DEMO_BASE_CENTS - available;
+  await makeWalletService({ db: deps.db, clock: deps.clock }).deposit(userId, missing);
+  return missing;
 }
 
 /**
- * Cria o lote cancelado pelos MESMOS services da aplicação (`createLot`, `placeBid`, `cancelLot`) com um `FakeClock`
- * em `agora − 2 h`: lance de R$ 20.000,00 aos 20 min, de R$ 20.500,00 aos 30 min e cancelamento aos 60 min com
- * `confirmEntryCount = 2`. Termina com o estorno ao licitante 2 e a linha CANCEL `seq = 3` na cadeia; o comprometido
- * de cada carteira volta a ser só o que ela lidera em lote ao vivo. Retoma por título: completa lances e cancelamento.
+ * Lote ao vivo de demonstração: começa agora, fecha em 30 dias e recebe 5 lances de Ana e Bruno pelo `placeBid`
+ * (Bruno abre e termina na frente, para a Ana entrar vendo "superado"). Compartilhada pelo lote 005 do seed
+ * e pelo `seed:demo`. Antes dos lances, recompõe o saldo dos dois (R-9.5).
  */
-export async function seedCancelledLot(deps: SeedCancelledLotDeps): Promise<{ created: number }> {
-  const { db, clock, auditKey, auctioneerId, cars, baseDir, log = () => undefined } = deps;
-  const plan = CANCELLED_DEMO;
-  const existing = await db.lot.findFirst({
-    where: { title: plan.title },
-    select: { id: true, number: true, startsAt: true, cancelledAt: true },
-  });
-  if (existing?.cancelledAt) {
-    log(`Lote ${formatLotNumber(existing.number)} (${plan.title}) já existe cancelado: o seed não refaz.`);
-    return { created: 0 };
+export async function buildLiveDemoLot(
+  deps: SeedDeps,
+  { auctioneerId, bidders, car }: { auctioneerId: string; bidders: Bidders; car: FixtureCar },
+) {
+  for (const userId of [bidders.openerId, bidders.rivalId]) {
+    const deposited = await topUpToBase(deps, userId);
+    if (deposited > 0) deps.log?.(`Saldo recomposto: depósito de ${deposited} centavos.`);
   }
+  const now = deps.clock.now().getTime();
+  const terms = liveLotTerms(car.priceCents);
+  const lot = await createLotAt(deps, lotServiceFor(deps, deps.clock), auctioneerId, car, terms, { startsAt: now, endsAt: now + 30 * DAY }, false);
+  const bids = makeBidService({ db: deps.db, clock: deps.clock, auditKey: deps.auditKey });
+  let expected: number | null = null;
+  for (let index = 0; index < LIVE_BID_COUNT; index++) {
+    const amountCents: number = terms.startingBidCents + index * terms.minIncrementCents;
+    const userId = index % 2 === 0 ? bidders.openerId : bidders.rivalId;
+    await placeSeedBid(bids, lot, { userId, amountCents, expectedCurrentCents: expected });
+    expected = amountCents;
+  }
+  return lot;
+}
 
+/** Carros que cabem nos R$ 100.000 do valor-base com 5 lances (o último pesa `inicial + 4 × incremento`). */
+function demoEligibleCars(cars: FixtureCar[]): FixtureCar[] {
+  return cars.filter((car) => {
+    const terms = liveLotTerms(car.priceCents);
+    return terms.startingBidCents + (LIVE_BID_COUNT - 1) * terms.minIncrementCents <= DEMO_BASE_CENTS;
+  });
+}
+
+async function accountIds(db: PrismaClient) {
   const users = await db.user.findMany({
-    where: { email: { in: [deps.firstBidderEmail, deps.leaderEmail] } },
+    where: { email: { in: Object.values(SEED_ACCOUNTS).map((account) => account.email) } },
     select: { id: true, email: true },
   });
-  const idOf = (email: string) => {
-    const id = users.find((user) => user.email === email)?.id;
-    if (!id) throw new Error(`Seed do cancelado: a conta ${email} não existe.`);
-    return id;
+  const idOf = (email: string) => users.find((user) => user.email === email)?.id;
+  return {
+    auctioneerId: idOf(SEED_ACCOUNTS.auctioneer.email),
+    anaId: idOf(SEED_ACCOUNTS.ana.email),
+    brunoId: idOf(SEED_ACCOUNTS.bruno.email),
   };
-  const first = idOf(deps.firstBidderEmail);
-  const leader = idOf(deps.leaderEmail);
+}
 
-  const fake = new FakeClock(clock.now());
-  const start = existing ? existing.startsAt.getTime() : clock.now().getTime() - 2 * HOUR;
-  let created = 0;
-  let lot: { id: string; number: number };
-  if (existing) {
-    lot = { id: existing.id, number: existing.number };
-  } else {
-    const car = cars.find((c) => c.key === plan.key);
-    if (!car) throw new Error(`fipe-fixture.json sem o carro ${plan.key}`);
-    const lots = makeLotService({
-      db,
-      clock: fake,
-      auditKey,
-      catalog: makeFixtureCatalog(cars, fake),
-      images: { suggest: async () => ({ status: "NOT_FOUND" }) },
-      imageStore: { download: async () => null },
-    });
-    fake.set(toDate(start));
-    const { response } = await lots.createLot(
-      auctioneerId,
-      {
-        brandId: car.brandId,
-        modelId: car.modelId,
-        yearId: car.yearId,
-        title: plan.title,
-        startingBidCents: plan.startingBidCents,
-        minIncrementCents: plan.minIncrementCents,
-        startsAt: toDate(start).toISOString(),
-        endsAt: toDate(start + 10 * DAY).toISOString(),
-        imageCredit: car.imageCredit ?? undefined,
-        imageCreditUrl: car.imageCreditUrl ?? undefined,
-      },
-      { allowPast: true, image: await readFixtureImage(baseDir, car) },
-    );
-    lot = { id: response.lot.id, number: response.lot.number };
-    created = 1;
-  }
-
-  const bids = makeBidService({ db, clock: fake, auditKey });
-  const planned = [
-    { userId: first, amount: plan.startingBidCents, expected: null, at: start + 20 * MINUTE },
-    { userId: leader, amount: plan.startingBidCents + plan.minIncrementCents, expected: plan.startingBidCents, at: start + 30 * MINUTE },
-  ];
-  const recorded = await db.bid.findMany({ where: { lotId: lot.id }, orderBy: { seq: "asc" }, select: { bidderId: true, amountCents: true } });
-  if (recorded.length > planned.length || recorded.some((row, index) => row.bidderId !== planned[index]!.userId || Number(row.amountCents) !== planned[index]!.amount)) {
-    throw new Error(`Seed do cancelado: lances do lote ${lot.number} divergem do plano; revisão manual necessária.`);
-  }
-  for (const next of planned.slice(recorded.length)) {
-    fake.set(toDate(next.at));
-    try {
-      await bids.placeBid(next.userId, "BIDDER", lot.id, { amountCents: next.amount, expectedCurrentCents: next.expected });
-    } catch (err) {
-      const reason = err instanceof Error ? err.message : String(err);
-      throw new Error(`Seed do cancelado: lance de ${next.amount} centavos no lote ${lot.number} foi recusado (${reason}).`);
+/**
+ * Seed final (S09 §11): 3 contas e 5 lotes, tudo pelos services da aplicação (nunca por SQL direto), com um
+ * `FakeClock` para o passado. 001 arrematado pela Ana (4 lances, o último prorroga), 002 sem lances, 003 cancelado
+ * (Bruno líder, estorno), 004 agendado, 005 ao vivo por 30 dias com 5 lances (Bruno na frente).
+ * Seguro a cada deploy: com o lock, se já há usuários sai sem fazer nada (R-9.4). Nunca apaga dados.
+ */
+export async function runSeed(deps: SeedDeps): Promise<SeedResult> {
+  const { db, log = () => undefined } = deps;
+  return withSeedLock(db, async () => {
+    if ((await db.user.count()) > 0) {
+      log(SEED_SKIPPED_MESSAGE);
+      return { skipped: true, receiptPath: null };
     }
-  }
+    const realNow = deps.clock.now().getTime();
+    // As contas e os depósitos nascem antes do primeiro lote (3 dias atrás): o extrato fica em ordem cronológica.
+    const fake = new FakeClock(toDate(realNow - 4 * DAY));
+    const auth = makeAuthService({ db, clock: fake, jwtSecret: deps.jwtSecret });
+    const wallet = makeWalletService({ db, clock: fake });
+    const ids = new Map<string, string>();
+    for (const { depositCents, ...account } of Object.values(SEED_ACCOUNTS)) {
+      const { user } = await auth.register({ ...account, password: SEED_PASSWORD });
+      if (depositCents > 0) await wallet.deposit(user.id, depositCents);
+      ids.set(account.email, user.id);
+      log(`Criado: ${account.email} (${account.role})`);
+    }
+    const auctioneerId = ids.get(SEED_ACCOUNTS.auctioneer.email)!;
+    const anaId = ids.get(SEED_ACCOUNTS.ana.email)!;
+    const brunoId = ids.get(SEED_ACCOUNTS.bruno.email)!;
 
-  const cancel = makeCancelService({ db, clock: fake, auditKey });
-  fake.set(toDate(start + 60 * MINUTE));
-  await cancel.cancelLot(auctioneerId, lot.id, planned.length);
-  log(`Lote ${formatLotNumber(lot.number)} cancelado: ${plan.title} (2 lances, estorno ao líder).`);
-  return { created };
+    const pastLots = lotServiceFor(deps, fake);
+    const bids = makeBidService({ db, clock: fake, auditKey: deps.auditKey });
+    const settlement = makeSettlementService({ db, clock: fake });
+    const announce = (what: string, lot: { number: number; title: string }) => log(`Lote ${formatLotNumber(lot.number)} ${what}: ${lot.title}.`);
+    const bidAll = async (lot: { id: string; number: number }, planned: { userId: string; amountCents: number; expectedCurrentCents: number | null; at: number }[]) => {
+      for (const { at, ...bid } of planned) {
+        fake.set(toDate(at));
+        await placeSeedBid(bids, lot, bid);
+      }
+    };
+
+    // 001: encerrado e arrematado pela Ana. O último lance cai a 40 s do fim e prorroga em +2 min.
+    {
+      const plan = PLAN.sold;
+      const start = realNow - plan.daysAgo * DAY;
+      fake.set(toDate(start));
+      const lot = await createLotAt(deps, pastLots, auctioneerId, carOf(deps, plan.key), plan, { startsAt: start, endsAt: start + HOUR }, true);
+      const first = plan.startingBidCents;
+      const step = plan.minIncrementCents;
+      await bidAll(lot, [
+        { userId: brunoId, amountCents: first, expectedCurrentCents: null, at: start + 5 * MINUTE },
+        { userId: anaId, amountCents: first + step, expectedCurrentCents: first, at: start + 15 * MINUTE },
+        { userId: brunoId, amountCents: first + 2 * step, expectedCurrentCents: first + step, at: start + 30 * MINUTE },
+        { userId: anaId, amountCents: first + 3 * step, expectedCurrentCents: first + 2 * step, at: start + HOUR - 40_000 },
+      ]);
+      const extended = await db.lot.findUniqueOrThrow({ where: { id: lot.id }, select: { endsAt: true } });
+      fake.set(toDate(extended.endsAt.getTime() + 1_000));
+      const outcome = await settlement.settleLot(lot.id);
+      if (outcome.result !== "SOLD") throw new Error(`Seed: o lote ${formatLotNumber(lot.number)} não foi liquidado (${outcome.result}).`);
+      announce("arrematado", lot);
+    }
+
+    // 002: encerrado sem lances.
+    {
+      const plan = PLAN.unsold;
+      const start = realNow - plan.daysAgo * DAY;
+      fake.set(toDate(start));
+      const lot = await createLotAt(deps, pastLots, auctioneerId, carOf(deps, plan.key), plan, { startsAt: start, endsAt: start + HOUR }, true);
+      fake.set(toDate(start + HOUR + 1_000));
+      const outcome = await settlement.settleLot(lot.id);
+      if (outcome.result !== "UNSOLD") throw new Error(`Seed: o lote ${formatLotNumber(lot.number)} não fechou sem lances (${outcome.result}).`);
+      announce("encerrado sem lances", lot);
+    }
+
+    // 003: ao vivo há 2 h, a Ana abre, o Bruno cobre e lidera, e o leiloeiro cancela: estorno ao Bruno e linha CANCEL.
+    {
+      const plan = PLAN.cancelled;
+      const start = realNow - 2 * HOUR;
+      fake.set(toDate(start));
+      const lot = await createLotAt(deps, pastLots, auctioneerId, carOf(deps, plan.key), plan, { startsAt: start, endsAt: start + 10 * DAY }, true);
+      await bidAll(lot, [
+        { userId: anaId, amountCents: plan.startingBidCents, expectedCurrentCents: null, at: start + 20 * MINUTE },
+        { userId: brunoId, amountCents: plan.startingBidCents + plan.minIncrementCents, expectedCurrentCents: plan.startingBidCents, at: start + 30 * MINUTE },
+      ]);
+      fake.set(toDate(start + HOUR));
+      await makeCancelService({ db, clock: fake, auditKey: deps.auditKey }).cancelLot(auctioneerId, lot.id, 2);
+      announce("cancelado", lot);
+    }
+
+    // 004 e 005 usam o relógio de verdade e a validação normal de datas.
+    {
+      const plan = PLAN.scheduled;
+      const start = deps.clock.now().getTime() + 2 * DAY;
+      const lot = await createLotAt(deps, lotServiceFor(deps, deps.clock), auctioneerId, carOf(deps, plan.key), plan, { startsAt: start, endsAt: start + DAY }, false);
+      announce("agendado", lot);
+    }
+    const live = await buildLiveDemoLot(deps, { auctioneerId, bidders: { openerId: brunoId, rivalId: anaId }, car: carOf(deps, PLAN.live.key) });
+    announce("ao vivo", live);
+
+    const sold = await db.receipt.findFirst({ orderBy: { issuedAt: "asc" }, select: { token: true } });
+    const receiptPath = sold ? `/c/${sold.token}` : null;
+    if (receiptPath) log(`Comprovante de demonstração: ${receiptPath}`);
+    return { skipped: false, receiptPath };
+  });
+}
+
+/**
+ * `npm run seed:demo`: cria um lote ao vivo NOVO (30 dias, 5 lances de Ana e Bruno) sem tocar nos demais e recompõe o
+ * saldo dos dois até o valor-base (R-9.5). Precisa das contas do seed.
+ */
+export async function runSeedDemo(deps: SeedDeps): Promise<{ id: string; number: number; title: string }> {
+  const { db, log = () => undefined } = deps;
+  return withSeedLock(db, async () => {
+    const { auctioneerId, anaId, brunoId } = await accountIds(db);
+    if (!auctioneerId || !anaId || !brunoId) throw new Error("As contas de teste não existem: rode `npm run seed` antes do seed:demo.");
+    const eligible = demoEligibleCars(deps.cars);
+    if (eligible.length === 0) throw new Error("fipe-fixture.json sem carro que caiba no valor-base do seed:demo.");
+    const car = eligible[(await db.lot.count()) % eligible.length]!;
+    const lot = await buildLiveDemoLot(deps, { auctioneerId, bidders: { openerId: brunoId, rivalId: anaId }, car });
+    log(`Lote ${formatLotNumber(lot.number)} criado: ${lot.title} (ao vivo por 30 dias).`);
+    return lot;
+  });
 }

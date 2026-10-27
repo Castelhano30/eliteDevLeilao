@@ -8,8 +8,8 @@ import { entryHash, genesisHash, sealHash } from "../domain/audit-chain";
 import type { PrismaClient } from "@prisma/client";
 import { FakeClock } from "../infra/clock";
 import { makeAuditService } from "../services/audit.service";
-import { seedCancelledLot, seedClosedLots, seedLiveBids, seedShowcaseLots, type FixtureCar } from "../seed/showcase";
-import { TEST_JWT_SECRET, makeTestApp, registerUser, testEnv } from "../../test/helpers/app";
+import { runSeed, type FixtureCar } from "../seed/showcase";
+import { TEST_JWT_SECRET, makeTestApp, testEnv } from "../../test/helpers/app";
 import { FORBIDDEN_KEYS, collectKeys, makeUser, postBid, type TestUser } from "../../test/helpers/bids";
 import { createTestPrisma, testDatabaseUrl, truncateAll } from "../../test/helpers/db";
 import { insertLot } from "../../test/helpers/lots";
@@ -460,14 +460,10 @@ describe.skipIf(!testDatabaseUrl)("GET /lots/:id/audit (integração, DATABASE_U
   });
 
   describe("privacidade (AC-8.16 a 8.20, 8.36)", () => {
-    /** O seed completo pelos mesmos services do deploy (001 ao vivo, agendado, arrematado, sem lances, cancelado). */
+    /** O seed final (001 arrematado … 005 ao vivo) pelos mesmos services do deploy, num banco vazio. */
     async function seedAll() {
-      const { user: auctioneer } = await registerUser(app, { role: "AUCTIONEER", email: "leiloeiro@lanceauto.test" });
-      const base = { db: prisma, clock, auditKey: testEnv.AUDIT_HMAC_KEY };
-      await seedShowcaseLots({ ...base, auctioneerId: auctioneer.id, cars, baseDir });
-      await seedLiveBids({ ...base, bidderEmails: ["bruno@lanceauto.test", "ana@lanceauto.test"] });
-      await seedClosedLots({ ...base, auctioneerId: auctioneer.id, cars, baseDir, rivalEmail: "bruno@lanceauto.test", winnerEmail: "ana@lanceauto.test" });
-      await seedCancelledLot({ ...base, auctioneerId: auctioneer.id, cars, baseDir, firstBidderEmail: "bruno@lanceauto.test", leaderEmail: "ana@lanceauto.test" });
+      await truncateAll(prisma);
+      await runSeed({ db: prisma, clock, auditKey: testEnv.AUDIT_HMAC_KEY, jwtSecret: TEST_JWT_SECRET, cars, baseDir });
       return prisma.lot.findMany({ orderBy: { number: "asc" }, include: { receipt: true } });
     }
     const leaks = async () => {

@@ -16,3 +16,8 @@ export async function truncateAll(prisma: PrismaClient): Promise<void> {
   const list = tables.map((t) => `"public"."${t.tablename}"`).join(", ");
   await prisma.$executeRawUnsafe(`TRUNCATE ${list} CASCADE`);
 }
+
+/** Recomeça a numeração dos lotes em 001 (TRUNCATE não reinicia a sequência): para testes que conferem os números do seed. */
+export async function restartLotNumbering(prisma: PrismaClient): Promise<void> {
+  await prisma.$executeRawUnsafe(`ALTER SEQUENCE ${"\"Lot_number_seq\""} RESTART WITH 1`);
+}
