@@ -54,6 +54,9 @@ const config = {
         comprovante: "1200px",
         manual: "1440px",
       },
+      minWidth: {
+        alvo: "44px",
+      },
       minHeight: {
         alvo: "44px",
         botao: "44px",

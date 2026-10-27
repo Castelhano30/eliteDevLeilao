@@ -142,7 +142,7 @@ export function WalletScreen() {
       header: "Lote",
       render: (row) =>
         row.lotId ? (
-          <Link href={`/lotes/${row.lotId}`}>{row.lotNumber === null ? "Lote" : `Lote ${lotNumberLabel(row.lotNumber)}`}</Link>
+          <Link href={`/lotes/${row.lotId}`} className="inline-flex min-h-alvo min-w-alvo items-center">{row.lotNumber === null ? "Lote" : `Lote ${lotNumberLabel(row.lotNumber)}`}</Link>
         ) : (
           "—"
         ),

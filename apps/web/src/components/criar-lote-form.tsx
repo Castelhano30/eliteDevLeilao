@@ -316,7 +316,7 @@ export function CriarLoteForm() {
   return (
     <PageShell>
       <p className="t-mono-rotulo">
-        <Link href="/painel">PAINEL</Link> / CRIAR LOTE
+        <Link href="/painel" className="inline-flex min-h-alvo items-center">PAINEL</Link> / CRIAR LOTE
       </p>
       <div className="mt-4 flex flex-wrap items-end gap-6">
         <h1 className="t-display-titulo">Criar lote</h1>
@@ -511,7 +511,7 @@ export function CriarLoteForm() {
                   Agendar lote
                 </Button>
               )}
-              <Link href="/painel" className="t-body">
+              <Link href="/painel" className="t-body inline-flex min-h-alvo items-center">
                 Voltar ao painel sem salvar
               </Link>
             </div>
