@@ -289,3 +289,9 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - **Achado fora do escopo, não corrigido:** no cartão, em "últimos 2 min" prorrogado, o selo "+2 MIN" (`right -14`, `top -14`) cobre parte do rótulo "ÚLTIMOS 2 MIN". Já era assim antes desta repaginação.
 - Verificação da raiz: `npm run typecheck` e `npm run lint` exit 0; `npm test` exit 0 (shared 154, API 501, web 436).
 - Ajuste da etapa 3, achado ao rever a Sala em 360 px: o `nowrap` impede a quebra que antes escondia a largura do mostrador, e o `26d 10:18:34` a 44 px (≈305 px com a caixa) passava da borda do painel. A fonte do tamanho "sala" virou `clamp(32px, 10vw, 44px)`; o cartão segue em 24 px. Medido em 320, 360, 375, 390, 768 e 1280 px: a caixa fica dentro do painel, com folga, e sem rolagem lateral.
+
+## 27/10/2026 — Repaginação visual: logo branco no tema noite
+- Pedido do Felipe: no tema noite o logo deve continuar branco. O `Logo` usava `bg-papel`, `border-tinta` e `text-tinta`, que escurecem no noite. Agora usa dois literais fixos, iguais nos dois temas: `--f-logo-papel` (`#f5eedf`) e `--f-logo-tinta` (`#1e1c19`), como já é feito com `--f-faixa-placa`.
+- Pegadinha: a regra global `a { color: var(--c-tinta) }` fica fora de layer e vence a utility do Tailwind, então o texto saiu apagado até usar `!text-logoTinta` (o resto do código já faz assim nos links). O teste cobre as duas coisas.
+- Conferido no Chrome a 360 e 1280 px, claro e noite. Texto escuro sobre o papel dá ~14:1 e o texto branco sobre a faixa azul, 10,60:1.
+- Push e deploy seguem pendentes de aprovação.
