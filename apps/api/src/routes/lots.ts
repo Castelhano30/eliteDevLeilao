@@ -87,14 +87,21 @@ export function lotsRouter(
 ): Router {
   const router = Router();
 
-  router.post("/lots", auth.requireAuth, auth.requireRole("AUCTIONEER", CATALOG_TEXT.roleNotAllowed), async (req, res) => {
+  // Cada criação pode baixar até 4 MB e gravar em BYTEA: 10/min por leiloeiro (S09, deferred-work da S02).
+  router.post(
+    "/lots",
+    auth.requireAuth,
+    auth.requireRole("AUCTIONEER", CATALOG_TEXT.roleNotAllowed),
+    makeRateLimiter({ windowMs: 60_000, max: 10, keyGenerator: (req) => `create-lot:${req.user?.id ?? "?"}` }),
+    async (req, res) => {
     // Corpo e datas antes de qualquer chamada externa (§6.2).
     const result = validateCreateLot(req.body, clock.now().getTime());
     if (!result.ok) throw new AppError("VALIDATION", { fields: result.fields });
     const { response, events } = await lots.createLot(req.user!.id, result.data);
     publisher.publish(events);
     res.status(201).json(response);
-  });
+    },
+  );
 
   router.get("/lots", async (req, res) => {
     const parsed = lotListQuerySchema.safeParse(req.query);
