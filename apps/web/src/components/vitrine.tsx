@@ -2,7 +2,7 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
-import { formatBrasiliaClock, showcaseGroup, type LotCard as LotCardDto, type LotListResponse, type ShowcaseGroup, GLOBAL_TEXT } from "@lanceauto/shared";
+import { formatBrasiliaClock, showcaseGroup, type BrandListResponse, type LotCard as LotCardDto, type LotListResponse, type ShowcaseGroup, GLOBAL_TEXT } from "@lanceauto/shared";
 import { CarrosselDestaques } from "@/components/carrossel-destaques";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { Button } from "@/components/ui/button";
@@ -20,11 +20,17 @@ import { cardStatusAt, checksForFilter, showcaseRefetchInterval } from "@/lib/re
 import { SHOWCASE_LISTS_KEY, useShowcaseLive } from "@/lib/realtime/use-showcase-live";
 import { serverNow } from "@/lib/server-clock";
 import { useOnReach, useServerNow } from "@/lib/use-server-clock";
-import { DEFAULT_FILTERS, lotsKey, lotsPath, type VitrineFilters, type VitrineTab } from "@/lib/vitrine-query";
+import { BRANDS_KEY, brandOptions, DEFAULT_FILTERS, lotsKey, lotsPath, type VitrineFilters, type VitrineTab } from "@/lib/vitrine-query";
 
 async function fetchLots(filters: VitrineFilters, signal?: AbortSignal): Promise<LotListResponse> {
   const result = await apiGet<LotListResponse>(lotsPath(filters), { signal });
   if (!result.ok) throw new Error("Não consegui trazer os lotes.");
+  return result.data;
+}
+
+async function fetchBrands(signal?: AbortSignal): Promise<BrandListResponse> {
+  const result = await apiGet<BrandListResponse>("/brands", { signal });
+  if (!result.ok) throw new Error("Não consegui trazer as marcas.");
   return result.data;
 }
 
@@ -95,6 +101,8 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
       return step.interval;
     },
   });
+  // Marcas do seletor: todas as da FIPE. Se a consulta falha ou demora, o seletor segue com as marcas dos lotes.
+  const brandsQuery = useQuery({ queryKey: BRANDS_KEY, queryFn: ({ signal }) => fetchBrands(signal), staleTime: 60 * 60 * 1000, retry: 1 });
   // Sala showcase: lance, prorrogação e lote novo chegam sozinhos; reconectar refaz a consulta.
   useShowcaseLive(SHOWCASE_LISTS_KEY);
   const connection = useConnectionStatus();
@@ -188,7 +196,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
           className="min-w-[min(100%,200px)] flex-[0_1_200px]"
         >
           <option value="">Todas</option>
-          {(data?.brands ?? []).map((brand) => (
+          {brandOptions(brandsQuery.data?.brands, data?.brands, filters.brand).map((brand) => (
             <option key={brand} value={brand}>
               {brand}
             </option>

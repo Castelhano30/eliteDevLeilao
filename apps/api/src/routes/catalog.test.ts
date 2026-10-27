@@ -1,9 +1,10 @@
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { CATALOG_TEXT } from "@lanceauto/shared";
-import { makeTestApp, tokenFor } from "../../test/helpers/app";
+import { makeTestApp, registerUser, tokenFor } from "../../test/helpers/app";
 import { createTestPrisma, testDatabaseUrl, truncateAll } from "../../test/helpers/db";
 import { deadUrl, fipeHandler, json, startFakeServer, type FakeServer } from "../../test/helpers/fake-server";
+import { insertLot } from "../../test/helpers/lots";
 import { CACHE_TTL_MS } from "../infra/external-cache";
 
 describe.skipIf(!testDatabaseUrl)("catálogo (integração)", () => {
@@ -165,5 +166,69 @@ describe.skipIf(!testDatabaseUrl)("catálogo (integração)", () => {
     expect(limited.body.error.code).toBe("RATE_LIMITED");
     const other = await request(app).get("/catalog/brands").set("Authorization", `Bearer ${tokenFor("leiloeiro-2", "AUCTIONEER")}`);
     expect(other.status).toBe(200);
+  });
+
+  describe("GET /brands (público: marcas do seletor da Vitrine)", () => {
+    const window = { startsAt: "2026-10-23T10:00:00.000Z", endsAt: "2026-10-23T18:00:00.000Z" };
+    const owner = async (app: Parameters<typeof request>[0]) => (await registerUser(app, { role: "AUCTIONEER" })).user.id;
+
+    it("sem token: todas as marcas da FIPE, pelo nome limpo e em ordem pt-BR", async () => {
+      const { app } = appWith();
+      const res = await request(app).get("/brands");
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ brands: ["Chevrolet", "Toyota", "Volkswagen"] });
+    });
+
+    it("junta as marcas dos lotes que a FIPE não lista, sem repetir por maiúsculas ou acento e sem os cancelados", async () => {
+      const { app } = appWith();
+      const auctioneerId = await owner(app);
+      await insertLot(prisma, { auctioneerId, brand: "Fiat", ...window });
+      await insertLot(prisma, { auctioneerId, brand: "CHEVROLET", ...window });
+      await insertLot(prisma, { auctioneerId, brand: "Lada", ...window, cancelledAt: "2026-10-23T11:00:00.000Z" });
+      const res = await request(app).get("/brands");
+      expect(res.body.brands).toEqual(["Chevrolet", "Fiat", "Toyota", "Volkswagen"]);
+    });
+
+    it("FIPE fora e cache vazio: 200 só com as marcas dos lotes, nunca 503", async () => {
+      const { app } = appWith(await deadUrl());
+      const auctioneerId = await owner(app);
+      await insertLot(prisma, { auctioneerId, brand: "Fiat", ...window });
+      const started = performance.now();
+      const res = await request(app).get("/brands");
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ brands: ["Fiat"] });
+      expect(performance.now() - started).toBeLessThan(9_000);
+    });
+
+    it("FIPE fora, cache vazio e nenhum lote: 200 com lista vazia", async () => {
+      const { app } = appWith(await deadUrl());
+      expect((await request(app).get("/brands")).body).toEqual({ brands: [] });
+    });
+
+    it("usa o cache da FIPE: a segunda leitura não faz nova chamada", async () => {
+      const { app } = appWith();
+      await request(app).get("/brands");
+      await request(app).get("/brands");
+      expect(fipe.hits).toEqual(["/cars/brands"]);
+    });
+
+    it("compartilha o cache com o Criar lote e, vencido e com a FIPE caindo, serve a lista vencida", async () => {
+      const { app, clock } = appWith();
+      await request(app).get("/catalog/brands").set("Authorization", auctioneer);
+      expect(fipe.hits).toEqual(["/cars/brands"]);
+      expect((await request(app).get("/brands")).body.brands).toEqual(["Chevrolet", "Toyota", "Volkswagen"]);
+      expect(fipe.hits).toHaveLength(1);
+      fipe.setHandler((_req, res) => json(res, 500, {}));
+      clock.advance(CACHE_TTL_MS + 1);
+      expect((await request(app).get("/brands")).body.brands).toEqual(["Chevrolet", "Toyota", "Volkswagen"]);
+    });
+
+    it("não troca o campo brands de GET /lots, que segue só com as marcas dos lotes", async () => {
+      const { app } = appWith();
+      const auctioneerId = await owner(app);
+      await insertLot(prisma, { auctioneerId, brand: "Fiat", ...window });
+      expect((await request(app).get("/lots")).body.brands).toEqual(["Fiat"]);
+      expect(fipe.hits).toHaveLength(0);
+    });
   });
 });

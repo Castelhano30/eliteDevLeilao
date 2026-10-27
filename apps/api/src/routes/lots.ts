@@ -103,6 +103,11 @@ export function lotsRouter(
     },
   );
 
+  // Marcas do seletor da Vitrine: pública, FIPE em cache mais as marcas dos lotes (nunca 503).
+  router.get("/brands", async (_req, res) => {
+    res.json(await lots.listBrands());
+  });
+
   router.get("/lots", async (req, res) => {
     const parsed = lotListQuerySchema.safeParse(req.query);
     if (!parsed.success) throw new AppError("VALIDATION", { fields: fieldErrors(parsed.error) });

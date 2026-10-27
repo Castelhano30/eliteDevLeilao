@@ -151,6 +151,11 @@ export interface CreateLotResponse extends LotState {
   imageStatus: StoredImageStatus;
 }
 
+/** Marcas do seletor da Vitrine: as da FIPE mais as dos lotes publicados, sem repetir. */
+export interface BrandListResponse {
+  brands: string[];
+}
+
 export interface LotListResponse {
   lots: LotCard[];
   brands: string[];

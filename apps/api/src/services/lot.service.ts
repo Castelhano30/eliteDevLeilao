@@ -9,6 +9,7 @@ import {
   lotStatus,
   normalizeSearch,
   searchTerms,
+  type BrandListResponse,
   type CreateLotInput,
   type CreateLotResponse,
   type DomainEvent,
@@ -75,7 +76,18 @@ const imageNotFound = () => new AppError("NOT_FOUND", undefined, "Imagem não en
 /** O crédito tem a cara do que a Wikipedia sugere? */
 const looksLikeWikiCredit = (credit: string) => credit.startsWith("Foto: Wikipedia");
 
+/** Marcas sem repetir por maiúsculas ou acento (vale a primeira grafia) e em ordem pt-BR. */
+function uniqueBrands(names: string[]): string[] {
+  const byKey = new Map<string, string>();
+  for (const name of names) if (!byKey.has(normalizeSearch(name))) byKey.set(normalizeSearch(name), name);
+  return [...byKey.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
 export function makeLotService({ db, clock, auditKey, catalog, images, imageStore, logger }: LotServiceDeps) {
+  /** Marcas com ao menos um lote não cancelado (as linhas servem ao filtro por marca e à lista do seletor). */
+  const publishedBrandRows = () =>
+    db.item.findMany({ where: { lots: { some: { cancelledAt: null } } }, select: { brand: true }, distinct: ["brand"] });
+
   /**
    * Crédito gravado. Crédito com cara de Wikipedia só vale se a URL for a sugerida para o carro, e aí o texto e o
    * link gravados são os da sugestão, nunca os do corpo (evita atribuição falsa e link de crédito arbitrário).
@@ -195,6 +207,23 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
       }
     },
 
+    /**
+     * Marcas do seletor da Vitrine: todas as da FIPE (cache de 24 h, compartilhado com o Criar lote) mais as dos lotes publicados,
+     * para nenhum lote ficar sem filtro. FIPE fora e sem cache: só as dos lotes, sem erro (a Vitrine não depende da FIPE).
+     */
+    async listBrands(): Promise<BrandListResponse> {
+      const published = (await publishedBrandRows()).map((row) => row.brand);
+      const fipe = await catalog
+        .brands()
+        .then((items) => items.map((item) => item.name))
+        .catch((err: unknown) => {
+          logger?.warn({ err }, "marcas da FIPE indisponíveis; seletor só com as marcas dos lotes");
+          return [] as string[];
+        });
+      // A grafia da FIPE vem primeiro e vence a dos lotes.
+      return { brands: uniqueBrands([...fipe, ...published]) };
+    },
+
     /** Vitrine (R-2.11, R-2.13): nunca cancelados; ao vivo, agendados e encerrados, cada grupo na sua ordem. */
     async listLots(query: LotListQuery): Promise<LotListResponse> {
       const now = clock.now();
@@ -205,14 +234,8 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
       } satisfies Record<string, Prisma.LotWhereInput>;
       const notCancelled = { cancelledAt: null } satisfies Prisma.LotWhereInput;
 
-      const brandRows = await db.item.findMany({
-        where: { lots: { some: notCancelled } },
-        select: { brand: true },
-        distinct: ["brand"],
-      });
-      const byKey = new Map<string, string>();
-      for (const { brand } of brandRows) if (!byKey.has(normalizeSearch(brand))) byKey.set(normalizeSearch(brand), brand);
-      const brands = [...byKey.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
+      const brandRows = await publishedBrandRows();
+      const brands = uniqueBrands(brandRows.map((row) => row.brand));
 
       const [live, scheduled, ended] = await Promise.all([
         db.lot.count({ where: { ...notCancelled, ...groups.LIVE } }),
