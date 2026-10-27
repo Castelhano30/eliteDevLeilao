@@ -68,13 +68,13 @@ O build corre em **duas fases**, cada uma com `lint`, `typecheck`, `test` e `bui
 ### Fase 1 — Servidor: shared, migração, `GET /me/bids`, seed
 
 **Execution:**
-- [ ] Linha de base -- medida na raiz com a árvore limpa: shared 99, api 353, web 288 (o diário dizia 284; o commit do M1 da S06 acrescentou 4).
-- [ ] `packages/shared/src/my-bids.ts` -- teste antes: `bidderLotState` cobre `cancelledAt`×`settledAt`×`leaderId` (eu / outro / nulo) e `cancelledAt` vence; contrato e textos (AC-7.12).
-- [ ] Migração `add_bid_bidder_index` -- `@@index([bidderId])`, migração aplicada no banco de testes e conferida sem drift.
-- [ ] `domain/my-bids.ts` -- teste antes: posição e `bidderCount` com vários lances por licitante, 1 licitante, três licitantes; ordenação R-7.9.
-- [ ] `my-bids.service.ts` + rota + `app.ts` -- AC-7.1 a 7.11 e 7.13, mais a transição por serviço (A superado → `OUTBID`; liquida → `LOST`; cancela → `CANCELLED`) e o teste de seed (§11, cinco estados nas duas contas).
-- [ ] Prova de mutação no servidor -- `cancelledAt` não vencer, contar lances em vez de licitantes, soltar `receiptToken` fora de `WON`, esquecer a checagem de papel; cópia de segurança antes, nunca `git checkout`.
-- [ ] Fechamento da fase -- raiz com saída real; push; CI verde; Railway API `SUCCESS` com a migração aplicada no start; leitura pública de `/me/bids` com as contas do seed; diário (80+) e "Onde parei".
+- [x] Linha de base -- medida na raiz com a árvore limpa: shared 99, api 353, web 288 (o diário dizia 284; o commit do M1 da S06 acrescentou 4).
+- [x] `packages/shared/src/my-bids.ts` -- teste antes: `bidderLotState` cobre `cancelledAt`×`settledAt`×`leaderId` (eu / outro / nulo) e `cancelledAt` vence; contrato e textos (AC-7.12).
+- [x] Migração `add_bid_bidder_index` -- `@@index([bidderId])`, migração aplicada no banco de testes e conferida sem drift.
+- [x] `domain/my-bids.ts` -- teste antes: posição e `bidderCount` com vários lances por licitante, 1 licitante, três licitantes; ordenação R-7.9.
+- [x] `my-bids.service.ts` + rota + `app.ts` -- AC-7.1 a 7.11 e 7.13, mais a transição por serviço (A superado → `OUTBID`; liquida → `LOST`; cancela → `CANCELLED`) e o teste de seed (§11, cinco estados nas duas contas).
+- [x] Prova de mutação no servidor -- `cancelledAt` não vencer, contar lances em vez de licitantes, soltar `receiptToken` fora de `WON`, esquecer a checagem de papel; cópia de segurança antes, nunca `git checkout`.
+- [x] Fechamento da fase -- raiz com saída real; push; CI verde; Railway API `SUCCESS` com a migração aplicada no start; leitura pública de `/me/bids` com as contas do seed; diário (80+) e "Onde parei".
 
 **Fora da Fase 1:** `apps/web` além do que o typecheck exigir pelo contrato novo.
 
@@ -103,6 +103,23 @@ O build corre em **duas fases**, cada uma com `lint`, `typecheck`, `test` e `bui
 9. **Ocre** só no "Cobrir lance" (vários `OUTBID` podem ter vários, interpretação por cartão da §16.3 da fatia).
 
 ## Implementation Notes
+
+### Fase 1 (servidor, 27/10/2026)
+
+Implementada direto, sem subagente (o prompt da sessão trazia banco, portas e regras de commit que o spec não repete). Linha de base confirmada na raiz com a árvore limpa: shared 99, api 353, web 288. Depois: shared **121** (+22), api **386** (+33: 10 do domínio, 22 de `GET /me/bids`, 1 do seed), web 288 (nenhum arquivo de `apps/web` mudou; o typecheck não exigiu).
+
+Desvios e decisões menores, nenhum mexe no bloco congelado:
+- **Leituras num só snapshot.** As três consultas (lotes do usuário, melhor lance de cada licitante, `findMany` do lote) rodam numa transação `RepeatableRead`, para a posição nunca misturar dois instantes. O spec não pedia; custa só o `BEGIN`/`COMMIT`.
+- **Consulta 2** também filtra `bidderId IS NOT NULL` (a linha CANCEL não tem autor; o `kind='BID'` já a exclui, é só defesa).
+- **`Cache-Control: no-store`** na rota: a resposta leva o token do comprovante do dono.
+- **`MY_BIDS_TEXT` tem funções** (frases e selos com valor, posição e plural) além das constantes; os textos de copiar link (`Link copiado`, falha) não foram duplicados: a Fase 2 usa `RECEIPT_TEXT.copied`/`copyFailed` e `COPIED_LABEL_MS`.
+- **Desempate da ordem (R-7.9):** pelo número do lote (crescente nos ativos, decrescente nos finalizados), para a ordem ser estável.
+- **Migração escrita à mão** (`20261027120000_add_bid_bidder_index`, um `CREATE INDEX`); `prisma migrate diff` do banco contra o schema: sem diferença.
+- **Teste de seed** em arquivo próprio (`seed/my-bids.seed.test.ts`), para não mexer no `showcase.test.ts`.
+- **Sem ocorrência de bug da S06** nesta fase; nada novo no `deferred-work.md`.
+- **Deslize meu:** rodei o teste do domínio uma vez sem exportar `DATABASE_URL_TEST`; o `globalSetup` leu o `.env` e aplicou a migração do índice em `lanceauto_test`, banco que a sessão em paralelo usa. Só `CREATE INDEX`, nenhum dado tocado; registrado no diário.
+
+Prova de mutação (cópia no scratchpad, restauração por cópia, sem `git checkout`): M1 `cancelledAt` não vence, M2 `bidderCount` = `bidCount`, M3 `receiptToken` fora de `WON`, M4 sem `requireRole`, M5 estorno a quem não liderava, M6 `myRank` fora de `LEADING`/`OUTBID`: **mortos**. M7 (tirar `receipt.winnerId === userId`) **sobreviveu** na 1ª rodada: a checagem é redundante no fluxo normal (`WON` já implica ser o vencedor). Acrescentei o teste de dado inconsistente (Receipt de outro) e M7 morreu. Não coberto por teste: o `RepeatableRead` em si (exigiria uma escrita concorrente entre as leituras).
 
 ## Spec Change Log
 
