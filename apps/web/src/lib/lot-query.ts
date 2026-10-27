@@ -15,3 +15,6 @@ export async function fetchLot(id: string, signal?: AbortSignal): Promise<LotSta
   if (result.status === 404) throw new LotNotFoundError(LOT_TEXT.notFoundTitle);
   throw new Error("Não consegui trazer o lote.");
 }
+
+/** Meus arremates (`GET /me/bids`); `showcase:lot`, `wallet:updated` e a reconexão refazem a consulta. */
+export const MY_BIDS_KEY = ["me", "bids"] as const;
