@@ -108,6 +108,16 @@ O leiloeiro dono cancela qualquer lote seu **agendado ou ao vivo, com ou sem lan
 - **Rede ambígua:** se a resposta do cancelamento se perde, o diálogo não reenvia sozinho; ao tentar de novo ele primeiro refaz `GET /my/lots` e, se o lote já está cancelado, trata como sucesso.
 - **Seed:** `npm run seed` cria, pelos mesmos services e com relógio simulado, um lote ao vivo "cancelado de demonstração" (dois lances e cancelamento com `confirmEntryCount = 2`, estorno ao líder, linha CANCEL `seq = 3`). O comprometido de cada carteira continua igual à soma dos lances dos lotes ao vivo que ela lidera.
 
+## Meus arremates
+
+O licitante vê em `/arremates` (item "Meus arremates" no cabeçalho) todos os lotes em que deu lance, cada um num ingresso com o seu estado: **Ganhando**, **Superado**, **Arrematado**, **Perdido** ou **Cancelado**. `GET /me/bids` (só `BIDDER`) devolve a lista já ordenada e com o `state` pronto, calculado pelo servidor só com as colunas do banco; o cliente não decide estado nem reordena.
+
+- **Perdido** é o lote que **encerrou e foi liquidado** com outra pessoa vencendo. **Cancelado nunca é Perdido**: `cancelledAt` vence tudo, aparece só na aba "Todos" e, se a pessoa liderava, a frase diz que o saldo voltou.
+- **Apurando:** entre o fim do relógio e a liquidação o `state` segue Ganhando/Superado, mas a tela troca o selo por "APURANDO" e a frase "Martelo batido. Apurando o resultado…", sem posição e sem "Cobrir lance" (o lance já está bloqueado). Só esse rótulo é derivado no navegador, com `lotStatus` e o relógio do servidor; quando a liquidação sai, o `showcase:lot` refaz a lista e o ingresso vira Arrematado ou Perdido.
+- **Posição:** "é o 2º maior de 3" conta licitantes distintos pelo maior lance de cada um (o mesmo `rankFrom` da Sala). O token do comprovante só vem no ingresso Arrematado e só do próprio `Receipt`; "Ver comprovante" abre em outra guia e "Copiar link" copia `{origem}/c/{token}`.
+- **Tempo real:** a lista só muda com a resposta do `GET`. Evento de lote que não está na lista é ignorado, versão velha é descartada, rajadas viram uma consulta (300 ms), e `wallet:updated` e a reconexão do socket também refazem. Os anúncios da região viva ("Lote 018: você foi superado.") só saem entre duas respostas do servidor, nunca na carga inicial.
+- Na Carteira, cada lote de "Travado onde você lidera" leva ao ingresso (`/arremates#lote-018`). A linha CANCEL e os links "Conferir na auditoria" dos ingressos Perdido e Cancelado ficam para a S08.
+
 ## Catálogo: Tabela FIPE e Wikipedia
 
 Só o back-end fala com as APIs externas, e só em duas situações: as rotas `/catalog/*` (selects do Criar lote) e a criação do lote (`POST /lots`, que busca de novo o detalhe do carro na FIPE em vez de confiar no navegador). Vitrine, Sala, Painel e imagens leem só o banco: com a FIPE e a Wikipedia fora do ar, só o Criar lote mostra o aviso "A tabela FIPE não respondeu.", e nada do que foi digitado se perde.

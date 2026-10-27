@@ -305,6 +305,32 @@ Perguntas abertas:
 2. Textos marcados "(a revisar)" foram escritos aqui por falta de texto nas fontes (frases de `LEADING`, `WON`, `LOST`, `CANCELLED`, aba vazia, faixa de desatualizado).
 3. O PRD pede o status "perdido" mas o estado só aparece depois da liquidação; se preferir mostrar "Perdido" já no fim do relógio (antes de liquidar), pede mudança de regra R-7.3 (sugestão: manter "apurando").
 
+Decisões do build (27/10/2026; o spec de build `spec-s07-meus-arremates.md` tem o contexto):
+1. **Railway** no lugar de Neon, Render e Vercel; "migração aplicada no deploy" vale para o `migrate deploy` do start da API.
+2. **`BotaoCopiarLink` já era compartilhado** (S05): nada a extrair. Ganhou a prop opcional `ariaLabel`, para o nome acessível levar o título do lote ("Copiar link do comprovante do lote 018, Gol GTI 2.0 1996").
+3. **Ordem (R-7.9 e Q10):** o servidor ordena (ativos primeiro, `OUTBID` antes de `LEADING`, por `endsAt` crescente; `WON`, `LOST` e `CANCELLED` juntos por `endsAt` decrescente, desempate pelo número do lote). O cliente nunca reordena; as abas só filtram.
+4. **Pseudônimo próprio** vem de `MAX(Bid.pseudonym)` da consulta 1. O chip diz "Neste lote você é Licitante XXXX." sem a marca "VOCÊ" em ocre: o AC-7.21 pede só "Cobrir lance" em ocre e vence o §9.
+5. **"Ver comprovante" abre em outra guia** (`target="_blank"`, `rel="noopener noreferrer"`), como o link da Sala. O nome acessível carrega "(abre em outra guia)" dentro do `aria-label` (com `aria-label` o texto escondido seria ignorado).
+6. **Sem polling** enquanto há ingresso "apurando": a §7 manda evento, `wallet:updated` e reconexão, e o fechamento publica `showcase:lot`. Foi o que o Chrome real mostrou: a liquidação trocou o ingresso em segundos. Se faltar na prática, entra um `refetchInterval` com teto (item no `deferred-work.md`).
+7. **Anúncios** só os quatro da §8 e só entre duas respostas do servidor (nunca na carga inicial, nem para lote que acabou de entrar na lista); voltar a `LEADING` não anuncia. Cada anúncio é um nó novo da região viva (`key` pela sequência), para o leitor de tela repetir mesmo o texto igual.
+8. **Evento `showcase:lot`:** lote fora da lista é ignorado; versão menor que a já vista é descartada; versão igual só refaz se o status mudou (o fechamento não sobe `entryCount`, C10). A resposta do `GET` renova o que foi visto e vale em empate, exceto contra versão estritamente maior que um evento já trouxe.
+9. **Ocre** só no "Cobrir lance", por cartão (vários `OUTBID` podem ter vários).
+10. **"Apurando" derivado:** vale se o cartão já vem `CLOSING` **ou** se `lotStatus(lot, serverClock.now())` dá `CLOSING` (o tempo só anda para a frente, então o status do cartão nunca desmente o relógio). `settledAt` entra como nulo, porque todo `LEADING`/`OUTBID` é não liquidado (R-7.2). Com o relógio ainda sem acertar (`now <= 0`) vale só o status do cartão. Estado final nunca vira "apurando", e a aba "Em disputa" segue contando o ingresso (a aba olha o estado, não o relógio).
+11. **Cada visita é uma carga inicial:** a consulta `["me","bids"]` usa `gcTime: 0`, para uma lista guardada de outra visita não virar "transição" anunciada.
+12. **Ingresso fluido por container query** (`@container`, 44rem), não por janela: empilha (canhoto, corpo, valores, ações) em 390 px e vira três colunas (192 px · fluida · 200 px, colunas fixas para os divisores alinharem entre ingressos) a partir daí.
+13. **Canhoto = `LotTag`** (tom papel, nunca ocre). O ingresso não usa `CarPhoto`: a §9 não põe foto nele. Sem `Perforation` (acabamento da S09).
+14. **Vazio total** não desenha abas ("sem abas quebradas"): só a frase e "Ver a vitrine" como botão secundário.
+15. **Âncora `#lote-NNN`** é resolvida na primeira resposta do `GET`: a aba volta a "Todos", a página rola até o `<li>` e foca nele (`tabindex="-1"`). Hash de lote que não está na lista é ignorado.
+16. **Carimbo Perdido** é o "Sem lances" com texto próprio (`tinta2`, tracejado 4px, sem contorno, −2°), em corpo menor (20 px) como a §9 pede ("carimbo pequeno").
+17. **Carteira:** os itens de "Travado onde você lidera" viraram um só link ("Lote 007 · título · R$ X,00", nome acessível "Ver o lote 007, título, no Meus arremates"), apontando para `/arremates#lote-NNN`.
+
+Perguntas abertas, com a sugestão que o build adotou:
+1. **Ordenação (R-7.9):** adotada a da fatia (a mesma da Q10 do SPEC.md). Se preferir a ordem cronológica simples, é só o servidor.
+2. **Textos "(a revisar)":** adotados como estão em `MY_BIDS_TEXT`; a revisão de voz fica para a S09.
+3. **"Perdido" já no fim do relógio, antes de liquidar:** mantido "apurando" (sem mudar a R-7.3).
+4. **Anunciar a volta a "Você está ganhando"?** Sugestão adotada: não (a §8 lista só quatro anúncios). Se quiser, é uma linha em `transitionAnnouncement`.
+5. **`Em disputa` conta o ingresso apurando?** Sugestão adotada: sim (a aba olha o estado do servidor, não o relógio).
+
 ## 17. Definition of Done
 
 - [ ] `GET /me/bids` e `MyBidItem` em `packages/shared`; todos os AC `[auto]` verdes no CI.

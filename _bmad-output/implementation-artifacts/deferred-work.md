@@ -99,3 +99,23 @@
   evidence: É o que a §9.2 pede, mas sem a rotina de fechamento (S05) um lote vencido fica `CLOSING` para sempre, e cada visitante da Vitrine aberta faz uma consulta a cada 3 s. A conferência de abertura tem teto (`OPENING_CHECKS`); esta não.
   alvo: S05 (o `showcase:lot` do fechamento tira o cartão de "apurando"; conferir que o polling para em produção)
   resolved: S05, `showcaseRefetchInterval` com teto de 20 respostas novas e zera sem cartão apurando (commit 55d86a8, spec-s05-fechamento-comprovante.md); mutações feitas; no Chrome real local e no link público o `GET /lots` parou depois do `showcase:lot` do fechamento (0 consultas em 14 s e em 15 s).
+- source_spec: `_bmad-output/implementation-artifacts/spec-s07-meus-arremates.md`
+  summary: Teste de componente para `useMyBids` e para a fiação de `MyBidsScreen` (âncora, anúncio, erro com dados anteriores).
+  evidence: O web não tem ambiente de DOM (Vitest em node). A lógica está em funções puras (`my-bid-view`, `my-bids-tabs`, `my-bids-events`) e nos componentes renderizados como HTML estático; o hook, a âncora com foco, a região viva e a faixa de lista desatualizada foram conferidos só no Chrome real (item 83 do diário). Tirar o `useShowcaseLive(MY_BIDS_KEY)` ou o ouvinte de `wallet:updated` não derruba teste automático.
+  alvo: S09 (com jsdom ou Playwright, junto dos hooks da S04)
+- source_spec: `_bmad-output/implementation-artifacts/spec-s07-meus-arremates.md`
+  summary: Sem polling enquanto há ingresso "apurando": se o `showcase:lot` do fechamento se perder, o selo fica em "APURANDO" até o próximo evento, `wallet:updated` ou reconexão.
+  evidence: Decisão do build 6 (a §7 da fatia manda evento, `wallet:updated` e reconexão; o fechamento publica `showcase:lot`). No Chrome real a liquidação trocou o ingresso em segundos, e a queda do socket refez a lista na volta. Se faltar na prática, o caminho é um `refetchInterval` com teto, como o da Vitrine.
+  alvo: S09 (só se aparecer na prática)
+- source_spec: `_bmad-output/implementation-artifacts/spec-s07-meus-arremates.md`
+  summary: Botão "Conferir na auditoria" nos ingressos Perdido e Cancelado (`/lotes/{id}/auditoria`).
+  evidence: Oculto de propósito até a S08 (sem botão vazio nem link quebrado); `myBidView` devolve `actions: []` nesses estados e há teste que impede qualquer ação com "auditoria" antes da hora.
+  alvo: S08
+- source_spec: `_bmad-output/implementation-artifacts/spec-s07-meus-arremates.md`
+  summary: Revisão de voz dos textos "(a revisar)" da §8 (frases de Ganhando, Arrematado, Perdido, Cancelado, aba vazia, faixa de desatualizado, anúncios) e picote (`Perforation`) do ingresso.
+  evidence: Escritos na fatia por falta de texto nas fontes; o ingresso nasceu com a linha tracejada simples, como a §9 manda ("o picote é acabamento se sobrar tempo"). O ingresso também não usa `CarPhoto`: a §9 não põe foto no ingresso.
+  alvo: S09
+- source_spec: `_bmad-output/implementation-artifacts/spec-s07-meus-arremates.md`
+  summary: Anunciar a volta a "Você está ganhando" na região viva.
+  evidence: A §8 lista só quatro anúncios e `transitionAnnouncement` devolve `null` para `LEADING` (decisão do build 7). Quem está com leitor de tela só ouve quando perde, não quando recupera a frente.
+  alvo: S09 (decisão do Felipe)
