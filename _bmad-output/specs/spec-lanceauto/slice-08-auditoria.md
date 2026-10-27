@@ -587,9 +587,9 @@ Perguntas abertas (sugestão marcada):
 - [x] Teste de privacidade em todos os endpoints públicos (AC12).
 - [x] Tela T9 completa nos dois temas e a 390px; estados de §9 conferidos no Chrome real (85 verificações, ver o diário). Mutação no web: 13 de 13 mortas.
 - [x] Retrofits de links de §15 feitos e conferidos (Vitrine, Sala em todos os estados, Comprovante, Painel, Meus arremates).
-- [ ] Seed inteiro audita `OK` localmente (AC-8.14) e no deploy (Vitrine inteira = `OK`).
+- [x] Seed inteiro audita `OK` localmente (AC-8.14) e no deploy (os nove lotes da Vitrine = `OK`; cancelado só local).
 - [x] Texto da técnica (§15) copiado para o README.
-- [ ] Sem nova migração; deploy da API e do web feitos; smoke no link público: auditoria do lote arrematado do seed = Íntegro.
+- [x] Sem nova migração; deploy da API e do web feitos (web `SUCCESS` em c4c0e84, API `SUCCESS` em 5ffd270, mesmo código); smoke no link público (só leitura, 14 de 14): auditoria do lote arrematado do seed = Íntegro. CI verde.
 - [x] Commits atômicos em pt-BR; entrada no `progresso.md`.
 - [ ] **Pendência do Felipe:** leitor de tela (AC-8.29: "Veredito: …" uma vez, banner como alerta, nome acessível dos "ver inteiro").
 - [ ] **Pendência do Felipe:** aparelho real (toque e 390px de verdade).

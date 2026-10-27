@@ -2,7 +2,7 @@
 title: 'S08 — Auditoria pública e verificação da cadeia HMAC'
 type: 'feature'
 created: '2026-10-27'
-status: 'in-progress'
+status: 'done'
 baseline_commit: 'df2895b7b8112c57a7ae37fd6bbec3e4edfcb6fc'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -70,22 +70,22 @@ O build corre em **duas fases**, cada uma com `lint`, `typecheck`, `test` e `bui
 ### Fase 1 — Servidor: domínio, shared, `GET /lots/:id/audit`
 
 **Execution:**
-- [ ] Linha de base -- raiz com a árvore limpa (esperado shared 121, api 386, web 372).
-- [ ] `domain/audit-chain.ts` -- teste antes (§14 itens 1–7): cadeias válidas de 0/1/5 linhas, tabela de adulteração por campo e linha, remoções, selo, comprovante, precedência, chave errada, CANCEL com nulos, todos os `consistencyIssue`.
-- [ ] `packages/shared/src/audit.ts` -- teste antes: `abbreviateHash`, `verdictSentence` e `problemBanner` para cada linha da §8 (plural "1 lance"/"2 lances", "registros" com CANCEL, `receiptOk` true/false no `BROKEN_AT`), schema zod aceitando o DTO.
-- [ ] `test/helpers/tamper.ts` + `audit.service.ts` + `routes/audit.ts` + `app.ts` -- integração AC-8.1 a 8.22 e 8.36 a 8.39, sanidade do trigger e "trigger habilitado depois de cada caso" (inclusive quando `fn` lança); AC-8.40 em `audit.rate-limit.test.ts`.
-- [ ] Prova de mutação no servidor -- precedência invertida, `eq` sem checar tamanho/sempre `===` fora do `timingSafeEqual`, `sealOk` sem `entryCount === rows.length`, linhas após a ruim como `OK`, `consistencyIssue` ignorado, `mine` sem token, token do `Receipt` no DTO, leitura fora da transação (se o teste concorrente pegar).
-- [ ] Fechamento da fase -- raiz com saída real; push; CI verde; Railway API `SUCCESS`; smoke de leitura `GET /lots/{arrematado do seed}/audit` = `OK` e sem `token`; diário.
+- [x] Linha de base -- raiz com a árvore limpa (esperado shared 121, api 386, web 372).
+- [x] `domain/audit-chain.ts` -- teste antes (§14 itens 1–7): cadeias válidas de 0/1/5 linhas, tabela de adulteração por campo e linha, remoções, selo, comprovante, precedência, chave errada, CANCEL com nulos, todos os `consistencyIssue`.
+- [x] `packages/shared/src/audit.ts` -- teste antes: `abbreviateHash`, `verdictSentence` e `problemBanner` para cada linha da §8 (plural "1 lance"/"2 lances", "registros" com CANCEL, `receiptOk` true/false no `BROKEN_AT`), schema zod aceitando o DTO.
+- [x] `test/helpers/tamper.ts` + `audit.service.ts` + `routes/audit.ts` + `app.ts` -- integração AC-8.1 a 8.22 e 8.36 a 8.39, sanidade do trigger e "trigger habilitado depois de cada caso" (inclusive quando `fn` lança); AC-8.40 em `audit.rate-limit.test.ts`.
+- [x] Prova de mutação no servidor -- precedência invertida, `eq` sem checar tamanho/sempre `===` fora do `timingSafeEqual`, `sealOk` sem `entryCount === rows.length`, linhas após a ruim como `OK`, `consistencyIssue` ignorado, `mine` sem token, token do `Receipt` no DTO, leitura fora da transação (se o teste concorrente pegar).
+- [x] Fechamento da fase -- raiz com saída real; push; CI verde; Railway API `SUCCESS`; smoke de leitura `GET /lots/{arrematado do seed}/audit` = `OK` e sem `token`; diário.
 
 ### Fase 2 — Web: tela, retrofits, verificação e entrega
 
 **Execution:**
-- [ ] Web puro, com teste antes -- `audit-view.ts` (rótulo/ícone por status, contadores, meta, 400 ms e clique ignorado durante a verificação) e `lotCardHref`/`myBidView` atualizados.
-- [ ] Tela T9 -- grupo `(auditoria)`, `AuditScreen` e componentes; estados Verificando, Íntegro, os três Adulterados, ao vivo, agendado, sem lances (`FeedbackState` vazio), cancelado, apurando, 404, erro com e sem resultado anterior ("DESATUALIZADO"), reduced-motion; live region e banner `role="alert"`; `HashCell` com `aria-expanded`/`aria-controls`, alvo 44 px.
-- [ ] Retrofits -- Vitrine, Sala, Comprovante, Painel, Meus arremates (e os testes que proibiam "auditoria").
-- [ ] Prova de mutação no web -- cartão Encerrado indo à Sala, LOST sem "Conferir na auditoria", status trocado de rótulo, segundo clique disparando outra chamada, Verificando sem mínimo.
-- [ ] Documentação -- §16 e §17 da fatia, README com o texto da técnica, `deferred-work.md`, diário.
-- [ ] Verificação -- raiz; Chrome real (estados da §9, claro/noite, 390 px, teclado, adulteração pelo psql no banco descartável vendo "Adulterado" na linha 03 e o banner de selo); push, CI verde, Railway web e API `SUCCESS` no mesmo SHA, smoke público só de leitura (arrematado do seed = Íntegro; seed inteiro `OK`).
+- [x] Web puro, com teste antes -- `audit-view.ts` (rótulo/ícone por status, contadores, meta, 400 ms e clique ignorado durante a verificação) e `lotCardHref`/`myBidView` atualizados.
+- [x] Tela T9 -- grupo `(auditoria)`, `AuditScreen` e componentes; estados Verificando, Íntegro, os três Adulterados, ao vivo, agendado, sem lances (`FeedbackState` vazio), cancelado, apurando, 404, erro com e sem resultado anterior ("DESATUALIZADO"), reduced-motion; live region e banner `role="alert"`; `HashCell` com `aria-expanded`/`aria-controls`, alvo 44 px.
+- [x] Retrofits -- Vitrine, Sala, Comprovante, Painel, Meus arremates (e os testes que proibiam "auditoria").
+- [x] Prova de mutação no web -- cartão Encerrado indo à Sala, LOST sem "Conferir na auditoria", status trocado de rótulo, segundo clique disparando outra chamada, Verificando sem mínimo.
+- [x] Documentação -- §16 e §17 da fatia, README com o texto da técnica, `deferred-work.md`, diário.
+- [x] Verificação -- raiz; Chrome real (estados da §9, claro/noite, 390 px, teclado, adulteração pelo psql no banco descartável vendo "Adulterado" na linha 03 e o banner de selo); push, CI verde, Railway web e API `SUCCESS` no mesmo SHA, smoke público só de leitura (arrematado do seed = Íntegro; seed inteiro `OK`).
 
 **Acceptance Criteria:** AC-8.1 a 8.22 e 8.36 a 8.40 [auto] fecham na Fase 1; AC-8.23 a 8.35 [manual] na Fase 2 (Chrome local e link público). Leitor de tela (AC-8.29) e aparelho real ficam como pendência do Felipe, sem marcar feito.
 
@@ -103,6 +103,22 @@ O build corre em **duas fases**, cada uma com `lint`, `typecheck`, `test` e `bui
 10. **Texto da técnica vai ao README nesta fatia** (a §17 permite); a revisão final do README é da S09.
 
 ## Implementation Notes
+
+Implementada direto, sem subagente (o prompt da sessão trazia banco, portas e regras de commit que o spec não repete). Linha de base na raiz: shared 121, api 386, web 372. Depois: shared **150** (+29), api **495** (+109), web **416** (+44); lint, typecheck e build exit 0; CI verde em c4c0e84; Railway web `SUCCESS` em c4c0e84 e API `SUCCESS` em 5ffd270 (nada de `apps/api` mudou depois).
+
+Desvios e decisões menores, nenhum mexe no bloco congelado (as 16 decisões completas estão na §16 da fatia):
+- **Chave do limitador** é a padrão por IP (sem `keyGenerator`): a decisão do build 4 do spec dizia `audit:{ip}`, mas o `express-rate-limit` 8 exige o helper de IPv6 para chave própria e cada limitador já tem a sua contagem.
+- **404 sem validar UUID** (decisão 3) e **`receiptChecked`** com `RECEIPT_MISSING` (decisão 5) como previstos.
+- **Retrato da leitura** provado por teste determinístico (`prisma.$extends` injeta um lance entre as leituras); as 20 auditorias paralelas não bastavam: a mutação `ReadCommitted` sobreviveu até o teste novo existir.
+- **Frases novas** para selo fora com 0 e com 1 linha, e verbo no singular com N = 1 (a tabela da §8 não cobria); todas "(a revisar)".
+- **Contraste:** o `.85` do elo quebrado ficou só nos dados da linha (a Situação a 100%) e "NÃO CONFERE" ficou em tinta com ícone e borda em ferrugem, porque ferrugem a 85% dava 4,26:1 no claro e 3,79:1 na noite, e sobre o fundo `falha` dava 3,80:1 na noite.
+- **Ordem do veredito:** hora e "Verificar de novo" antes dos contadores, para o Tab seguir a leitura.
+- **`refetch({ cancelRefetch: false })`** para dois cliques seguidos serem uma só chamada (o padrão da biblioteca cancela e refaz).
+- **Texto da técnica no README** já nesta fatia.
+- **Sem ocorrência de bug da S06**; as pendências M2, B1, B2, B3 não foram tocadas.
+- **Deslizes meus:** regex do `receiptCode` com 3 dígitos fixos (a sequência de lotes passa de 999 nos testes); algumas rodadas do vitest sem exportar `DATABASE_URL_TEST` (o `globalSetup` aplicou `migrate deploy` em `lanceauto_test`, sem migração pendente).
+
+Provas de mutação (cópia no scratchpad, restauração por cópia, nunca `git checkout`): domínio 13/13 mortas, servidor e rota 13/13, web 13/13. Chrome real: 85 de 85 verificações (`.tmp/s08-chrome.mjs`); smoke público de leitura: 14 de 14 (`.tmp/s08-smoke-prod.mjs`). Pendências do Felipe, sem marcar feito: leitor de tela (AC-8.29) e aparelho real.
 
 ## Spec Change Log
 
