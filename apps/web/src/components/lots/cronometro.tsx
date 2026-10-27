@@ -82,9 +82,8 @@ export function Cronometro({ status, startsAt, endsAt, originalEndsAt, size, lab
         {shownLabel}
       </span>
       <span role="timer" aria-label={ariaLabel} className="relative font-semibold leading-none" style={{ fontSize: digits }}>
-        <span aria-hidden="true" className="absolute inset-0 opacity-10" style={{ color: "var(--c-led)" }}>
-          {text.replace(/\d/g, "8")}
-        </span>
+        {/* Segmentos apagados do mostrador: decoração pura, fora do DOM como texto (pseudo-elemento em globals.css). */}
+        <span aria-hidden="true" data-ghost={text.replace(/\d/g, "8")} className="la-segmentos-apagados absolute inset-0" />
         <span
           aria-hidden="true"
           className="relative"
