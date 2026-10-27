@@ -18,6 +18,11 @@
   --c-ocre-hover: #174bc2;
   --c-ocre-texto: #0033a0;
   --c-sobre-ocre: #ffffff;
+  --c-ocre-ativo: #001e63;
+  --c-ocre-borda: transparent;
+  --c-botao-texto: var(--c-ocre-texto);
+  --c-botao-borda: var(--c-ocre);
+  --c-botao-borda-hover: var(--c-ocre);
   --c-selecionado: #e8efff;
   --c-foco: #174bc2;
   --c-destaque: #0033a0;
@@ -56,6 +61,11 @@
 --c-ocre-hover: #2459d6;
 --c-ocre-texto: #6b93ff;
 --c-sobre-ocre: #ffffff;
+--c-ocre-ativo: #0033a0;
+--c-ocre-borda: #3d6dff;
+--c-botao-texto: var(--c-tinta);
+--c-botao-borda: var(--c-linha);
+--c-botao-borda-hover: var(--c-ocre-texto);
 --c-selecionado: #001e63;
 --c-foco: #8aaaff;
 --c-destaque: #3d6dff;
@@ -94,6 +104,11 @@
   --c-ocre-hover: #2459d6;
   --c-ocre-texto: #6b93ff;
   --c-sobre-ocre: #ffffff;
+  --c-ocre-ativo: #0033a0;
+  --c-ocre-borda: #3d6dff;
+  --c-botao-texto: var(--c-tinta);
+  --c-botao-borda: var(--c-linha);
+  --c-botao-borda-hover: var(--c-ocre-texto);
   --c-selecionado: #001e63;
   --c-foco: #8aaaff;
   --c-destaque: #3d6dff;
@@ -285,17 +300,12 @@ dialog::backdrop {
 .cabecalho {
   --c-linha: #8fa3cf;
   --c-sombra: #c9d5ee;
-  --c-sobre-ocre: #f5eedf;
   /* Provisório: o menu do perfil ainda usa a sombra dura do cabeçalho aprovado até a etapa 9. */
   --sh-cartao: 3px 3px 0 var(--c-sombra);
   --h-azul: var(--c-destaque);
   --h-divisor: var(--c-borda);
   --h-ativo-texto: var(--c-ocre-texto);
   --h-valor: var(--c-ocre-texto);
-  --h-cta: var(--c-ocre);
-  --h-cta-hover: var(--c-ocre-hover);
-  --h-botao-texto: var(--c-ocre-texto);
-  --h-botao-borda: var(--c-ocre);
   --h-avatar-fundo: var(--f-azul);
   --h-avatar-borda: var(--f-azul);
   --h-avatar-texto: #ffffff;
@@ -311,8 +321,6 @@ dialog::backdrop {
   --c-sombra: #05070a;
   --h-ativo-texto: var(--c-tinta);
   --h-valor: var(--c-tinta);
-  --h-botao-texto: var(--c-tinta);
-  --h-botao-borda: #5a6678;
   --h-avatar-fundo: var(--f-azul-profundo);
   --h-avatar-borda: var(--c-destaque);
   --h-avatar-texto: var(--c-tinta);
@@ -327,8 +335,6 @@ dialog::backdrop {
     --c-sombra: #05070a;
     --h-ativo-texto: var(--c-tinta);
     --h-valor: var(--c-tinta);
-    --h-botao-texto: var(--c-tinta);
-    --h-botao-borda: #5a6678;
     --h-avatar-fundo: var(--f-azul-profundo);
     --h-avatar-borda: var(--c-destaque);
     --h-avatar-texto: var(--c-tinta);

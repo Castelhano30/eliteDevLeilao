@@ -34,8 +34,6 @@ describe("cabeçalho: claro por padrão, escuro no tema noite", () => {
     expect(tokensClaro).toMatch(/--c-suave:\s*#e8efff/);
     expect(tokensClaro).toMatch(/--c-ocre:\s*#0033a0/);
     expect(tokensClaro).toMatch(/--c-ocre-hover:\s*#174bc2/);
-    expect(light).toMatch(/--h-cta:\s*var\(--c-ocre\)/);
-    expect(light).toMatch(/--h-cta-hover:\s*var\(--c-ocre-hover\)/);
     expect(light).toMatch(/--h-azul:\s*var\(--c-destaque\)/);
     expect(light).toMatch(/--h-divisor:\s*var\(--c-borda\)/);
     expect(light).toMatch(/color-scheme:\s*light/);

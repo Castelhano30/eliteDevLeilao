@@ -39,7 +39,8 @@ describe("BidTicketList — ingressos (S07 §9)", () => {
 
   it("só 'Cobrir lance' é ocre, e uma vez por ingresso OUTBID", () => {
     const html = render();
-    expect(html.match(/bg-ocre/g)?.length).toBe(1);
+    // Só o preenchimento de repouso conta: `hover:bg-ocreHover` e `active:bg-ocreAtivo` não são outro botão primário.
+    expect(html.match(/(?<=["\s])bg-ocre(?=["\s])/g)?.length).toBe(1);
     expect(html.match(/Cobrir lance<\/a>/g)).toHaveLength(1);
     // O chip do pseudônimo não leva a marca VOCÊ em ocre (AC-7.21).
     expect(html).not.toContain(">VOCÊ<");
