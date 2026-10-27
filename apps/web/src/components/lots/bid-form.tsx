@@ -95,6 +95,7 @@ export function BidForm({ id, lot, situation, blockReason }: BidFormProps) {
         label="Seu lance"
         value={field.text}
         maxDigits={BID_MAX_DIGITS}
+        tamanho="lance"
         onChange={(text) => edit({ text, dirty: true })}
         invalid={refusal?.invalid === true}
         help={`Mínimo aceito ${formatBRL(lot.minimumBidCents)} · incremento ${formatBRL(lot.minIncrementCents)}`}
@@ -114,7 +115,7 @@ export function BidForm({ id, lot, situation, blockReason }: BidFormProps) {
         loading={sending}
         loadingText={BID_TEXT.sending}
         aria-busy={sending || undefined}
-        className="w-full !min-h-12 !text-[24px]"
+        size="sala"
       >
         Dar lance
       </Button>

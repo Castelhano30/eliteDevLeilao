@@ -13,7 +13,7 @@ import {
   type LedgerEntryDto,
   type WalletPageDto,
 } from "@lanceauto/shared";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { PageShell } from "@/components/ui/page-shell";
@@ -194,7 +194,7 @@ export function WalletScreen() {
         <h2 id="depositar" className="t-display-secao mb-4">
           Depositar
         </h2>
-        <div className="mb-4 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-3" role="group" aria-label="Valores rápidos">
+        <div className="mb-4 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2" role="group" aria-label="Valores rápidos">
           {QUICK_AMOUNTS.map((option) => {
             const pressed = quick === option.cents;
             return (
@@ -207,9 +207,7 @@ export function WalletScreen() {
                   setCustom("");
                   setError(null);
                 }}
-                className={`t-botao min-h-botao rounded-nenhum border-2 border-linha px-2 ${
-                  pressed ? "bg-ocre text-sobreOcre shadow-botao" : "bg-papel text-tinta"
-                }`}
+                className={`${buttonClasses("atalho")} w-full whitespace-nowrap !px-2 !text-[14px]`}
               >
                 {option.label}
               </button>

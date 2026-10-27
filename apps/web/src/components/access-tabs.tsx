@@ -46,7 +46,7 @@ export function AccessTabs<Id extends string>({ label, tabs, value, onChange }: 
 
   return (
     <div>
-      <div role="tablist" aria-label={label} className="flex">
+      <div role="tablist" aria-label={label} className="mb-4 flex gap-1 rounded-xl bg-suave p-1">
         {tabs.map((tab, index) => {
           const active = tab.id === value;
           return (
@@ -63,8 +63,8 @@ export function AccessTabs<Id extends string>({ label, tabs, value, onChange }: 
               tabIndex={active ? 0 : -1}
               onClick={() => onChange(tab.id)}
               onKeyDown={(event) => onKeyDown(event, index)}
-              className={`t-botao relative top-[3px] min-h-12 flex-1 rounded-nenhum border-[3px] border-linha px-4 ${
-                active ? "bg-papel text-tinta border-b-papel" : "bg-suave text-tinta2"
+              className={`t-botao min-h-11 flex-1 rounded-lg border px-4 transition-[color,background-color,border-color,box-shadow] duration-150 ease-out ${
+                active ? "border-borda bg-papel text-ocreTexto shadow-cartao" : "border-transparent bg-transparent text-tinta2 hover:text-tinta"
               }`}
             >
               {tab.label}
@@ -72,7 +72,7 @@ export function AccessTabs<Id extends string>({ label, tabs, value, onChange }: 
           );
         })}
       </div>
-      <div className="rounded-nenhum border-[3px] border-linha bg-papel p-6 shadow-[8px_8px_0_var(--c-sombra)]">
+      <div className="rounded-2xl border border-borda bg-papel p-6 shadow-cartao">
         {tabs.map((tab) => (
           <div
             key={tab.id}

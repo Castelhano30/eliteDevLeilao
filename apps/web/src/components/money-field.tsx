@@ -21,6 +21,8 @@ export interface MoneyFieldProps {
   maxDigits?: number;
   /** Ids extras que descrevem o campo (ex.: a recusa que está fora dele). */
   describedBy?: string;
+  /** `lance` é o campo da Sala (56px, valor em 28px); o padrão serve ao depósito e ao Criar lote. */
+  tamanho?: "padrao" | "lance";
 }
 
 /** Campo de valor em reais inteiros: "R$" + dígitos com ponto de milhar + ",00". Reaplica a máscara a cada tecla ou colagem. */
@@ -36,6 +38,7 @@ export function MoneyField({
   id,
   maxDigits = DEPOSIT_MAX_DIGITS,
   describedBy,
+  tamanho,
 }: MoneyFieldProps) {
   const pending = useRef<{ input: HTMLInputElement; caret: number } | null>(null);
 
@@ -70,6 +73,7 @@ export function MoneyField({
       help={help}
       disabled={disabled}
       describedBy={describedBy}
+      tamanho={tamanho}
     />
   );
 }
