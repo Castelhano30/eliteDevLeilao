@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import request from "supertest";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, onTestFailed } from "vitest";
 import { BID_TEXT } from "@lanceauto/shared";
 import { FakeClock } from "../infra/clock";
 import { makeTestApp, testEnv } from "../../test/helpers/app";
@@ -15,6 +15,7 @@ import {
 } from "../../test/helpers/bids";
 import { createTestPrisma, testDatabaseUrl, truncateAll } from "../../test/helpers/db";
 import { insertLot } from "../../test/helpers/lots";
+import { baseSeed, seededShuffle } from "../../test/helpers/seeded-random";
 import { entryHash, genesisHash, sealHash } from "../domain/audit-chain";
 
 const KEY = testEnv.AUDIT_HMAC_KEY;
@@ -528,11 +529,17 @@ describe.skipIf(!testDatabaseUrl)("lances (integração, DATABASE_URL_TEST)", ()
       await assertLotInvariants(prisma, lotId);
     });
 
-    /** Uma rodada do AC-3.39: valores crescentes distintos, ordem de chegada embaralhada, saldos diferentes. */
+    // Semente da ordem de chegada: TEST_SEED repete uma falha; a base e a rodada saem na mensagem de quem falhar.
+    const seed = baseSeed();
+    let roundCount = 0;
+
+    /** Uma rodada do AC-3.39: valores crescentes distintos, ordem de chegada embaralhada pela semente, saldos diferentes. */
     async function round(crowd: TestUser[], target: string, shuffle: boolean) {
       const amounts = crowd.map((_, index) => 2_500_000 + index * 100_000);
-      const order = crowd.map((_, index) => index);
-      if (shuffle) order.sort(() => Math.random() - 0.5);
+      const roundSeed = seed + roundCount++;
+      onTestFailed(() => console.error(`rodada embaralhada com semente ${roundSeed} (TEST_SEED=${seed})`));
+      const natural = crowd.map((_, index) => index);
+      const order = shuffle ? seededShuffle(natural, roundSeed) : natural;
       const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("rodada travou (deadlock?)")), 10_000));
       const results = await Promise.race([
         Promise.all(order.map((index) => postBid(app, crowd[index]!, target, amounts[index]!, null))),
@@ -610,7 +617,19 @@ describe.skipIf(!testDatabaseUrl)("lances (integração, DATABASE_URL_TEST)", ()
       await assertLotInvariants(prisma, lotId);
     });
 
-    it("AC-3.43: o GET nunca mostra o lance atual sem a linha correspondente no histórico", async () => {
+    it("AC-3.43: depois de cada lance o GET mostra o lance atual com a sua linha, em qualquer ordem de gravação", async () => {
+      // Determinístico: um lance de cada vez, lendo entre eles. A versão concorrente fica no teste seguinte.
+      const crowd = await bidders(6, 50_000_000, "Seq");
+      for (const [index, user] of crowd.entries()) {
+        expect((await postBid(app, user, lotId, 2_500_000 + index * 100_000, index === 0 ? null : 2_500_000 + (index - 1) * 100_000)).status).toBe(201);
+        const { lot, bids } = (await request(app).get(`/lots/${lotId}`)).body;
+        expect(bids).toHaveLength(index + 1);
+        expect(lot.version).toBe(index + 1);
+        expect(bids[0].amountCents).toBe(lot.currentBidCents);
+      }
+    });
+
+    it("AC-3.43b: sob escrita concorrente o GET nunca mostra o lance atual sem a linha correspondente no histórico", async () => {
       const crowd = await bidders(8, 50_000_000, "Rap");
       const readers = Array.from({ length: 40 }, () => request(app).get(`/lots/${lotId}`));
       const writers = crowd.map((user, index) => postBid(app, user, lotId, 2_500_000 + index * 100_000, null));
