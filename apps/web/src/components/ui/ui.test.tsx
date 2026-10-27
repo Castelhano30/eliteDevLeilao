@@ -4,6 +4,7 @@ import { DataTable } from "./data-table";
 import { Field } from "./field";
 import { FilterTabs } from "./filter-tabs";
 import { IdentityChip } from "./identity-chip";
+import { PlacarPosicao } from "../lots/placar-posicao";
 import { LotTag } from "./lot-tag";
 import { RefusalMessage } from "./refusal-message";
 import { Stamp } from "./stamp";
@@ -99,6 +100,35 @@ describe("Stamp", () => {
     const html = renderToStaticMarkup(<Stamp variant="arrematado" animate />);
     expect(html).toContain("la-bate");
     expect(html).toContain("rotate(-6deg)");
+  });
+
+  it("Perdido: tinta2, tracejado, sem contorno e inclinado em -2° (S07 §9)", () => {
+    const html = renderToStaticMarkup(<Stamp variant="perdido" />);
+    expect(html).toContain("Perdido");
+    expect(html).toContain("4px dashed var(--c-tinta2)");
+    expect(html).toContain("rotate(-2deg)");
+    expect(html).not.toContain("outline");
+  });
+
+  it("Cancelado segue sólido, com contorno, em -4°", () => {
+    const html = renderToStaticMarkup(<Stamp variant="cancelado" />);
+    expect(html).toContain("4px solid var(--c-tinta2)");
+    expect(html).toContain("rotate(-4deg)");
+    expect(html).toContain("outline");
+  });
+});
+
+describe("PlacarPosicao", () => {
+  it("tom neutro: tinta sobre fundo, só o título quando não há subtítulo", () => {
+    const html = renderToStaticMarkup(<PlacarPosicao tone="neutro" title="APURANDO" />);
+    expect(html).toContain("APURANDO");
+    expect(html).toContain("bg-tinta");
+    expect(html).not.toContain('<p class="mt-1');
+  });
+
+  it("verde e ferrugem seguem com o subtítulo", () => {
+    expect(renderToStaticMarkup(<PlacarPosicao tone="verde" title="VOCÊ ESTÁ GANHANDO" sub="1º de 2" />)).toContain("1º de 2");
+    expect(renderToStaticMarkup(<PlacarPosicao tone="ferrugem" title="X" sub="2º de 2" />)).toContain("bg-ferrugem");
   });
 });
 

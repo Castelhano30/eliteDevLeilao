@@ -1,4 +1,4 @@
-export type StampVariant = "ao-vivo" | "arrematado" | "sem-lances" | "integro" | "adulterado" | "cancelado";
+export type StampVariant = "ao-vivo" | "arrematado" | "sem-lances" | "integro" | "adulterado" | "cancelado" | "perdido";
 
 const VARIANTS: Record<StampVariant, { label: string; color: string; rotate: number; dashed?: boolean }> = {
   "ao-vivo": { label: "Ao vivo", color: "var(--c-ferrugem)", rotate: -5 },
@@ -7,6 +7,7 @@ const VARIANTS: Record<StampVariant, { label: string; color: string; rotate: num
   integro: { label: "Íntegro", color: "var(--c-verde)", rotate: -7 },
   adulterado: { label: "Adulterado", color: "var(--c-ferrugem)", rotate: 4 },
   cancelado: { label: "Cancelado", color: "var(--c-tinta2)", rotate: -4 },
+  perdido: { label: "Perdido", color: "var(--c-tinta2)", rotate: -2, dashed: true },
 };
 
 export interface StampProps {
