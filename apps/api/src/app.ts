@@ -15,11 +15,13 @@ import { makeImageStore, type ImageDownloader, type ImageStoreOptions } from "./
 import { makeWikipedia, type ImageSuggestionPort } from "./infra/wikipedia";
 import { requestContext } from "./middleware/request-context";
 import { accountRouter } from "./routes/account";
+import { auditRouter } from "./routes/audit";
 import { authRouter } from "./routes/auth";
 import { healthRouter } from "./routes/health";
 import { myBidsRouter } from "./routes/my-bids";
 import { receiptsRouter } from "./routes/receipts";
 import { catalogRouter, lotsRouter } from "./routes/lots";
+import { makeAuditService } from "./services/audit.service";
 import { makeAuthService } from "./services/auth.service";
 import { makeBidService } from "./services/bid.service";
 import { makeCancelService } from "./services/cancel.service";
@@ -126,6 +128,7 @@ export function composeApp({
   const settlementJob = makeSettlementJob({ db, clock, settlement, publisher, logger });
   const receiptService = makeReceiptService({ db });
   const myBidsService = makeMyBidsService({ db, clock });
+  const auditService = makeAuditService({ db, clock, auditKey: env.AUDIT_HMAC_KEY });
 
   app.use(healthRouter(db));
   app.use(authRouter(authService, env.AUTH_RATE_LIMIT_MAX));
@@ -134,6 +137,7 @@ export function composeApp({
   app.use(lotsRouter(auth, lotService, bidService, cancelService, clock, publisher));
   app.use(receiptsRouter(receiptService));
   app.use(myBidsRouter(auth, myBidsService));
+  app.use(auditRouter(auth, auditService));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
