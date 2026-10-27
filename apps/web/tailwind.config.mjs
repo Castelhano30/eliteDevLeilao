@@ -28,6 +28,8 @@ const config = {
         faixaPlaca: "var(--f-faixa-placa)",
         brasilTexto: "var(--f-brasil-texto)",
         digitoPlaca: "var(--f-digito-placa)",
+        logoPapel: "var(--f-logo-papel)",
+        logoTinta: "var(--f-logo-tinta)",
         linhaCentralPlaca: "var(--f-linha-central-placa)",
         rotuloRelogio: "var(--f-rotulo-relogio)",
         rotuloNotaPainel: "var(--f-rotulo-nota-painel)",

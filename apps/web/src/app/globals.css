@@ -78,6 +78,9 @@
   --f-faixa-placa: #0033a0;
   --f-brasil-texto: #ffffff;
   --f-digito-placa: #f5eedf;
+  /* O logo é uma placa clara também no tema noite. */
+  --f-logo-papel: #f5eedf;
+  --f-logo-tinta: #1e1c19;
   --f-linha-central-placa: #000000;
   --f-rotulo-relogio: #8a8273;
   --f-rotulo-nota-painel: #b3aa99;

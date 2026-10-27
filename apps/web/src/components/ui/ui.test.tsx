@@ -5,6 +5,7 @@ import { Field } from "./field";
 import { FilterTabs } from "./filter-tabs";
 import { IdentityChip } from "./identity-chip";
 import { PlacarPosicao } from "../lots/placar-posicao";
+import { Logo } from "./logo";
 import { LotTag } from "./lot-tag";
 import { RefusalMessage } from "./refusal-message";
 import { Stamp } from "./stamp";
@@ -155,7 +156,19 @@ describe("LotTag", () => {
   });
 });
 
-describe("Stamp", () => {
+describe("Logo", () => {
+  // A placa é clara nos dois temas: nada dela usa token que escurece no tema noite.
+  it.each(["tela", "manual"] as const)("%s: usa só as cores fixas da placa", (size) => {
+    const html = renderToStaticMarkup(<Logo size={size} />);
+    expect(html).toContain("bg-logoPapel");
+    expect(html).toContain("border-logoTinta");
+    // `!`: a regra global `a { color }` fica fora de layer e venceria a utility sem ele.
+    expect(html).toContain("!text-logoTinta");
+    expect(html).not.toMatch(/\b(bg-papel|border-tinta|text-tinta|bg-tinta)\b/);
+  });
+});
+
+describe("Stamp (tamanho)", () => {
   it("o tamanho pequeno usa 20 px e não quebra linha", () => {
     const small = renderToStaticMarkup(<Stamp variant="arrematado" size="pequeno" />);
     expect(small).toContain("font-size:20px");
