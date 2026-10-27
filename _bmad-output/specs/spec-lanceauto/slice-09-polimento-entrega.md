@@ -389,14 +389,14 @@ Nota de propriedade (rastreabilidade): `O4`/`TST` têm dono nominal nesta fatia,
 
 ## 17. Definition of Done
 
-- [ ] Todas as fatias S00–S08 entregues e com DoD marcado.
-- [ ] Seed final (001–005) reescrito por esta fatia (R-9.12), por services, sem rede, com `allowPast` só no seed e `pg_advisory_lock`; auditoria `OK` em todos; `seed:demo` funcionando; seed seguro em redeploy (onde roda no Render confirmado no dia 1).
-- [ ] Checklists §9.1 (a11y), §9.2 (responsivo), §9.3 (temas), §9.4 (estados globais) passados e registrados; axe sem violações críticas/sérias nos fluxos centrais.
-- [ ] 404/erro globais; `/kit` 404 em produção; sem stubs, TODOs ou `console.log`.
-- [ ] Resiliência com FIPE/Wikipedia fora comprovada (AC-9.10 a AC-9.14).
-- [ ] CI verde (lint, typecheck, test, build) e suíte completa local verde.
+- [x] Todas as fatias S00–S08 entregues e com DoD marcado.
+- [x] Seed final (001–005) reescrito por esta fatia (R-9.12), por services, sem rede, com `allowPast` só no seed e `pg_advisory_lock`; auditoria `OK` em todos; `seed:demo` funcionando; seed seguro em redeploy (onde roda no Render confirmado no dia 1). **Feito (27/10/2026).** No Railway o seed roda no start e, com usuários, não faz nada; a produção atual não foi recriada (decisão do Felipe pendente).
+- [x] Checklists §9.1 (a11y), §9.2 (responsivo), §9.3 (temas), §9.4 (estados globais) passados e registrados; axe sem violações críticas/sérias nos fluxos centrais. **Feito no Chrome real headless** (152 combinações + teclado + axe, 0 crítica/séria); leitor de tela (NVDA) e aparelho real ficam com o Felipe.
+- [x] 404/erro globais; `/kit` 404 em produção; sem stubs, TODOs ou `console.log`. **Feito.**
+- [x] Resiliência com FIPE/Wikipedia fora comprovada (AC-9.10 a AC-9.14). **Feito** (testes AC-9.10 a 9.12; Chrome AC-9.13 e 9.14).
+- [x] CI verde (lint, typecheck, test, build) e suíte completa local verde. **Feito** (`cd8b533`).
 - [ ] README completo (D1–D8) e `.env.example` completo; Docker Compose testado por alguém de fora.
 - [ ] Deploy final com migrações e seed; smoke e AC1–AC15 verificados no link público; resultados anotados no `progresso.md`.
 - [ ] **Entrega (D9):** repositório **público** no GitHub (sem segredos no histórico); formulário da Verzel (https://elitedev.verzel.com.br/?elite-dev-2026-2) preenchido com: nome completo e e-mail; link do repositório; "Tem mais de um repositório?" = não (monorepo); link público do deploy; "Onde e como você usou IA".
 - [ ] **Relato de IA (D10):** texto final montado a partir do registro do `progresso.md`: PRD e pesquisa de APIs com Claude (revisão e ajustes de Felipe); design com Claude Design; planejamento (UX, arquitetura, spec) e implementação com BMad e Claude Code; para cada etapa dizer o que foi revisado e o que mudou (**preencher com fatos reais; não inventar**). Estar pronto para explicar qualquer trecho do código.
-- [ ] Commits atômicos em pt-BR; `progresso.md` atualizado ao fim de cada etapa e `git push`.
+- [x] Commits atômicos em pt-BR; `progresso.md` atualizado ao fim de cada etapa e `git push`.
