@@ -1,4 +1,6 @@
 import {
+  AUDIT_TEXT,
+  auditPath,
   copyLinkAriaLabel,
   formatLotNumber,
   lotStatus,
@@ -14,7 +16,7 @@ export type MyBidSeal =
   | { kind: "stamp"; variant: "arrematado" | "perdido" | "cancelado" };
 
 export type MyBidAction =
-  | { kind: "room" | "cover" | "receipt"; label: string; ariaLabel: string; href: string }
+  | { kind: "room" | "cover" | "receipt" | "audit"; label: string; ariaLabel: string; href: string }
   | { kind: "copy"; label: string; ariaLabel: string; token: string };
 
 export interface MyBidValue {
@@ -63,6 +65,12 @@ export function myBidView(entry: MyBidItem, nowMs: number): MyBidView {
   const { lot } = entry;
   const where = `lote ${formatLotNumber(lot.number)}, ${lot.title}`;
   const room: MyBidAction = { kind: "room", label: "Ir para a sala", ariaLabel: `Ir para a sala do ${where}`, href: `/lotes/${lot.id}` };
+  const audit: MyBidAction = {
+    kind: "audit",
+    label: AUDIT_TEXT.checkOnAudit,
+    ariaLabel: `${AUDIT_TEXT.checkOnAudit} do ${where}`,
+    href: auditPath(lot.id),
+  };
   const lotCents = lot.currentBidCents ?? entry.myBestBidCents;
   const mine: MyBidValue = { label: "SEU MAIOR LANCE", cents: entry.myBestBidCents };
   const closing = isClosing(entry, nowMs);
@@ -118,8 +126,7 @@ export function myBidView(entry: MyBidItem, nowMs: number): MyBidView {
         seal: { kind: "stamp", variant: "perdido" },
         sentence: MY_BIDS_TEXT.lostSentence(entry.winnerPseudonym ?? "Outro licitante", lotCents, entry.myBestBidCents),
         values: [mine, { label: "VALOR FINAL", cents: lotCents }],
-        // A S08 acrescenta "Conferir na auditoria"; até lá, sem botão vazio nem link quebrado.
-        actions: [],
+        actions: [audit],
       };
     case "CANCELLED":
       return {
@@ -127,7 +134,7 @@ export function myBidView(entry: MyBidItem, nowMs: number): MyBidView {
         seal: { kind: "stamp", variant: "cancelado" },
         sentence: MY_BIDS_TEXT.cancelledSentence(entry.refundedCents !== null),
         values: [mine, { label: "ÚLTIMO LANCE", cents: lotCents }],
-        actions: [],
+        actions: [audit],
       };
   }
 }

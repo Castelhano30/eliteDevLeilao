@@ -1,9 +1,9 @@
-import { brasiliaDayAndTime, brasiliaWeekday, type LotCard, type LotStatus } from "@lanceauto/shared";
+import { auditPath, brasiliaDayAndTime, brasiliaWeekday, type LotCard, type LotStatus } from "@lanceauto/shared";
 import { API_URL } from "./api-client";
 
-/** Destino do cartão: ao vivo, agendado e (por enquanto) encerrado vão à Sala. A S08 troca o encerrado. */
+/** Destino do cartão: o encerrado (arrematado ou sem lances) vai à Auditoria (S08); os demais, à Sala. */
 export function lotCardHref(card: Pick<LotCard, "id" | "status">): string {
-  return `/lotes/${card.id}`;
+  return card.status === "SOLD" || card.status === "UNSOLD" ? auditPath(card.id) : `/lotes/${card.id}`;
 }
 
 /** Caminho relativo da API ("/items/…/image") para URL absoluta. URL já absoluta passa direto. */

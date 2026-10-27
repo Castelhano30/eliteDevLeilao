@@ -82,13 +82,15 @@ describe("BidTicketList — ingressos (S07 §9)", () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it("Perdido e Cancelado: carimbo, frase e nenhum botão (nem 'Conferir na auditoria', que é da S08)", () => {
+  it("Perdido e Cancelado: carimbo, frase e só \"Conferir na auditoria\", com o nome acessível do lote", () => {
     const html = render([list[4]!, list[5]!]);
     expect(html).toContain("Perdido");
     expect(html).toContain("Cancelado");
     expect(html).toContain("Licitante 7F3A levou por R$ 33.500,00. Seu maior lance foi R$ 33.000,00.");
     expect(html).toContain("O saldo que estava travado voltou para você.");
-    expect(html).not.toMatch(/auditoria/i);
+    expect(html.match(/Conferir na auditoria<\/a>/g)).toHaveLength(2);
+    expect(html).toMatch(/href="\/lotes\/[^"]+\/auditoria"/);
+    expect(html).toMatch(/aria-label="Conferir na auditoria do lote \d{3}, [^"]+"/);
     expect(html).not.toContain("<a href=\"/c/");
   });
 
