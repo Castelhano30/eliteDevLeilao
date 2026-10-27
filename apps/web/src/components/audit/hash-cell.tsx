@@ -29,7 +29,7 @@ export function HashCell({ id, hash, what, alert = false }: HashCellProps) {
         aria-expanded={toggle.expanded}
         aria-controls={toggle.controls}
         aria-label={toggle.ariaLabel}
-        className="!min-h-alvo !px-3 !py-1 text-[12px]"
+        className="!min-h-alvo !px-3 !py-1 !text-[12px] !font-medium !tracking-[0.06em]"
         onClick={() => setExpanded((value) => !value)}
       >
         {toggle.text}

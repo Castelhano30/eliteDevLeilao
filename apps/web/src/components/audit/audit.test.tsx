@@ -64,10 +64,10 @@ const tampered = (): AuditView => {
 };
 
 describe("rowAccentOf (§9): a borda e o fundo seguem o veredito da linha", () => {
-  it("OK verde sem realce; MISMATCH ferrugem sobre falha; BROKEN_LINK ferrugem a 85%", () => {
-    expect(rowAccentOf({ status: "OK" })).toEqual({ borderColor: "var(--c-verde)", background: undefined, opacity: undefined });
-    expect(rowAccentOf({ status: "MISMATCH" })).toEqual({ borderColor: "var(--c-ferrugem)", background: "var(--c-falha)", opacity: undefined });
-    expect(rowAccentOf({ status: "BROKEN_LINK" })).toEqual({ borderColor: "var(--c-ferrugem)", background: undefined, opacity: 0.85 });
+  it("OK verde sem realce; MISMATCH ferrugem sobre falha; BROKEN_LINK ferrugem sem fundo", () => {
+    expect(rowAccentOf({ status: "OK" })).toEqual({ borderColor: "var(--c-verde)", background: undefined });
+    expect(rowAccentOf({ status: "MISMATCH" })).toEqual({ borderColor: "var(--c-ferrugem)", background: "var(--c-falha)" });
+    expect(rowAccentOf({ status: "BROKEN_LINK" })).toEqual({ borderColor: "var(--c-ferrugem)", background: undefined });
   });
 });
 
@@ -116,7 +116,11 @@ describe("AuditTable (S08 §9)", () => {
     expect(html.match(/NÃO CONFERE/g)).toHaveLength(1);
     expect(html.match(/ELO QUEBRADO/g)).toHaveLength(2);
     expect(html.match(/var\(--c-falha\)/g)).toHaveLength(1);
-    expect(html.match(/opacity:0\.85/g)).toHaveLength(2);
+    // Elo quebrado esmaece os 5 campos de dados (2 linhas × 5), nunca a Situação: o contraste do rótulo fica em 4,5:1.
+    expect(html.match(/opacity:0\.85/g)).toHaveLength(10);
+    const brokenStatus = [...html.matchAll(/<td[^>]*>((?:(?!<\/td>).)*ELO QUEBRADO(?:(?!<\/td>).)*)<\/td>/g)].map((m) => m[1]);
+    expect(brokenStatus).toHaveLength(2);
+    for (const cell of brokenStatus) expect(cell).not.toContain("opacity");
     expect(html).toContain("inset 6px 0 0 var(--c-ferrugem)");
     expect(html).toContain("inset 6px 0 0 var(--c-verde)");
     expect(html).not.toMatch(/original|esperado|corresponde/i);
@@ -183,6 +187,12 @@ describe("VerdictBox (S08 §9)", () => {
     const sealHtml = render(seal);
     expect(sealHtml).toContain("Faltam 2 no fim da corrente.");
     expect(sealHtml.match(/text-ferrugem/g)?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("a hora e o 'Verificar de novo' vêm antes dos contadores (ordem de leitura e de Tab)", () => {
+    const html = render(view());
+    expect(html.indexOf("Verificar de novo")).toBeGreaterThan(-1);
+    expect(html.indexOf("Verificar de novo")).toBeLessThan(html.indexOf("LINHAS NA CORRENTE"));
   });
 
   it("verificando: sem carimbo nem frase, com 'Refazendo a conta…' e botão inerte 'Verificando…'", () => {

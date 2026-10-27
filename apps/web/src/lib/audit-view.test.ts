@@ -45,8 +45,8 @@ const row = (overrides: Partial<AuditRowDto> = {}): AuditRowDto => ({
 describe("rowStatusView (§8 e §9): texto + ícone, nunca só cor", () => {
   it("CONFERE, NÃO CONFERE e ELO QUEBRADO", () => {
     expect(rowStatusView("OK")).toMatchObject({ label: "CONFERE", icon: "check", tone: "verde", border: "verde", highlight: false, faded: false });
-    expect(rowStatusView("MISMATCH")).toMatchObject({ label: "NÃO CONFERE", icon: "x", tone: "ferrugem", border: "ferrugem", highlight: true, faded: false });
-    expect(rowStatusView("BROKEN_LINK")).toMatchObject({ label: "ELO QUEBRADO", icon: "broken", tone: "ferrugem", border: "ferrugem", highlight: false, faded: true });
+    expect(rowStatusView("MISMATCH")).toMatchObject({ label: "NÃO CONFERE", icon: "x", tone: "tinta", iconTone: "ferrugem", border: "ferrugem", highlight: true, faded: false });
+    expect(rowStatusView("BROKEN_LINK")).toMatchObject({ label: "ELO QUEBRADO", icon: "broken", tone: "ferrugem", iconTone: "ferrugem", border: "ferrugem", highlight: false, faded: true });
   });
 
   it("só a linha que não confere ganha o fundo de falha; só o elo quebrado fica esmaecido", () => {

@@ -63,7 +63,8 @@ export function AuditScreen({ id }: { id: string }) {
     if (number !== undefined) document.title = auditTitle(number);
   }, [number]);
 
-  const verify = () => void query.refetch();
+  // Sem cancelar a chamada em voo: dois cliques seguidos continuam sendo uma verificação só (AC-8.24).
+  const verify = () => void query.refetch({ cancelRefetch: false });
   const verifying = state === "verifying";
   const banner = view && !verifying ? problemBanner(view) : null;
   const announcement = verifying ? AUDIT_TEXT.verifyingLive : view ? verdictAnnouncement(view) : "";

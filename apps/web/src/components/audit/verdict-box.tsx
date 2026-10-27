@@ -43,25 +43,6 @@ export function VerdictBox({ view, verifying, stale, onVerify }: VerdictBoxProps
         </div>
       )}
 
-      {view && counters && !verifying ? (
-        <dl className="mt-6 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))" }}>
-          <Counter label={AUDIT_TEXT.counters.inChain} alert={counters.chainAlert}>
-            {counters.inChain}
-          </Counter>
-          <Counter label={AUDIT_TEXT.counters.inSeal} alert={counters.sealAlert}>
-            {counters.inSeal}
-          </Counter>
-          <Counter label={AUDIT_TEXT.counters.finalHash}>
-            <HashCell id="hash-final" hash={view.finalHash} what="final" />
-          </Counter>
-          {counters.receiptShown && view.receipt ? (
-            <Counter label={AUDIT_TEXT.counters.receiptHash} alert={counters.receiptAlert}>
-              <HashCell id="hash-comprovante" hash={view.receipt.finalHash} what="do comprovante" alert={counters.receiptAlert} />
-            </Counter>
-          ) : null}
-        </dl>
-      ) : null}
-
       <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
         {view && !verifying ? (
           <p className="t-mono-dado flex flex-wrap items-center gap-3 text-tinta2">
@@ -81,6 +62,25 @@ export function VerdictBox({ view, verifying, stale, onVerify }: VerdictBoxProps
           {AUDIT_TEXT.verifyAgain}
         </Button>
       </div>
+
+      {view && counters && !verifying ? (
+        <dl className="mt-6 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))" }}>
+          <Counter label={AUDIT_TEXT.counters.inChain} alert={counters.chainAlert}>
+            {counters.inChain}
+          </Counter>
+          <Counter label={AUDIT_TEXT.counters.inSeal} alert={counters.sealAlert}>
+            {counters.inSeal}
+          </Counter>
+          <Counter label={AUDIT_TEXT.counters.finalHash}>
+            <HashCell id="hash-final" hash={view.finalHash} what="final" />
+          </Counter>
+          {counters.receiptShown && view.receipt ? (
+            <Counter label={AUDIT_TEXT.counters.receiptHash} alert={counters.receiptAlert}>
+              <HashCell id="hash-comprovante" hash={view.receipt.finalHash} what="do comprovante" alert={counters.receiptAlert} />
+            </Counter>
+          ) : null}
+        </dl>
+      ) : null}
     </section>
   );
 }

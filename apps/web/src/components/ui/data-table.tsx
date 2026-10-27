@@ -18,7 +18,7 @@ export interface DataTableProps<Row> {
   rowKey: (row: Row) => string;
   /** `min-width` da tabela, em px (560 a 780). */
   minWidth?: number;
-  /** Realce por linha: borda esquerda de 6 px, fundo e opacidade (a Auditoria usa para o veredito de cada linha). */
+  /** Realce por linha: borda esquerda de 6 px e fundo (a Auditoria usa para o veredito de cada linha). */
   rowAccent?: (row: Row) => RowAccent | undefined;
 }
 
@@ -26,7 +26,6 @@ export interface RowAccent {
   /** Cor da borda esquerda, como valor CSS (`var(--c-verde)`). */
   borderColor: string;
   background?: string;
-  opacity?: number;
 }
 
 function edge(index: number, total: number): string {
@@ -66,7 +65,7 @@ export function DataTable<Row>({ caption, captionHidden = false, columns, rows, 
               <tr
                 key={rowKey(row)}
                 className="border-t-2 border-dashed border-tracejado first:border-t-0"
-                style={accent ? { background: accent.background, opacity: accent.opacity } : undefined}
+                style={accent ? { background: accent.background } : undefined}
               >
                 {columns.map((column, index) => (
                   <td

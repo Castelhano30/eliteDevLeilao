@@ -25,12 +25,16 @@ function Icon({ icon }: { icon: RowIcon }) {
   );
 }
 
+const TEXT = { verde: "text-verde", ferrugem: "text-ferrugem", tinta: "text-tinta" } as const;
+
 /** Situação da linha: texto + ícone, nunca só cor (S08 §9). */
 export function RowStatusBadge({ status }: { status: AuditRowStatus }) {
   const view = rowStatusView(status);
   return (
-    <span className={`t-mono-rotulo inline-flex items-center gap-2 font-semibold ${view.tone === "verde" ? "text-verde" : "text-ferrugem"}`}>
-      <Icon icon={view.icon} />
+    <span className={`t-mono-rotulo inline-flex items-center gap-2 font-semibold ${TEXT[view.tone]}`}>
+      <span className={`inline-flex ${view.iconTone === "verde" ? "text-verde" : "text-ferrugem"}`}>
+        <Icon icon={view.icon} />
+      </span>
       {view.label}
     </span>
   );

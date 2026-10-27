@@ -16,20 +16,25 @@ export type RowIcon = "check" | "x" | "broken";
 export interface RowStatusView {
   label: string;
   icon: RowIcon;
-  /** Cor do texto e do ícone; nunca é a única pista (o rótulo e o ícone dizem o mesmo). */
-  tone: "verde" | "ferrugem";
+  /**
+   * Cor do texto. Nunca é a única pista (rótulo, ícone e borda dizem o mesmo). "NÃO CONFERE" fica em tinta: ferrugem
+   * sobre o fundo `falha` da própria linha dá 3,8:1 no tema noite, abaixo do piso de 4,5:1.
+   */
+  tone: "verde" | "ferrugem" | "tinta";
+  /** Cor do ícone (decorativo, `aria-hidden`). */
+  iconTone: "verde" | "ferrugem";
   /** Borda esquerda de 6 px da linha. */
   border: "verde" | "ferrugem";
   /** Fundo `falha` só na primeira linha que não confere. */
   highlight: boolean;
-  /** `opacity: .85` no elo quebrado (o protótipo usava .62; o piso de contraste manda subir). */
+  /** Elo quebrado: os dados da linha esmaecem a 85% (o protótipo usava 62%); a Situação não esmaece. */
   faded: boolean;
 }
 
 const ROW_STATUS: Record<AuditRowStatus, Omit<RowStatusView, "label">> = {
-  OK: { icon: "check", tone: "verde", border: "verde", highlight: false, faded: false },
-  MISMATCH: { icon: "x", tone: "ferrugem", border: "ferrugem", highlight: true, faded: false },
-  BROKEN_LINK: { icon: "broken", tone: "ferrugem", border: "ferrugem", highlight: false, faded: true },
+  OK: { icon: "check", tone: "verde", iconTone: "verde", border: "verde", highlight: false, faded: false },
+  MISMATCH: { icon: "x", tone: "tinta", iconTone: "ferrugem", border: "ferrugem", highlight: true, faded: false },
+  BROKEN_LINK: { icon: "broken", tone: "ferrugem", iconTone: "ferrugem", border: "ferrugem", highlight: false, faded: true },
 };
 
 export function rowStatusView(status: AuditRowStatus): RowStatusView {
