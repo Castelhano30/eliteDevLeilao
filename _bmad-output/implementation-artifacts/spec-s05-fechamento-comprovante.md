@@ -2,7 +2,7 @@
 title: 'S05 — Fechamento, liquidação e comprovante'
 type: 'feature'
 created: '2026-10-26'
-status: 'in-progress'
+status: 'done'
 baseline_commit: '3ec052b6763d50ad4006c2411ddf387ca4c654d8'
 route: 'dispatch'
 review_loop_iteration: 0

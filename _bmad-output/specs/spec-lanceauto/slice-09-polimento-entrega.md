@@ -15,7 +15,7 @@ fontes_de_origem: [PRD "Dados de teste", "Entrega", "Plano de 7 dias e critério
 
 Roteiro de demonstração (quem avalia, só com o README e o link):
 
-1. Abrir o link público da Vitrine (mesmo com o servidor "dormindo" na hospedagem gratuita): carrega e mostra os cinco estados do seed.
+1. Abrir o link público da Vitrine: carrega e mostra os estados do seed (o Railway não hiberna, então não há servidor "dormindo").
 2. Entrar como licitante de teste (e-mail/senha do README), dar um lance no lote ao vivo; em outra janela, entrar como o segundo licitante e ver o lance aparecer sem recarregar.
 3. Entrar como leiloeiro, criar um lote (FIPE), ver no Painel, cancelar.
 4. Abrir o comprovante e a auditoria do lote arrematado sem login.
@@ -173,7 +173,7 @@ Nenhum componente novo, exceto `app/not-found.tsx` e `app/error.tsx` globais (us
 
 ## 11. Seed final
 
-Comando: `npm run seed -w apps/api` (raiz: `npm run seed`). Lê `prisma/fipe-fixture.json`. Executado no deploy e no `docker compose up` (primeiro start). **Onde roda no Render é uma verificação do dia 1:** se o plano gratuito tiver release/pre-deploy command, use-o; se não, o comando de start da API fica `npx prisma migrate deploy && npm run seed && node dist/server.js`. Isso é seguro porque o seed é idempotente e protegido por advisory lock (R-9.4) e roda a cada acordada da API.
+Comando: `npm run seed -w apps/api` (raiz: `npm run seed`). Lê `prisma/fipe-fixture.json`. Executado no deploy e no `docker compose up` (primeiro start). **No Railway** (decisão 27/10/2026) o seed roda no comando de start da API, ao lado do `migrate deploy`: `npx prisma migrate deploy … && (npx tsx apps/api/prisma/seed.ts || echo seed-falhou-subindo-sem-ele) && node apps/api/dist/server.js`. É seguro porque o seed sai com código 0 quando já há usuários e é protegido por advisory lock (R-9.4); roda a cada start da API.
 
 Este arquivo substitui qualquer seed anterior (R-9.12). Os lotes 001 a 003 são criados no passado com `FakeClock` + `createLot({ allowPast: true })`; 004 e 005 usam o relógio real e a validação normal.
 
@@ -237,7 +237,7 @@ Valores sugeridos: lance inicial e incremento coerentes com a referência FIPE d
 
 **Hibernação e inicialização**
 
-- AC-9.22 [manual] Dado a API do plano gratuito dormindo, quando abro o link da web, então a página carrega assim que a API acordar (a primeira chamada pode levar dezenas de segundos) e o socket reconecta sozinho; o README descreve o comportamento.
+- AC-9.22 [manual] **(Railway, 27/10/2026)** Dado que a API do Railway não hiberna, quando um deploy ou reinício derruba o processo, então a Sala mostra "Sem sinal com o pátio. Tentando reconectar.", o socket reconecta sozinho e a Sala volta com "De volta ao pátio"; o README descreve o comportamento e cita o ping externo só como opção para outras hospedagens.
 - AC-9.23 [manual] Dado um lote cujo `endsAt` passou enquanto a API dormia, quando a API acorda, então a varredura de boot liquida o lote (uma vez; `settledAt` preenchido; comprovante criado; saldos certos), sem lances duplicados. (AD-6)
 
 **Verificação ponta a ponta dos critérios do PRD**
@@ -319,7 +319,7 @@ O README fica na raiz, em pt-BR, com este índice. Cada item abaixo é obrigató
 D8 — lista mínima:
 
 1. **Prorrogação:** novo fim = horário do lance + 2 min (interpretação adotada do enunciado), sem teto de prorrogações.
-2. **Hibernação:** o plano gratuito do Render dorme sem uso; a primeira visita pode demorar dezenas de segundos; o timer de fechamento para durante o sono e a varredura de boot liquida o atraso; o socket reconecta sozinho. (Confirmar o prazo de inatividade no dia do deploy.)
+2. **Hospedagem sem hibernação (Railway):** a API roda como processo contínuo; um deploy ou reinício derruba os sockets por alguns segundos e os navegadores reconectam sozinhos; se a API ficar parada, o timer de fechamento para e a varredura de boot liquida o atraso. Ping externo (UptimeRobot e semelhantes) só é citado, para hospedagens que dormem.
 3. **Limite da FIPE:** 500 requisições/dia sem token (1.000 com token gratuito); por isso o cache de 24 h; se o cache esvaziar e a FIPE cair, o Criar lote mostra erro e o resto do app segue.
 4. **Carros sem imagem:** nem todo modelo tem artigo/foto na Wikipedia; o nome da FIPE é simplificado para buscar; sem foto usa ilustração padrão; imagens sob licença Creative Commons com crédito.
 5. **Auditoria:** limitações do texto de D7 (quem tem a chave, backup antigo e completo, troca de `AUDIT_HMAC_KEY`).
@@ -340,14 +340,14 @@ D8 — lista mínima:
 | # | Item |
 | --- | --- |
 | 1 | Hosts e versões confirmados e lockfile commitado (a arquitetura marcou Vercel/Render/Neon e versões como `[ASSUMPTION]`) |
-| 2 | Neon: `DATABASE_URL` com pooling e `DIRECT_URL` para migração |
-| 3 | Render (API): variáveis completas; `WEB_ORIGIN` = origem exata da Vercel; comando de start = `prisma migrate deploy` + `node dist/server.js`; o `npm run seed` roda em release/pre-deploy command **se o plano gratuito tiver** (verificar no dia 1); caso contrário o start vira `npx prisma migrate deploy && npm run seed && node dist/server.js` (seed idempotente com advisory lock, R-9.4); `trust proxy` = 1 ativo (T1) |
-| 4 | Vercel (web): `NEXT_PUBLIC_API_URL` = URL pública da API |
+| 2 | Railway (Postgres): `DATABASE_URL` e `DIRECT_URL` iguais, pela rede privada (sem pooler) |
+| 3 | Railway (API): variáveis completas; `WEB_ORIGIN` = origem exata do web; comando de start = `prisma migrate deploy` + seed tolerante a falha + `node dist/server.js` (seed idempotente com advisory lock, R-9.4); `trust proxy` = 1 ativo (T1) |
+| 4 | Railway (web): `NEXT_PUBLIC_API_URL` = URL pública da API |
 | 5 | `JWT_SECRET` e `AUDIT_HMAC_KEY` fortes definidos **antes** do primeiro seed e anotados em local seguro |
 | 6 | Migrações aplicadas; seed executado; `GET /health` → `{ok:true, db:true}` |
 | 7 | Smoke pelo **link público**: login como Ana/Bruno/leiloeiro, lance, Sala ao vivo com 2 navegadores, comprovante, auditoria, Criar lote com FIPE real |
 | 8 | CORS e WebSocket confirmados pelo console do navegador (sem erro) |
-| 9 | `seed:demo` testado em produção uma vez e o lote criado conferido (ou documentado como "rode se o lote ao vivo expirar") |
+| 9 | `seed:demo` provado em banco descartável; em produção só com aval do Felipe (documentado no README como "rode se o lote ao vivo expirar") |
 | 10 | Verificar AC1–AC15 (§15) neste ambiente e anotar |
 
 ## 16. Conflitos resolvidos e perguntas abertas
@@ -373,6 +373,19 @@ Perguntas abertas (sugestão marcada; decisão é do usuário):
 8. **Host do deploy (aviso).** O deploy migrou de Render + Vercel + Neon para o **Railway**. Esta fatia cita Render, Vercel e Neon (hibernação, release/pre-deploy command do Render, pooling do Neon, `WEB_ORIGIN` da Vercel) e, por isso, o item 2 da seção de limitações (hibernação), a pergunta 2 ("Acordando o pátio…") e a checklist de deploy precisam ser relidos contra o Railway: lá a API não hiberna e o seed pode entrar no start, ao lado do `migrate deploy`. Fatia não reescrita; decidir na S09.
 
 Nota de propriedade (rastreabilidade): `O4`/`TST` têm dono nominal nesta fatia, mas os testes são escritos nas S01 a S08; aqui só se **verifica** que todos rodam no CI e se registra a cobertura. O mesmo vale para `T3` (dono S06, Sala já completa na S05) e `DEP` (dono S00): a S09 só confere o resultado final.
+
+### Decisões do Felipe (27/10/2026) para as perguntas acima
+
+| # | Decisão |
+|---|---|
+| 1 | Credenciais mantidas: `leiloeiro@`, `ana@`, `bruno@lanceauto.test`, senha `lance1234`; saldos R$ 500.000 e R$ 300.000 |
+| 2 | **Não fazer** "Acordando o pátio…": o Railway não hiberna. D8 item 2, AC-9.22 e a checklist de deploy foram ajustados |
+| 3 | **Não fazer** `seed:demo --relampago` |
+| 4 | Ping externo só citado no README |
+| 5 | O repositório não vira público por conta do build. Achado: o GitHub já o reporta como público; varredura inicial do histórico sem `.env`, chave privada ou padrão de segredo (resultado completo no diário) |
+| 6 | Valor-base de recomposição do `seed:demo`: R$ 100.000 |
+| 7 | Resolvida: o cartão Encerrado abre a Sala; a auditoria é o link "Auditar este lote" dentro dela |
+| 8 | Releitura contra o Railway feita (§4, §11, §13, §15 e D8), sem Render, Vercel nem Neon |
 
 ## 17. Definition of Done
 

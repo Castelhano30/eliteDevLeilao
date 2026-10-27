@@ -234,12 +234,12 @@ Todas têm sugestão nas fatias e **não bloqueiam** o build; decidir antes ou d
 - **Q1 (S03)** Manter a ordem do PRD (BELOW_MINIMUM antes de ALREADY_WINNING) ou voltar à da arquitetura? Hoje vale o PRD, com a mensagem própria `OWN_LEAD` (T10) para o líder que reenvia.
 - **Q2 (S02)** Duração mínima do lote de 5 min e `início >= agora − 60 s` vêm da arquitetura, não do PRD. Manter?
 - **Q3 (S06)** Lote cancelado **sem** lances também grava a linha CANCEL na cadeia (sugestão: sim)?
-- **Q4 (S01/S09)** Usuários de teste: `leiloeiro@lanceauto.test`, `ana@lanceauto.test`, `bruno@lanceauto.test`, senha `lance1234`, saldos R$ 500.000 (Ana) e R$ 300.000 (Bruno). Confirmar.
+- **Q4 (S01/S09)** Usuários de teste: `leiloeiro@lanceauto.test`, `ana@lanceauto.test`, `bruno@lanceauto.test`, senha `lance1234`, saldos R$ 500.000 (Ana) e R$ 300.000 (Bruno). Confirmar. **Decidido (Felipe, 27/10/2026): confirmadas.**
 - **Q5 (S01/S03/S08)** Limites de requisição (auth 30/min por IP, lance 30/min por usuário, auditoria 60/min por IP) e o novo código `RATE_LIMITED` 429.
-- **Q6 (várias)** Muitos textos novos estão marcados "texto a revisar" (diálogo de cancelamento, erros de cadastro, conexão, "Como funciona"). Revisar a voz antes do polimento?
+- **Q6 (várias)** Muitos textos novos estão marcados "texto a revisar" (diálogo de cancelamento, erros de cadastro, conexão, "Como funciona"). Revisar a voz antes do polimento? **Decidido (S09): revisão de voz feita; teste de varredura no shared.**
 - **Q7 (S02)** Fotos do seed: começar com ilustração padrão e trocar por imagens livres com crédito depois?
-- **Q8 (S09)** Mostrar "Acordando o pátio…" quando o Render demora a acordar? `seed:demo --relampago` com lote de 10 min para demonstrar prorrogação e fechamento?
-- **Q9 (S09)** O repositório precisa ficar público antes da entrega (hoje é privado).
+- **Q8 (S09)** Mostrar "Acordando o pátio…" quando o Render demora a acordar? `seed:demo --relampago` com lote de 10 min para demonstrar prorrogação e fechamento? **Decidido (Felipe, 27/10/2026): não fazer nenhum dos dois** (o Railway não hiberna; sem `--relampago`).
+- **Q9 (S09)** O repositório precisa ficar público antes da entrega (hoje é privado). **Em aberto (Felipe):** o GitHub já reporta o repositório como público; a decisão e a conferência de segredos ficam com ele.
 - **Q10 (S07)** Ordenação de Meus arremates (sugestão: superados, depois ganhando por fim mais próximo, depois os demais por fim decrescente) ou simples cronológica? O desempate dos superados está no R-7.9 da S07.
 - **Q11 (S08)** O cartão Encerrado da Vitrine leva direto à auditoria (como no protótipo) ou à Sala, como diz o PRD? A S08 segue o protótipo. **Decidido (Felipe, 27/10/2026): à Sala;** a auditoria é um link dentro da Sala.
 
