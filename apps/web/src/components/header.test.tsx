@@ -27,12 +27,17 @@ describe("cabeçalho: claro por padrão, escuro no tema noite", () => {
   const dark = block('\n[data-theme="noite"] .cabecalho');
   const system = css.slice(css.indexOf(":root:not([data-theme=\"claro\"]) .cabecalho"));
 
-  it("a barra clara usa fundo claro, texto escuro e o azul principal", () => {
-    expect(light).toMatch(/--c-fundo:\s*#f7f9ff/);
-    expect(light).toMatch(/--c-tinta:\s*#0f1b33/);
-    expect(light).toMatch(/--c-suave:\s*var\(--f-azul-suave\)/);
-    expect(light).toMatch(/--h-cta:\s*var\(--f-azul\)/);
-    expect(light).toMatch(/--h-cta-hover:\s*var\(--f-azul-interativo\)/);
+  it("a barra clara usa os tokens globais: fundo claro, texto escuro e o azul principal", () => {
+    const tokensClaro = block(':root,\n[data-theme="claro"]');
+    expect(tokensClaro).toMatch(/--c-fundo:\s*#f7f9ff/);
+    expect(tokensClaro).toMatch(/--c-tinta:\s*#0f1b33/);
+    expect(tokensClaro).toMatch(/--c-suave:\s*#e8efff/);
+    expect(tokensClaro).toMatch(/--c-ocre:\s*#0033a0/);
+    expect(tokensClaro).toMatch(/--c-ocre-hover:\s*#174bc2/);
+    expect(light).toMatch(/--h-cta:\s*var\(--c-ocre\)/);
+    expect(light).toMatch(/--h-cta-hover:\s*var\(--c-ocre-hover\)/);
+    expect(light).toMatch(/--h-azul:\s*var\(--c-destaque\)/);
+    expect(light).toMatch(/--h-divisor:\s*var\(--c-borda\)/);
     expect(light).toMatch(/color-scheme:\s*light/);
   });
 
@@ -45,12 +50,15 @@ describe("cabeçalho: claro por padrão, escuro no tema noite", () => {
     }
   });
 
-  it("o tema noite redefine a barra escura, também quando o noite vem do sistema", () => {
+  it("o tema noite usa os tokens escuros globais, também quando o noite vem do sistema", () => {
+    const tokensNoite = block('\n[data-theme="noite"]');
+    expect(tokensNoite).toMatch(/--c-fundo:\s*#0f1216/);
+    expect(tokensNoite).toMatch(/--c-tinta:\s*#f3f5f8/);
+    expect(tokensNoite).toMatch(/--c-ocre:\s*#174bc2/);
+    expect(tokensNoite).toMatch(/--c-ocre-texto:\s*#6b93ff/);
+    expect(css.slice(css.indexOf("@media (prefers-color-scheme: dark)"))).toMatch(/--c-ocre:\s*#174bc2/);
     for (const scope of [dark, system]) {
-      expect(scope).toMatch(/--c-fundo:\s*#0f1216/);
-      expect(scope).toMatch(/--c-tinta:\s*#f3f5f8/);
       expect(scope).toMatch(/--c-suave:\s*var\(--f-azul-profundo\)/);
-      expect(scope).toMatch(/--h-cta:\s*var\(--f-azul-interativo\)/);
       expect(scope).toMatch(/color-scheme:\s*dark/);
       expect(scope).toMatch(/border-bottom:\s*2px solid var\(--h-azul\)/);
     }

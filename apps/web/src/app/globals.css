@@ -1,75 +1,115 @@
 @import "tailwindcss";
 @config "../../tailwind.config.mjs";
 
-/* ---------- Tokens: tema claro "De dia · papel" (padrão) ---------- */
+/* ---------- Tokens: tema claro (padrão) ---------- */
 :root,
 [data-theme="claro"] {
-  --c-fundo: #e8dfcb;
-  --c-papel: #f5eedf;
-  --c-suave: #ddd3bc;
-  --c-pontos: #c9bea5;
-  --c-tinta: #1e1c19;
-  --c-tinta2: #5b5449;
-  --c-linha: #1e1c19;
-  --c-sombra: #1e1c19;
-  --c-tracejado: #8a8273;
+  --c-fundo: #f7f9ff;
+  --c-papel: #ffffff;
+  --c-suave: #e8efff;
+  --c-pontos: #d3dcf0;
+  --c-borda: #d3dcf0;
+  --c-tinta: #0f1b33;
+  --c-tinta2: #4b5870;
+  --c-linha: #6f83ad;
+  --c-sombra: #001e63;
+  --c-tracejado: #aebbd6;
   --c-ocre: #0033a0;
+  --c-ocre-hover: #174bc2;
   --c-ocre-texto: #0033a0;
-  --c-sobre-ocre: #f5eedf;
-  --c-ferrugem: #a43c1e;
-  --c-verde: #2e6a3e;
-  --c-sobre-cor: #f5eedf;
-  --c-painel: #141311;
+  --c-sobre-ocre: #ffffff;
+  --c-selecionado: #e8efff;
+  --c-foco: #174bc2;
+  --c-destaque: #0033a0;
+  --c-ferrugem: #b42318;
+  --c-falha: rgba(180, 35, 24, 0.09);
+  --c-verde: #1e7a46;
+  --c-verde-suave: #e7f5ec;
+  --c-alerta: #8a4b00;
+  --c-alerta-suave: #fff3dc;
+  --c-sobre-alerta: #ffffff;
+  --c-sobre-cor: #ffffff;
+  --c-painel: #0b1530;
   --c-led: #f2b92b;
   --c-led-alerta: #ff6a3d;
-  --c-falha: rgba(164, 60, 30, 0.12);
+  --sh-xs: 0 1px 2px rgba(0, 30, 99, 0.2);
+  --sh-cartao: 0 1px 2px rgba(0, 30, 99, 0.06), 0 4px 14px -8px rgba(0, 30, 99, 0.22);
+  --sh-elevada: 0 8px 24px -12px rgba(0, 30, 99, 0.4);
+  --sh-modal: 0 24px 48px -20px rgba(0, 30, 99, 0.45);
 }
 
-/* ---------- Tokens: tema noite "À noite · carvão" ---------- */
+/* ---------- Tokens: tema noite ----------
+   O #0033a0 não é texto nem borda aqui (1,65:1 sobre o papel): texto azul usa ocre-texto e o fundo do botão primário usa ocre. */
 [data-theme="noite"] {
-  --c-fundo: #161513;
-  --c-papel: #262420;
-  --c-suave: #2f2c27;
-  --c-pontos: #3f3b34;
-  --c-tinta: #ece4d2;
-  --c-tinta2: #b3aa99;
-  --c-linha: #cfc5b0;
-  --c-sombra: #3a362f;
-  --c-tracejado: #6e675c;
-  --c-ocre: #0033a0;
-  --c-ocre-texto: #6b93ff;
-  --c-sobre-ocre: #f5eedf;
-  --c-ferrugem: #e36a43;
-  --c-verde: #74b585;
-  --c-sobre-cor: #161513;
-  --c-painel: #0b0b0a;
-  --c-led: #f2b92b;
-  --c-led-alerta: #ff6a3d;
-  --c-falha: rgba(227, 106, 67, 0.16);
+--c-fundo: #0f1216;
+--c-papel: #151a21;
+--c-suave: #1c2330;
+--c-pontos: #2a3341;
+--c-borda: #313a47;
+--c-tinta: #f3f5f8;
+--c-tinta2: #9ba7b8;
+--c-linha: #6f7c90;
+--c-sombra: #000000;
+--c-tracejado: #4a5568;
+--c-ocre: #174bc2;
+--c-ocre-hover: #2459d6;
+--c-ocre-texto: #6b93ff;
+--c-sobre-ocre: #ffffff;
+--c-selecionado: #001e63;
+--c-foco: #8aaaff;
+--c-destaque: #3d6dff;
+--c-ferrugem: #ff8a7a;
+--c-falha: rgba(255, 138, 122, 0.14);
+--c-verde: #5fd08a;
+--c-verde-suave: #12271b;
+--c-alerta: #f2b65a;
+--c-alerta-suave: #2b2010;
+--c-sobre-alerta: #0f1216;
+--c-sobre-cor: #0f1216;
+--c-painel: #070b14;
+--c-led: #f2b92b;
+--c-led-alerta: #ff6a3d;
+--sh-xs: 0 0 #0000;
+--sh-cartao: 0 0 #0000;
+--sh-elevada: 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+--sh-modal: 0 24px 48px -16px rgba(0, 0, 0, 0.7);
 }
 
 /* Sistema em modo escuro, a menos que o usuário tenha escolhido "claro". */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="claro"]) {
-    --c-fundo: #161513;
-    --c-papel: #262420;
-    --c-suave: #2f2c27;
-    --c-pontos: #3f3b34;
-    --c-tinta: #ece4d2;
-    --c-tinta2: #b3aa99;
-    --c-linha: #cfc5b0;
-    --c-sombra: #3a362f;
-    --c-tracejado: #6e675c;
-    --c-ocre: #0033a0;
-    --c-ocre-texto: #6b93ff;
-    --c-sobre-ocre: #f5eedf;
-    --c-ferrugem: #e36a43;
-    --c-verde: #74b585;
-    --c-sobre-cor: #161513;
-    --c-painel: #0b0b0a;
-    --c-led: #f2b92b;
-    --c-led-alerta: #ff6a3d;
-    --c-falha: rgba(227, 106, 67, 0.16);
+  --c-fundo: #0f1216;
+  --c-papel: #151a21;
+  --c-suave: #1c2330;
+  --c-pontos: #2a3341;
+  --c-borda: #313a47;
+  --c-tinta: #f3f5f8;
+  --c-tinta2: #9ba7b8;
+  --c-linha: #6f7c90;
+  --c-sombra: #000000;
+  --c-tracejado: #4a5568;
+  --c-ocre: #174bc2;
+  --c-ocre-hover: #2459d6;
+  --c-ocre-texto: #6b93ff;
+  --c-sobre-ocre: #ffffff;
+  --c-selecionado: #001e63;
+  --c-foco: #8aaaff;
+  --c-destaque: #3d6dff;
+  --c-ferrugem: #ff8a7a;
+  --c-falha: rgba(255, 138, 122, 0.14);
+  --c-verde: #5fd08a;
+  --c-verde-suave: #12271b;
+  --c-alerta: #f2b65a;
+  --c-alerta-suave: #2b2010;
+  --c-sobre-alerta: #0f1216;
+  --c-sobre-cor: #0f1216;
+  --c-painel: #070b14;
+  --c-led: #f2b92b;
+  --c-led-alerta: #ff6a3d;
+  --sh-xs: 0 0 #0000;
+  --sh-cartao: 0 0 #0000;
+  --sh-elevada: 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --sh-modal: 0 24px 48px -16px rgba(0, 0, 0, 0.7);
   }
 }
 
@@ -77,7 +117,7 @@
 :root {
   --f-faixa-placa: #0033a0;
   --f-brasil-texto: #ffffff;
-  --f-digito-placa: #f5eedf;
+  --f-digito-placa: #f3f5f8;
   /* O logo é uma placa clara por padrão; o cabeçalho claro a inverte (ver `.cabecalho`). */
   --f-logo-papel: #f5eedf;
   --f-logo-tinta: #1e1c19;
@@ -89,8 +129,8 @@
   --f-azul-profundo: #001e63;
   --f-azul-suave: #e8efff;
   --f-linha-central-placa: #000000;
-  --f-rotulo-relogio: #8a8273;
-  --f-rotulo-nota-painel: #b3aa99;
+  --f-rotulo-relogio: #9fb0cf;
+  --f-rotulo-nota-painel: #9fb0cf;
 
   --gutter-lateral: clamp(16px, 4vw, 56px);
 }
@@ -182,30 +222,26 @@ label:has(input:focus-visible) {
 
 /* ---------- Diálogo nativo ---------- */
 dialog::backdrop {
-  background: rgba(30, 28, 25, 0.65);
+  background: rgba(5, 12, 32, 0.6);
 }
 
 /* ---------- Cabeçalho: claro por padrão, escuro no tema noite ----------
-   Os tokens são redefinidos só dentro da barra, então tema, saldo, perfil e botões herdam a paleta dela.
-   O logo faz o inverso da barra (placa escura na clara, placa clara na escura), para sempre contrastar. */
+   Cores, botões e divisores vêm dos tokens globais; só ficam aqui os valores que o cabeçalho mantém próprios (linha, sombra,
+   fundo suave no noite, avatar e logo). O logo faz o inverso da barra (placa escura na clara, placa clara na escura), para sempre contrastar. */
 .cabecalho {
-  --c-fundo: #f7f9ff;
-  --c-papel: #ffffff;
-  --c-suave: var(--f-azul-suave);
-  --c-tinta: #0f1b33;
-  --c-tinta2: #4b5870;
   --c-linha: #8fa3cf;
   --c-sombra: #c9d5ee;
-  --c-ocre: var(--f-azul);
-  --c-ocre-texto: var(--f-azul);
-  --h-azul: var(--f-azul);
-  --h-divisor: #d3dcf0;
-  --h-ativo-texto: var(--f-azul);
-  --h-valor: var(--f-azul);
-  --h-cta: var(--f-azul);
-  --h-cta-hover: var(--f-azul-interativo);
-  --h-botao-texto: var(--f-azul);
-  --h-botao-borda: var(--f-azul);
+  --c-sobre-ocre: #f5eedf;
+  /* Provisório: o menu do perfil ainda usa a sombra dura do cabeçalho aprovado até a etapa 9. */
+  --sh-cartao: 3px 3px 0 var(--c-sombra);
+  --h-azul: var(--c-destaque);
+  --h-divisor: var(--c-borda);
+  --h-ativo-texto: var(--c-ocre-texto);
+  --h-valor: var(--c-ocre-texto);
+  --h-cta: var(--c-ocre);
+  --h-cta-hover: var(--c-ocre-hover);
+  --h-botao-texto: var(--c-ocre-texto);
+  --h-botao-borda: var(--c-ocre);
   --h-avatar-fundo: var(--f-azul);
   --h-avatar-borda: var(--f-azul);
   --h-avatar-texto: #ffffff;
@@ -219,26 +255,16 @@ dialog::backdrop {
   box-shadow: 0 6px 18px -10px rgba(0, 30, 99, 0.35);
 }
 [data-theme="noite"] .cabecalho {
-  --c-fundo: #0f1216;
-  --c-papel: #151a21;
   --c-suave: var(--f-azul-profundo);
-  --c-tinta: #f3f5f8;
-  --c-tinta2: #9ba7b8;
   --c-linha: #5a6678;
   --c-sombra: #05070a;
-  --c-ocre: var(--f-azul-interativo);
-  --c-ocre-texto: #6b93ff;
-  --h-azul: #3d6dff;
-  --h-divisor: #313a47;
-  --h-ativo-texto: #f3f5f8;
-  --h-valor: #f3f5f8;
-  --h-cta: var(--f-azul-interativo);
-  --h-cta-hover: #2459d6;
-  --h-botao-texto: #f3f5f8;
+  --h-ativo-texto: var(--c-tinta);
+  --h-valor: var(--c-tinta);
+  --h-botao-texto: var(--c-tinta);
   --h-botao-borda: #5a6678;
   --h-avatar-fundo: var(--f-azul-profundo);
-  --h-avatar-borda: #3d6dff;
-  --h-avatar-texto: #f3f5f8;
+  --h-avatar-borda: var(--c-destaque);
+  --h-avatar-texto: var(--c-tinta);
   --h-logo-sombra: 0 0 0 1px #3d6dff, 0 0 16px rgba(61, 109, 255, 0.35);
   --f-logo-papel: #f5eedf;
   --f-logo-tinta: #1e1c19;
@@ -248,26 +274,16 @@ dialog::backdrop {
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="claro"]) .cabecalho {
-    --c-fundo: #0f1216;
-    --c-papel: #151a21;
     --c-suave: var(--f-azul-profundo);
-    --c-tinta: #f3f5f8;
-    --c-tinta2: #9ba7b8;
     --c-linha: #5a6678;
     --c-sombra: #05070a;
-    --c-ocre: var(--f-azul-interativo);
-    --c-ocre-texto: #6b93ff;
-    --h-azul: #3d6dff;
-    --h-divisor: #313a47;
-    --h-ativo-texto: #f3f5f8;
-    --h-valor: #f3f5f8;
-    --h-cta: var(--f-azul-interativo);
-    --h-cta-hover: #2459d6;
-    --h-botao-texto: #f3f5f8;
+    --h-ativo-texto: var(--c-tinta);
+    --h-valor: var(--c-tinta);
+    --h-botao-texto: var(--c-tinta);
     --h-botao-borda: #5a6678;
     --h-avatar-fundo: var(--f-azul-profundo);
-    --h-avatar-borda: #3d6dff;
-    --h-avatar-texto: #f3f5f8;
+    --h-avatar-borda: var(--c-destaque);
+    --h-avatar-texto: var(--c-tinta);
     --h-logo-sombra: 0 0 0 1px #3d6dff, 0 0 16px rgba(61, 109, 255, 0.35);
     --f-logo-papel: #f5eedf;
     --f-logo-tinta: #1e1c19;
