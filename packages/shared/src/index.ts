@@ -7,6 +7,7 @@ export * from "./errors";
 export * from "./events";
 export * from "./lots";
 export * from "./money";
+export * from "./my-bids";
 export * from "./receipts";
 export * from "./search";
 export * from "./texts";
