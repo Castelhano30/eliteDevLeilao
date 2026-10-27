@@ -25,7 +25,8 @@ export function ResultadoDoLote({ view, lotNumber, animate }: ResultadoDoLotePro
           variant={view.stamp}
           animate={arrematado && animate}
           rotate={arrematado ? -6 : undefined}
-          className={arrematado ? "!text-[52px]" : "!text-[40px]"}
+          // Fluido: a 320 px o "Arrematado" de 52 px media 413 px e estourava a página.
+          className={arrematado ? "!text-[length:clamp(24px,8vw,52px)]" : "!text-[length:clamp(24px,8vw,40px)]"}
         />
       </div>
       {view.sentence ? <p className="t-body-lead">{view.sentence}</p> : null}
