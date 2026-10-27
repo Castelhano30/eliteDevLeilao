@@ -200,7 +200,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
         </section>
 
         <section aria-label="Painel do lote" className="min-w-0" style={{ flex: "1 1 440px", maxWidth: 560 }}>
-          <div className="flex flex-wrap items-center gap-4 pt-6">
+          <div className="flex flex-wrap items-center gap-4">
             <LotTag number={lot.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} />
             {status === "LIVE" ? <Stamp variant="ao-vivo" /> : null}
           </div>

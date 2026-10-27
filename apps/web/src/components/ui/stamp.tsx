@@ -16,17 +16,20 @@ export interface StampProps {
   animate?: boolean;
   /** Inclinação de repouso; sem ela vale a da variante (ou -6° quando bate). */
   rotate?: number;
+  /** Pequeno para caber no cartão da Vitrine (20 px); o padrão é 26 px. */
+  size?: "padrao" | "pequeno";
   className?: string;
 }
 
 /** Carimbo de status. O texto é o status: não depende da rotação nem da cor. */
-export function Stamp({ variant, animate = false, rotate: resting, className = "" }: StampProps) {
+export function Stamp({ variant, animate = false, rotate: resting, size = "padrao", className = "" }: StampProps) {
   const spec = VARIANTS[variant];
   const rotate = resting ?? (animate ? -6 : spec.rotate);
   return (
     <span
-      className={`t-carimbo inline-flex items-center gap-2 rounded-nenhum px-3 pb-[2px] pt-1 ${className}`.trim()}
+      className={`t-carimbo inline-flex items-center gap-2 rounded-nenhum px-3 pb-[2px] pt-1 ${size === "pequeno" ? "whitespace-nowrap" : ""} ${className}`.trim()}
       style={{
+        fontSize: size === "pequeno" ? 20 : undefined,
         color: spec.color,
         border: `4px ${spec.dashed ? "dashed" : "solid"} ${spec.color}`,
         outline: spec.dashed ? undefined : `2px solid ${spec.color}`,

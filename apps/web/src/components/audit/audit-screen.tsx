@@ -88,7 +88,7 @@ export function AuditScreen({ id }: { id: string }) {
 
       {view ? (
         <header className="mb-8">
-          <div className="flex flex-wrap items-center gap-5 pt-6">
+          <div className="flex flex-wrap items-center gap-5">
             <LotTag number={view.lot.number} tone={view.lot.status === "LIVE" || view.lot.status === "SCHEDULED" || view.lot.status === "CLOSING" ? "ocre" : "papel"} />
             <h1 className="t-display-titulo min-w-0 flex-1">{view.lot.title}</h1>
           </div>

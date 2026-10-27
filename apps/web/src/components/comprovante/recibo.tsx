@@ -31,7 +31,7 @@ export function Recibo({ receipt }: { receipt: ReceiptDTO }) {
       className="mx-auto w-[calc(100%-8px)] max-w-[760px]"
       style={{ transform: "rotate(-1deg)", filter: "drop-shadow(8px 8px 0 var(--c-sombra))" }}
     >
-      <div className={`${BAND} flex flex-wrap items-center justify-between gap-4 border-2 !pt-6`}>
+      <div className={`${BAND} flex flex-wrap items-center justify-between gap-4 border-2`}>
         <div className="flex min-w-0 items-center gap-5">
           <LotTag number={receipt.lotNumber} tone="papel" />
           <p className="min-w-0 text-[32px] font-bold uppercase leading-none [overflow-wrap:anywhere]">{car.title}</p>

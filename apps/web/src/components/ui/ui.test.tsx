@@ -140,4 +140,28 @@ describe("LotTag", () => {
   it("aceita texto, como NOVO", () => {
     expect(renderToStaticMarkup(<LotTag number="NOVO" />)).toContain(">NOVO<");
   });
+
+  it("o laço fica dentro da caixa e a caixa reserva o espaço dele", () => {
+    const html = renderToStaticMarkup(<LotTag number={18} />);
+    // Nenhum deslocamento negativo à esquerda: o laço não passa da borda do componente.
+    expect(html).toMatch(/left:0(px)?;top:-18px/);
+    expect(html).not.toMatch(/left:-\d/);
+    expect(html).toContain("padding:18px 4px 6px 2px");
+  });
+
+  it("o tamanho compacto reduz só o número", () => {
+    expect(renderToStaticMarkup(<LotTag number={18} size="compacto" />)).toContain("font-size:36px");
+    expect(renderToStaticMarkup(<LotTag number={18} />)).not.toContain("font-size:36px");
+  });
+});
+
+describe("Stamp", () => {
+  it("o tamanho pequeno usa 20 px e não quebra linha", () => {
+    const small = renderToStaticMarkup(<Stamp variant="arrematado" size="pequeno" />);
+    expect(small).toContain("font-size:20px");
+    expect(small).toContain("whitespace-nowrap");
+    const normal = renderToStaticMarkup(<Stamp variant="arrematado" />);
+    expect(normal).not.toContain("font-size:20px");
+    expect(normal).not.toContain("whitespace-nowrap");
+  });
 });
