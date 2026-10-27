@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { AUDIT_TEXT, auditPath, brasiliaDayAndTime, formatBRL, formatBrasilia, formatLotNumber, type LotCard as LotCardDto, type MyLotCard, type MyLotsResponse } from "@lanceauto/shared";
+import { AUDIT_TEXT, auditPath, brasiliaDayAndTime, formatBRL, formatBrasilia, formatLotNumber, type LotCard as LotCardDto, type MyLotCard, type MyLotsResponse, GLOBAL_TEXT } from "@lanceauto/shared";
 import { CancelDialog } from "@/components/cancel-dialog";
 import { Cronometro } from "@/components/lots/cronometro";
 import { LotCard } from "@/components/lots/lot-card";
@@ -227,7 +227,7 @@ export function PainelScreen() {
         <div className="mt-8">
           {query.isError ? (
             <FeedbackState variant="erro" onRetry={() => void query.refetch()}>
-              Não consegui trazer seus lotes.
+              {GLOBAL_TEXT.loadError}
             </FeedbackState>
           ) : (
             <FeedbackState variant="carregando" />
@@ -237,7 +237,7 @@ export function PainelScreen() {
         <>
           {query.isError ? (
             <FeedbackState variant="erro" onRetry={() => void query.refetch()} className="mt-8">
-              Não consegui atualizar seus lotes. Os dados abaixo estão desatualizados.
+              {GLOBAL_TEXT.staleError}
             </FeedbackState>
           ) : null}
           <section aria-label="Resumo" className="mt-8 flex flex-wrap gap-6">

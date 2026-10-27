@@ -2,7 +2,7 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
-import { formatBrasiliaClock, showcaseGroup, type LotCard as LotCardDto, type LotListResponse, type ShowcaseGroup } from "@lanceauto/shared";
+import { formatBrasiliaClock, showcaseGroup, type LotCard as LotCardDto, type LotListResponse, type ShowcaseGroup, GLOBAL_TEXT } from "@lanceauto/shared";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { Button } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
@@ -203,13 +203,13 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
           <FeedbackState variant="carregando" className="min-h-[200px]" />
         ) : !data ? (
           <FeedbackState variant="erro" onRetry={() => void query.refetch()}>
-            Não consegui trazer os lotes.
+            {GLOBAL_TEXT.loadError}
           </FeedbackState>
         ) : (
           <>
             {query.isError ? (
               <FeedbackState variant="erro" onRetry={() => void query.refetch()} className="mb-6">
-                Não consegui trazer os lotes. Os dados abaixo estão desatualizados.
+                {GLOBAL_TEXT.staleError}
               </FeedbackState>
             ) : null}
             {nothingPublished && !filtered ? (

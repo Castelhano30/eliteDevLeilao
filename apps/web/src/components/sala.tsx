@@ -12,6 +12,7 @@ import {
   formatBRL,
   formatReferenceMonth,
   type LotState,
+  GLOBAL_TEXT,
 } from "@lanceauto/shared";
 import { useAuth } from "@/components/auth-provider";
 import { ConnectionBanner } from "@/components/connection-banner";
@@ -111,7 +112,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
     return shell(
       query.isError ? (
         <FeedbackState variant="erro" onRetry={() => void query.refetch()}>
-          Não consegui trazer o lote.
+          {GLOBAL_TEXT.loadError}
         </FeedbackState>
       ) : (
         <FeedbackState variant="carregando" />
@@ -172,7 +173,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
       </p>
       {query.isError ? (
         <FeedbackState variant="erro" onRetry={() => void query.refetch()} className="mb-6">
-          Não consegui atualizar o lote. Os dados abaixo estão desatualizados.
+          {GLOBAL_TEXT.staleError}
         </FeedbackState>
       ) : null}
       <div className="flex flex-wrap gap-6">

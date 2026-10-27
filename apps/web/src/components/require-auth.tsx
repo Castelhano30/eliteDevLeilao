@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { homeFor, type Role } from "@lanceauto/shared";
+import { homeFor, type Role, GLOBAL_TEXT } from "@lanceauto/shared";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { PageShell } from "@/components/ui/page-shell";
 import { useAuth } from "./auth-provider";
@@ -27,7 +27,7 @@ export function RequireAuth({ role, children }: { role?: Role; children: ReactNo
     return (
       <PageShell>
         <FeedbackState variant="erro" onRetry={retrySession}>
-          Não consegui carregar sua sessão.
+          {GLOBAL_TEXT.loadError}
         </FeedbackState>
       </PageShell>
     );
