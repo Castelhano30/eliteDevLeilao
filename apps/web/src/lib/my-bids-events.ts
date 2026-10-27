@@ -1,4 +1,11 @@
-import { formatLotNumber, transitionAnnouncement, type LotCard, type LotStatus, type MyBidItem } from "@lanceauto/shared";
+import {
+  formatLotNumber,
+  transitionAnnouncement,
+  type LotCard,
+  type LotStatus,
+  type MyBidItem,
+  type MyBidsResponse,
+} from "@lanceauto/shared";
 import type { MyBidsTab } from "./my-bids-tabs";
 
 /** Rajada de eventos vira uma só consulta (S07 §7). */
@@ -87,6 +94,22 @@ export function transitionAnnouncements(previous: readonly MyBidItem[] | undefin
     if (message) messages.push(message);
   }
   return messages;
+}
+
+/** O que a região viva mostra e a última lista vista; `seq` troca a cada anúncio novo (o nó da região é refeito). */
+export interface AnnouncementState {
+  items: readonly MyBidItem[] | undefined;
+  seq: number;
+  text: string;
+}
+
+export const INITIAL_ANNOUNCEMENT: AnnouncementState = { items: undefined, seq: 0, text: "" };
+
+/** Passo a cada resposta nova do `GET`: guarda a lista e, se algum lote mudou de estado desde a anterior, anuncia. */
+export function advanceAnnouncement(state: AnnouncementState, response: MyBidsResponse): AnnouncementState {
+  const messages = transitionAnnouncements(state.items, response.items);
+  if (messages.length === 0) return { ...state, items: response.items };
+  return { items: response.items, seq: state.seq + 1, text: messages.join(" ") };
 }
 
 /** `id` do `<li>` de um ingresso, e o destino do link da Carteira. */

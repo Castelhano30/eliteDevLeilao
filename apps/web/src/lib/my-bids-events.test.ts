@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  INITIAL_ANNOUNCEMENT,
   MY_BIDS_DEBOUNCE_MS,
+  advanceAnnouncement,
   anchorId,
   createDebounced,
   decideEvent,
@@ -173,5 +175,40 @@ describe("âncora #lote-NNN (AC-7.20)", () => {
     expect(resolveAnchor("#outra-coisa", list)).toBeNull();
     expect(resolveAnchor("#lote-", list)).toBeNull();
     expect(resolveAnchor("#lote-1x", list)).toBeNull();
+  });
+});
+
+describe("advanceAnnouncement — o estado da região viva", () => {
+  const response = (items: ReturnType<typeof item>[]) => ({ items, serverTime: "2026-10-25T09:00:00.000Z" });
+
+  it("a primeira resposta guarda a lista e não anuncia", () => {
+    const state = advanceAnnouncement(INITIAL_ANNOUNCEMENT, response([item("OUTBID", { myRank: 2 }, { number: 18 })]));
+    expect(state.text).toBe("");
+    expect(state.seq).toBe(0);
+    expect(state.items).toHaveLength(1);
+  });
+
+  it("a segunda resposta, com transição, anuncia e sobe a sequência (a região é um nó novo a cada anúncio)", () => {
+    const first = advanceAnnouncement(INITIAL_ANNOUNCEMENT, response([item("LEADING", {}, { id: "a", number: 18 })]));
+    const second = advanceAnnouncement(first, response([item("OUTBID", { myRank: 2 }, { id: "a", number: 18 })]));
+    expect(second.text).toBe("Lote 018: você foi superado.");
+    expect(second.seq).toBe(1);
+  });
+
+  it("segunda resposta sem transição mantém o último texto e a sequência", () => {
+    const first = advanceAnnouncement(INITIAL_ANNOUNCEMENT, response([item("LEADING", {}, { id: "a", number: 18 })]));
+    const second = advanceAnnouncement(first, response([item("OUTBID", { myRank: 2 }, { id: "a", number: 18 })]));
+    const third = advanceAnnouncement(second, response([item("OUTBID", { myRank: 2 }, { id: "a", number: 18 })]));
+    expect(third.text).toBe(second.text);
+    expect(third.seq).toBe(second.seq);
+  });
+
+  it("o mesmo anúncio duas vezes seguidas ganha outra sequência, para o leitor de tela repetir", () => {
+    let state = advanceAnnouncement(INITIAL_ANNOUNCEMENT, response([item("LEADING", {}, { id: "a", number: 18 })]));
+    state = advanceAnnouncement(state, response([item("OUTBID", { myRank: 2 }, { id: "a", number: 18 })]));
+    state = advanceAnnouncement(state, response([item("LEADING", {}, { id: "a", number: 18 })]));
+    state = advanceAnnouncement(state, response([item("OUTBID", { myRank: 2 }, { id: "a", number: 18 })]));
+    expect(state.text).toBe("Lote 018: você foi superado.");
+    expect(state.seq).toBe(2);
   });
 });
