@@ -4,7 +4,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
 import {
+  AUDIT_TEXT,
   LOT_TEXT,
+  auditPath,
   brasiliaDayAndTime,
   cancelledAtLabel,
   formatBRL,
@@ -205,6 +207,11 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
             {lot.title}
           </h1>
           <div className="mt-6">{panel}</div>
+          <p className="mt-8">
+            <Link href={auditPath(id)} className={`${buttonClasses("secundario")} !min-h-alvo`}>
+              {AUDIT_TEXT.auditThisLot}
+            </Link>
+          </p>
         </section>
       </div>
     </>,

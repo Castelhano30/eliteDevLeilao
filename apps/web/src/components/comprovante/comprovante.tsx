@@ -1,9 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { RECEIPT_TEXT, type ReceiptDTO } from "@lanceauto/shared";
+import Link from "next/link";
+import { AUDIT_TEXT, RECEIPT_TEXT, type ReceiptDTO } from "@lanceauto/shared";
 import { BotaoCopiarLink } from "@/components/botao-copiar-link";
 import { CarPhoto } from "@/components/lots/car-photo";
+import { buttonClasses } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { PageShell } from "@/components/ui/page-shell";
 import { apiGet } from "@/lib/api-client";
@@ -76,6 +78,9 @@ export function Comprovante({ token, initial }: { token: string; initial?: Recei
               {receipt.car.imageUrl === null ? <p className="t-body-legenda mt-2 text-tinta2">Imagem ilustrativa</p> : null}
             </div>
             <BotaoCopiarLink token={token} lotNumber={receipt.lotNumber} />
+            <Link href={receipt.auditUrl} className={`${buttonClasses("secundario")} !min-h-alvo`}>
+              {AUDIT_TEXT.auditLot}
+            </Link>
             <p className="t-body-nota">{RECEIPT_TEXT.privacyNote}</p>
           </div>
         </div>

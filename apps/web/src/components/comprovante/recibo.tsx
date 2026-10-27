@@ -1,5 +1,6 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
-import { RECEIPT_TEXT, formatBRL, formatBrasilia, formatLotNumber, formatReferenceMonth, type ReceiptDTO } from "@lanceauto/shared";
+import { AUDIT_TEXT, RECEIPT_TEXT, formatBRL, formatBrasilia, formatLotNumber, formatReferenceMonth, type ReceiptDTO } from "@lanceauto/shared";
 import { LotTag } from "@/components/ui/lot-tag";
 import { Perforation } from "@/components/ui/perforation";
 import { Stamp } from "@/components/ui/stamp";
@@ -61,6 +62,9 @@ export function Recibo({ receipt }: { receipt: ReceiptDTO }) {
         <div>
           <p className="t-mono-rotulo">{RECEIPT_TEXT.hashLabel}</p>
           <p className="mt-1 select-all text-[15px] leading-[1.5] [overflow-wrap:anywhere]">{receipt.finalHash}</p>
+          <Link href={receipt.auditUrl} className="t-body-nota mt-1 inline-flex min-h-alvo items-center underline underline-offset-4">
+            {AUDIT_TEXT.verifyOnAudit}
+          </Link>
         </div>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>

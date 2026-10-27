@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { brasiliaDayAndTime, formatBRL, formatBrasilia, formatLotNumber, type LotCard as LotCardDto, type MyLotCard, type MyLotsResponse } from "@lanceauto/shared";
+import { AUDIT_TEXT, auditPath, brasiliaDayAndTime, formatBRL, formatBrasilia, formatLotNumber, type LotCard as LotCardDto, type MyLotCard, type MyLotsResponse } from "@lanceauto/shared";
 import { CancelDialog } from "@/components/cancel-dialog";
 import { Cronometro } from "@/components/lots/cronometro";
 import { LotCard } from "@/components/lots/lot-card";
@@ -104,6 +104,19 @@ function RowActions({ lot, onCancel }: { lot: MyLotCard; onCancel: (lot: MyLotCa
   );
 }
 
+/** "Auditoria do lote" (S08): nome acessível único por linha, com o número do lote. */
+function AuditLink({ lot }: { lot: LotCardDto }) {
+  return (
+    <Link
+      href={auditPath(lot.id)}
+      className={`${buttonClasses("secundario")} !min-h-alvo whitespace-nowrap !px-3 !py-1 text-[16px]`}
+      aria-label={`${AUDIT_TEXT.auditLotPanel} ${formatLotNumber(lot.number)}`}
+    >
+      {AUDIT_TEXT.auditLotPanel}
+    </Link>
+  );
+}
+
 function Counter({ label, value, alert = false }: { label: string; value: number; alert?: boolean }) {
   return (
     <div className="flex min-w-[150px] flex-1 flex-col justify-between border-2 border-linha bg-painel px-4 py-3">
@@ -177,6 +190,7 @@ export function PainelScreen() {
     { key: "ultimo", header: "Último lance", align: "right", render: (lot) => cancelledColumns(lot).lastBid },
     { key: "estorno", header: "Estorno", align: "right", render: (lot) => cancelledColumns(lot).refund },
     { key: "em", header: "Cancelado em", render: (lot) => cancelledColumns(lot).cancelledAt },
+    { key: "auditoria", header: "Auditoria", render: (lot) => <AuditLink lot={lot} /> },
   ];
 
   return (
@@ -268,7 +282,13 @@ export function PainelScreen() {
             {ended.length ? (
               <div className="grid gap-x-6 gap-y-10 pt-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 330px), 1fr))" }}>
                 {ended.map((lot) => (
-                  <LotCard key={lot.id} card={lot} serverTime={data.serverTime} resultado={lot.resultado} />
+                  <div key={lot.id} className="flex flex-col gap-4">
+                    <LotCard card={lot} serverTime={data.serverTime} resultado={lot.resultado} />
+                    <span className="flex flex-wrap gap-2">
+                      <AuditLink lot={lot} />
+                      <SeeRoom lot={lot} />
+                    </span>
+                  </div>
                 ))}
               </div>
             ) : (
