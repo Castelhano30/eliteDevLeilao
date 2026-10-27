@@ -56,7 +56,7 @@ export function ProfileMenu() {
       >
         <span
           aria-hidden="true"
-          className={`flex h-11 w-11 items-center sm:h-12 sm:w-12 justify-center rounded-full border-2 border-[var(--h-azul)] text-[15px] font-extrabold text-tinta group-hover:bg-suave ${open ? "bg-suave" : "bg-papel"}`}
+          className={`flex h-11 w-11 items-center sm:h-12 sm:w-12 justify-center rounded-full border-2 border-[var(--h-avatar-borda)] text-[15px] font-extrabold text-[var(--h-avatar-texto)] transition-colors group-hover:bg-[var(--f-azul-interativo)] ${open ? "bg-[var(--f-azul-interativo)]" : "bg-[var(--h-avatar-fundo)]"}`}
         >
           {initials}
         </span>

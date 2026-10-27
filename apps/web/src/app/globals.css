@@ -78,9 +78,16 @@
   --f-faixa-placa: #0033a0;
   --f-brasil-texto: #ffffff;
   --f-digito-placa: #f5eedf;
-  /* O logo é uma placa clara também no tema noite. */
+  /* O logo é uma placa clara por padrão; o cabeçalho claro a inverte (ver `.cabecalho`). */
   --f-logo-papel: #f5eedf;
   --f-logo-tinta: #1e1c19;
+  --f-logo-contorno: #1e1c19;
+
+  /* Paleta azul: principal (botões e marca), interativo (hover e estados ativos), profundo (destaques no escuro), suave (fundos de badge e áreas informativas). */
+  --f-azul: #0033a0;
+  --f-azul-interativo: #174bc2;
+  --f-azul-profundo: #001e63;
+  --f-azul-suave: #e8efff;
   --f-linha-central-placa: #000000;
   --f-rotulo-relogio: #8a8273;
   --f-rotulo-nota-painel: #b3aa99;
@@ -178,26 +185,98 @@ dialog::backdrop {
   background: rgba(30, 28, 25, 0.65);
 }
 
-/* ---------- Cabeçalho: barra escura nos dois temas ----------
-   Os tokens são redefinidos só dentro dela, então tema, saldo, perfil e botões já nascem na paleta escura. */
+/* ---------- Cabeçalho: claro por padrão, escuro no tema noite ----------
+   Os tokens são redefinidos só dentro da barra, então tema, saldo, perfil e botões herdam a paleta dela.
+   O logo faz o inverso da barra (placa escura na clara, placa clara na escura), para sempre contrastar. */
 .cabecalho {
+  --c-fundo: #f7f9ff;
+  --c-papel: #ffffff;
+  --c-suave: var(--f-azul-suave);
+  --c-tinta: #0f1b33;
+  --c-tinta2: #4b5870;
+  --c-linha: #8fa3cf;
+  --c-sombra: #c9d5ee;
+  --c-ocre: var(--f-azul);
+  --c-ocre-texto: var(--f-azul);
+  --h-azul: var(--f-azul);
+  --h-divisor: #d3dcf0;
+  --h-ativo-texto: var(--f-azul);
+  --h-valor: var(--f-azul);
+  --h-cta: var(--f-azul);
+  --h-cta-hover: var(--f-azul-interativo);
+  --h-botao-texto: var(--f-azul);
+  --h-botao-borda: var(--f-azul);
+  --h-avatar-fundo: var(--f-azul);
+  --h-avatar-borda: var(--f-azul);
+  --h-avatar-texto: #ffffff;
+  --h-logo-sombra: 0 2px 6px rgba(0, 30, 99, 0.25);
+  --f-logo-papel: #14181f;
+  --f-logo-tinta: #f5f7fb;
+  color-scheme: light;
+  background: var(--c-fundo);
+  color: var(--c-tinta);
+  border-bottom: 1px solid #d9e2f5;
+  box-shadow: 0 6px 18px -10px rgba(0, 30, 99, 0.35);
+}
+[data-theme="noite"] .cabecalho {
   --c-fundo: #0f1216;
   --c-papel: #151a21;
-  --c-suave: #1d242d;
+  --c-suave: var(--f-azul-profundo);
   --c-tinta: #f3f5f8;
   --c-tinta2: #9ba7b8;
   --c-linha: #5a6678;
   --c-sombra: #05070a;
-  --c-ocre: #1d4ed8;
+  --c-ocre: var(--f-azul-interativo);
   --c-ocre-texto: #6b93ff;
   --h-azul: #3d6dff;
   --h-divisor: #313a47;
+  --h-ativo-texto: #f3f5f8;
+  --h-valor: #f3f5f8;
+  --h-cta: var(--f-azul-interativo);
+  --h-cta-hover: #2459d6;
+  --h-botao-texto: #f3f5f8;
+  --h-botao-borda: #5a6678;
+  --h-avatar-fundo: var(--f-azul-profundo);
+  --h-avatar-borda: #3d6dff;
+  --h-avatar-texto: #f3f5f8;
+  --h-logo-sombra: 0 0 0 1px #3d6dff, 0 0 16px rgba(61, 109, 255, 0.35);
+  --f-logo-papel: #f5eedf;
+  --f-logo-tinta: #1e1c19;
   color-scheme: dark;
-  background: var(--c-fundo);
-  color: var(--c-tinta);
+  box-shadow: none;
   border-bottom: 2px solid var(--h-azul);
 }
-.cabecalho .logo-placa { box-shadow: 0 0 0 1px var(--h-azul), 0 0 16px rgba(61, 109, 255, 0.35); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="claro"]) .cabecalho {
+    --c-fundo: #0f1216;
+    --c-papel: #151a21;
+    --c-suave: var(--f-azul-profundo);
+    --c-tinta: #f3f5f8;
+    --c-tinta2: #9ba7b8;
+    --c-linha: #5a6678;
+    --c-sombra: #05070a;
+    --c-ocre: var(--f-azul-interativo);
+    --c-ocre-texto: #6b93ff;
+    --h-azul: #3d6dff;
+    --h-divisor: #313a47;
+    --h-ativo-texto: #f3f5f8;
+    --h-valor: #f3f5f8;
+    --h-cta: var(--f-azul-interativo);
+    --h-cta-hover: #2459d6;
+    --h-botao-texto: #f3f5f8;
+    --h-botao-borda: #5a6678;
+    --h-avatar-fundo: var(--f-azul-profundo);
+    --h-avatar-borda: #3d6dff;
+    --h-avatar-texto: #f3f5f8;
+    --h-logo-sombra: 0 0 0 1px #3d6dff, 0 0 16px rgba(61, 109, 255, 0.35);
+    --f-logo-papel: #f5eedf;
+    --f-logo-tinta: #1e1c19;
+    color-scheme: dark;
+    box-shadow: none;
+    border-bottom: 2px solid var(--h-azul);
+  }
+}
+.cabecalho .logo-placa { box-shadow: var(--h-logo-sombra); }
 .cabecalho-divisor { display: none; flex: 0 0 auto; width: 1px; height: 28px; background: var(--h-divisor); }
 @media (min-width: 768px) {
   .cabecalho-divisor { display: block; }

@@ -33,7 +33,7 @@ export function BalanceChip() {
       <span className="shrink-0 text-[var(--h-azul)]"><HeaderIcon name="wallet" size={24} /></span>
       <span className="flex min-w-0 flex-col leading-tight">
         <span className="text-[11px] uppercase tracking-[0.1em] text-tinta2">Disponível</span>
-        <span className="balance-value text-[16px] font-extrabold tabular-nums">{value}</span>
+        <span className="balance-value text-[16px] font-extrabold tabular-nums text-[var(--h-valor)]">{value}</span>
       </span>
     </Link>
     <button type="button" aria-label={hidden ? "Mostrar saldo" : "Ocultar saldo"} onClick={() => setBalanceHidden(!hidden)} className="inline-flex h-11 min-w-[44px] shrink-0 items-center sm:h-12 sm:min-w-[48px] justify-center rounded-full border border-linha bg-papel text-tinta hover:bg-suave">
