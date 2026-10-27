@@ -427,7 +427,7 @@ Nenhuma criação. Verificação: todos os lotes do seed (ao vivo, agendado, arr
 
 **Retrofits**
 
-- AC-8.34 [manual] Dado a Vitrine, quando clico num cartão **Encerrado**, então vai para a auditoria daquele lote (e não para o lote 018 nem para a Sala). Ao vivo e agendado continuam indo para a Sala.
+- AC-8.34 [manual] ~~Vitrine: cartão Encerrado vai para a auditoria.~~ **Substituído em 27/10/2026 (decisão do Felipe):** dado a Vitrine, quando clico num cartão **Encerrado**, então vai para a **Sala** do lote, como os demais cartões; a auditoria é o link "Auditar este lote" dentro da Sala (AC-8.35).
 - AC-8.35 [manual] Dado a Sala (qualquer status), então existe o link "Auditar este lote" com alvo ≥ 44px apontando para a auditoria do próprio lote; no comprovante, "Verificar na auditoria"/"Auditar lote" aponta para o lote do comprovante; no Painel, "Auditoria do lote" (encerrados e cancelados); em Meus arremates, "Conferir na auditoria" (perdidos).
 
 ## 13. Casos de borda e concorrência
@@ -472,7 +472,7 @@ Esta fatia altera código de fatias anteriores:
 
 | Onde | Mudança |
 | --- | --- |
-| `lotCardHref` (S02) | Cartão `SOLD`/`UNSOLD` (encerrado) → `/lotes/{id}/auditoria`. Ao vivo/agendado/apuração seguem para a Sala |
+| `lotCardHref` (S02) | ~~Cartão Encerrado → auditoria~~ **Não muda** (decisão do Felipe, 27/10/2026): todo cartão, inclusive o encerrado, segue para a Sala |
 | Sala (S02/S03/S05) | Link "Auditar este lote" (≥ 44px) visível em todos os estados, inclusive cancelado e agendado |
 | Comprovante (S05) | Link "Verificar na auditoria" e botão "Auditar lote" → `/lotes/{id}/auditoria` |
 | Painel (S02/S05/S06) | "Auditoria do lote" nos cartões Encerrados e nos Cancelados |
@@ -568,7 +568,7 @@ Decisões do build (S08, 27/10/2026; `spec-s08-auditoria.md`):
 13. **`DataTable`** ganhou `rowAccent` opcional (borda esquerda de 6 px por sombra interna, porque a borda de `<tr>` não é confiável com `border-collapse`, e fundo); os outros usos não mudam.
 14. **Texto da técnica no README** já nesta fatia (a §17 permite); a revisão final do README é da S09. O `psql` do exemplo usa `lanceauto`, que é o padrão do `.env.example`.
 15. **Cancelado sem lances** também tem a linha CANCEL (a S06 a grava) e audita `OK`; a frase "cancelado antes do primeiro lance" só aparece se a cadeia vier sem nenhuma linha.
-16. **Cartão Encerrado → auditoria** por decisão do Felipe (pergunta 5, **SIM**). No Painel, o cartão Encerrado também vai à auditoria e ganhou, ao lado, "Auditoria do lote" e "Ver sala".
+16. **Cartão Encerrado → Sala** (decisão do Felipe, 27/10/2026, revertendo o SIM do primeiro build): o cartão da Vitrine e o do Painel abrem a Sala; a auditoria fica no link "Auditar este lote" dentro da Sala. O Painel mantém "Auditoria do lote" ao lado de cada cartão Encerrado.
 
 Perguntas abertas (sugestão marcada):
 
@@ -576,7 +576,7 @@ Perguntas abertas (sugestão marcada):
 2. **Tempo mínimo de 400 ms no estado "Verificando".** Sugestão para o estado ser perceptível (EXPERIENCE diz "por um instante"). Pode ser removido sem afetar contratos.
 3. **S06 grava linha `CANCEL` em cancelamento sem lances?** Esta fatia aceita os dois casos; a frase de "cancelado sem lances" é "texto a revisar". Alinhar com a S06.
 4. **Lotes com milhares de lances:** sem requisito; sem paginação. Sugestão: nenhuma ação (o seed e a avaliação têm dezenas de lances).
-5. ~~**Cartão Encerrado da Vitrine vai direto para a auditoria (AC-8.34)?**~~ **Decidido pelo Felipe em 27/10/2026: SIM, vai para a auditoria.** Texto original: É coerente com o protótipo, mas o PRD descreve Vitrine → Sala, e a Sala encerrada (S05) mostra resultado e comprovante. Sugestão atual: manter o cartão indo para a auditoria só se o usuário confirmar; senão, o cartão Encerrado vai para a Sala e a Sala já traz "Auditar este lote". **Pergunta para o usuário.** Se a resposta for "Sala", AC-8.34 e a linha `lotCardHref` de §15 deixam de valer.
+5. ~~**Cartão Encerrado da Vitrine vai direto para a auditoria (AC-8.34)?**~~ **Decidido pelo Felipe em 27/10/2026: não, vai para a Sala** (primeiro build tinha adotado o SIM; revertido no mesmo dia). AC-8.34 e a linha `lotCardHref` da §15 deixam de valer; a Sala já traz "Auditar este lote".
 
 ## 17. Definition of Done
 

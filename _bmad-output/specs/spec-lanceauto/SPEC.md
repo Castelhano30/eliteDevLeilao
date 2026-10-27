@@ -241,6 +241,6 @@ Todas têm sugestão nas fatias e **não bloqueiam** o build; decidir antes ou d
 - **Q8 (S09)** Mostrar "Acordando o pátio…" quando o Render demora a acordar? `seed:demo --relampago` com lote de 10 min para demonstrar prorrogação e fechamento?
 - **Q9 (S09)** O repositório precisa ficar público antes da entrega (hoje é privado).
 - **Q10 (S07)** Ordenação de Meus arremates (sugestão: superados, depois ganhando por fim mais próximo, depois os demais por fim decrescente) ou simples cronológica? O desempate dos superados está no R-7.9 da S07.
-- **Q11 (S08)** O cartão Encerrado da Vitrine leva direto à auditoria (como no protótipo) ou à Sala, como diz o PRD? A S08 segue o protótipo.
+- **Q11 (S08)** O cartão Encerrado da Vitrine leva direto à auditoria (como no protótipo) ou à Sala, como diz o PRD? A S08 segue o protótipo. **Decidido (Felipe, 27/10/2026): à Sala;** a auditoria é um link dentro da Sala.
 
 Numeração: Q1 a Q11 são deste arquivo; as fatias têm listas próprias (por exemplo, "pergunta 1 da §16 da S03"). Quando uma fatia citar um Q, leia o número deste arquivo.

@@ -122,6 +122,8 @@ Provas de mutação (cópia no scratchpad, restauração por cópia, nunca `git 
 
 ## Spec Change Log
 
+- **27/10/2026, pedido do Felipe após a entrega:** o cartão Encerrado da Vitrine volta a abrir a **Sala** (o bloco congelado dizia SIM, auditoria). A auditoria fica só no link "Auditar este lote" da Sala. `lotCardHref` volta a devolver sempre `/lotes/{id}`, o AC-8.34 deixa de valer e o Painel mantém "Auditoria do lote" nos Encerrados sem o "Ver sala" extra (o cartão já abre a Sala). O bloco congelado não foi reescrito: esta entrada o substitui nesse ponto.
+
 ## Review Triage Log
 
 ## Verification
