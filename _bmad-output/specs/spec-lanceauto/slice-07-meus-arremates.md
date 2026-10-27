@@ -333,11 +333,13 @@ Perguntas abertas, com a sugestão que o build adotou:
 
 ## 17. Definition of Done
 
-- [ ] `GET /me/bids` e `MyBidItem` em `packages/shared`; todos os AC `[auto]` verdes no CI.
-- [ ] Tela `/arremates` com guardas, abas, contadores, ingressos, vazios e erros; checklist `[manual]` percorrido (claro/noite, 390px, teclado).
-- [ ] Atualização em tempo real verificada com dois navegadores e após queda do socket.
-- [ ] Header com "Meus arremates"; Carteira com links.
-- [ ] Teste de seed confirma os cinco estados nas duas contas; seed roda do zero.
-- [ ] Migração `add_bid_bidder_index` aplicada no deploy.
-- [ ] Smoke no link público: logar como Licitante 1 do seed e ver os estados.
-- [ ] README: nota curta sobre "Meus arremates" e a definição de Perdido.
+- [x] `GET /me/bids` e `MyBidItem` em `packages/shared`; todos os AC `[auto]` verdes no CI (shared 121, api 386, web 372; CI verde em 25f0ac8).
+- [x] Tela `/arremates` com guardas, abas, contadores, ingressos, vazios e erros; checklist `[manual]` percorrido no Chrome real (AC-7.8 tela e 7.14 a 7.22; claro/noite, 390px, teclado, foco). Itens 83 e 84 do diário.
+- [x] Atualização em tempo real verificada com dois navegadores e após queda do socket.
+- [x] Header com "Meus arremates"; Carteira com links.
+- [x] Teste de seed confirma os cinco estados nas duas contas; seed roda do zero.
+- [x] Migração `add_bid_bidder_index` aplicada no deploy (start da API no Railway, Fase 1).
+- [x] Smoke no link público: Ana e Bruno do seed logados, estados conferidos (somente leitura).
+- [x] README: nota curta sobre "Meus arremates" e a definição de Perdido.
+- [ ] **Pendência do Felipe:** leitor de tela (ordem de leitura, nomes acessíveis, anúncios da região viva, "Link copiado", foco no `<li>`).
+- [ ] **Pendência do Felipe:** aparelho real (toque, 390px de verdade).

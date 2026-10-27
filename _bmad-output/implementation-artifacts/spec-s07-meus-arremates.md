@@ -2,7 +2,7 @@
 title: 'S07 — Meus arremates'
 type: 'feature'
 created: '2026-10-27'
-status: 'in-progress'
+status: 'done'
 baseline_commit: '0356ac462c51487f97c55fe546986914cc9307cf'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -81,12 +81,12 @@ O build corre em **duas fases**, cada uma com `lint`, `typecheck`, `test` e `bui
 ### Fase 2 — Web: tela, tempo real, verificação e entrega
 
 **Execution:**
-- [ ] Retomada -- ler o diário e este spec; `lint`, `typecheck`, `test` como base da fase.
-- [ ] Web puro, com teste antes -- `my-bid-view` (selo, frase, valores, ações, nome acessível único, "Apurando" sem "Cobrir lance"), `my-bids-tabs` (contadores batem com as listas; `CANCELLED` só em Todos), `my-bids-events` (evento fora da lista, versão velha, debounce, anúncios, âncora), `receiptUrl` já testado.
-- [ ] Web telas -- `Stamp perdido`, `PlacarPosicao neutro`, `BidTicket`/`StatusSeal`/`BidTicketList`, `useMyBids`, rota `/arremates`, cabeçalho, links da Carteira; estados carregando, erro, erro com dados, vazio total, vazio por aba.
-- [ ] Prova de mutação no web -- "Apurando" mostrar "Cobrir lance", contar `CANCELLED` em "Perdidos", aceitar evento fora da lista, aceitar versão velha, anúncio em carga inicial.
-- [ ] Documentação -- §16 e §17 da fatia, README, `deferred-work.md`, diário.
-- [ ] Verificação -- raiz; Chrome real (ACs [manual] 7.8, 7.14 a 7.22, claro/noite, 390 px, teclado, dois clientes, queda do socket); push, CI verde, Railway web e API `SUCCESS` no commit certo, smoke no link público (Ana e Bruno do seed).
+- [x] Retomada -- ler o diário e este spec; `lint`, `typecheck`, `test` como base da fase.
+- [x] Web puro, com teste antes -- `my-bid-view` (selo, frase, valores, ações, nome acessível único, "Apurando" sem "Cobrir lance"), `my-bids-tabs` (contadores batem com as listas; `CANCELLED` só em Todos), `my-bids-events` (evento fora da lista, versão velha, debounce, anúncios, âncora), `receiptUrl` já testado.
+- [x] Web telas -- `Stamp perdido`, `PlacarPosicao neutro`, `BidTicket`/`StatusSeal`/`BidTicketList`, `useMyBids`, rota `/arremates`, cabeçalho, links da Carteira; estados carregando, erro, erro com dados, vazio total, vazio por aba.
+- [x] Prova de mutação no web -- "Apurando" mostrar "Cobrir lance", contar `CANCELLED` em "Perdidos", aceitar evento fora da lista, aceitar versão velha, anúncio em carga inicial.
+- [x] Documentação -- §16 e §17 da fatia, README, `deferred-work.md`, diário.
+- [x] Verificação -- raiz; Chrome real (ACs [manual] 7.8, 7.14 a 7.22, claro/noite, 390 px, teclado, dois clientes, queda do socket); push, CI verde, Railway web e API `SUCCESS` no commit certo, smoke no link público (Ana e Bruno do seed).
 
 **Acceptance Criteria:** AC-7.1 a 7.13 [auto] fecham na Fase 1; AC-7.8 (tela), 7.14 a 7.22 [manual] na Fase 2 (Chrome local e link público). Leitor de tela e aparelho real **não** serão conferidos por mim: ficam como pendência do Felipe, sem marcar feito.
 
@@ -120,6 +120,23 @@ Desvios e decisões menores, nenhum mexe no bloco congelado:
 - **Deslize meu:** rodei o teste do domínio uma vez sem exportar `DATABASE_URL_TEST`; o `globalSetup` leu o `.env` e aplicou a migração do índice em `lanceauto_test`, banco que a sessão em paralelo usa. Só `CREATE INDEX`, nenhum dado tocado; registrado no diário.
 
 Prova de mutação (cópia no scratchpad, restauração por cópia, sem `git checkout`): M1 `cancelledAt` não vence, M2 `bidderCount` = `bidCount`, M3 `receiptToken` fora de `WON`, M4 sem `requireRole`, M5 estorno a quem não liderava, M6 `myRank` fora de `LEADING`/`OUTBID`: **mortos**. M7 (tirar `receipt.winnerId === userId`) **sobreviveu** na 1ª rodada: a checagem é redundante no fluxo normal (`WON` já implica ser o vencedor). Acrescentei o teste de dado inconsistente (Receipt de outro) e M7 morreu. Não coberto por teste: o `RepeatableRead` em si (exigiria uma escrita concorrente entre as leituras).
+
+### Fase 2 (web, 27/10/2026)
+
+Implementada direto, sem subagente (o prompt da sessão trazia banco, portas e regras de commit que o spec não repete). Base da fase: shared 121, api 386, web 288. Depois: shared **121**, api **386**, web **372** (+84: 64 das três peças puras e do estado da região viva, 4 de Stamp e PlacarPosicao, 16 do `BidTicketList`); lint, typecheck e build exit 0.
+
+Decisões do build 10 a 17 estão na §16 da fatia (Apurando = cartão `CLOSING` ou `lotStatus` com o relógio do servidor; `gcTime: 0`; container query; canhoto = `LotTag`; âncora na primeira resposta; carimbo Perdido pequeno). Desvios e achados, nenhum mexe no bloco congelado:
+- **`BotaoCopiarLink`** ganhou a prop opcional `ariaLabel` (nome acessível com o título do lote); os outros usos não mudam.
+- **Defeito de a11y pego por teste antes do Chrome:** o `role="group"` "Situação do seu lance" repetia o nome em todos os ingressos; saiu.
+- **Divisores desalinhados e etiqueta encostando no tracejado** (vistos nas capturas): colunas fixas de 192 px e 200 px a partir de 44rem.
+- **Sem `CarPhoto` nem `Perforation`** no ingresso (a §9 não põe foto; o picote é da S09).
+- **Roteiro do Chrome:** três erros meus no script, nenhum do app: regex que tirava os espaços de "Em disputa", `goto` só com `#hash` na mesma página (não recarrega, então o teste da âncora não provava nada, refeito com `about:blank`) e o Bruno liderando o 007 quando o roteiro esperava "superado". Os dois `ERR_FAILED` do console foram do `/me/bids` que abortei de propósito.
+- **Nada da S06 mudou**; sem bug da S06 novo (nada novo no `deferred-work.md` além dos cinco itens da S07).
+- **Pendências do Felipe, sem marcar feito:** leitor de tela e aparelho real.
+
+Prova de mutação no web (cópia no scratchpad, restauração por cópia, `git status` limpo): 10 de 10 mortos (Apurando com "Cobrir lance", Apurando que ignora o relógio, `CANCELLED` em "Perdidos", "Em disputa" sem `OUTBID`, evento fora da lista, versão velha, versão igual sempre ignorada, anúncio na carga inicial, ocre em todo botão, "Ver comprovante" sem `target`). Nenhum sobrevivente.
+
+Verificação: Chrome real local com dois navegadores (partes 1 a 3, ~100 verificações; falhas só do roteiro, acima) e smoke público de leitura com Ana e Bruno (33 de 33, sem escrita em produção). CI verde em `25f0ac8`; Railway web `SUCCESS`, API `SUCCESS` no `c121a2f` (nada de `apps/api` mudou na Fase 2).
 
 ## Spec Change Log
 
