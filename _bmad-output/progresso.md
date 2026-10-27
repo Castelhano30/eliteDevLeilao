@@ -295,3 +295,7 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - Pegadinha: a regra global `a { color: var(--c-tinta) }` fica fora de layer e vence a utility do Tailwind, então o texto saiu apagado até usar `!text-logoTinta` (o resto do código já faz assim nos links). O teste cobre as duas coisas.
 - Conferido no Chrome a 360 e 1280 px, claro e noite. Texto escuro sobre o papel dá ~14:1 e o texto branco sobre a faixa azul, 10,60:1.
 - Push e deploy seguem pendentes de aprovação.
+
+## 27/10/2026 — Repaginação visual: página /kit removida
+- Pedido do Felipe: a página `/kit` sai. Apaguei `apps/web/src/app/(site)/kit/` (página e `kit-demo.tsx`), o link "Kit" do cabeçalho (que só aparecia fora de produção) e a linha do `AGENTS.md` que descrevia o `/kit`. O SPEC e as fatias ainda citam o kit (AC-0.14); a decisão do Felipe vale sobre eles.
+- Nenhum componente dependia da página. Em dev, o `.next/types/validator.ts` gerado ainda apontava para ela e quebrava o `tsc`; o arquivo é gerado e ignorado pelo git, e foi regenerado. `/kit` responde 404. Typecheck, lint e 438 testes do web verdes.

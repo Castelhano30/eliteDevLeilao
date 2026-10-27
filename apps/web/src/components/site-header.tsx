@@ -36,7 +36,6 @@ export function SiteHeader() {
       <NavLink href="/">Vitrine</NavLink>
       {user?.role === "BIDDER" ? <><NavLink href="/arremates">Meus arremates</NavLink><NavLink href="/carteira">Carteira</NavLink></> : null}
       {!user ? <Link href="/#como-funciona" className={LINK}>Como funciona</Link> : null}
-      {process.env.NODE_ENV !== "production" ? <NavLink href="/kit">Kit</NavLink> : null}
     </nav>
   );
 

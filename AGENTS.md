@@ -28,7 +28,6 @@ Casa de leilões de carros (teste técnico Verzel, 7 dias, deploy obrigatório).
 
 - Windows 11, PowerShell ou Git Bash: não assuma comandos Unix no PowerShell.
 - Na raiz: `npm run dev` (shared em watch, API e web), `npm run build` (shared → api → web), `npm run lint`, `npm run typecheck`, `npm test`. Banco local: `docker compose up -d db` (porta 5433 na máquina do Felipe; 5432/3000/4000 ocupadas, use `WEB_PORT`/`PORT`). Os testes da API exigem `DATABASE_URL_TEST`. `next dev` gera `apps/web/AGENTS.md`: não versione.
-- `/kit` só existe fora de produção (`notFound()` com `NODE_ENV=production`).
 - Versões verificadas (T13): Node 24.14.1 (engines >=22.12), npm 11.11.0, Next 16.4.2, React 19.3.1, Express 5.3.0, Socket.IO 4.8.4, zod 4.6.7, TanStack Query 5.104.5, Tailwind 4.3.3, Vitest 5.0.5, ESLint 9.39.5, TypeScript 5.9.3, **Prisma 6.19.3** (o 7 tira `url`/`directUrl` do schema). O Vitest do web usa `oxc.jsx`, não `esbuild`.
 
 ## Conventions that differ from defaults
