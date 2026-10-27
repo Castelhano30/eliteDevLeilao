@@ -23,6 +23,7 @@
   --c-botao-texto: var(--c-ocre-texto);
   --c-botao-borda: var(--c-ocre);
   --c-botao-borda-hover: var(--c-ocre);
+  --c-ocre-texto-hover: var(--c-ocre-hover);
   --c-selecionado: #e8efff;
   --c-foco: #174bc2;
   --c-destaque: #0033a0;
@@ -66,6 +67,7 @@
 --c-botao-texto: var(--c-tinta);
 --c-botao-borda: var(--c-linha);
 --c-botao-borda-hover: var(--c-ocre-texto);
+--c-ocre-texto-hover: var(--c-ocre-texto);
 --c-selecionado: #001e63;
 --c-foco: #8aaaff;
 --c-destaque: #3d6dff;
@@ -109,6 +111,7 @@
   --c-botao-texto: var(--c-tinta);
   --c-botao-borda: var(--c-linha);
   --c-botao-borda-hover: var(--c-ocre-texto);
+  --c-ocre-texto-hover: var(--c-ocre-texto);
   --c-selecionado: #001e63;
   --c-foco: #8aaaff;
   --c-destaque: #3d6dff;

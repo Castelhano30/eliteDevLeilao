@@ -58,7 +58,8 @@ describe("BidTicketList — ingressos (S07 §9)", () => {
     expect(html).toContain("Martelo batido. Apurando o resultado…");
     expect(html).toContain("Ir para a sala");
     expect(html).not.toContain("Cobrir lance");
-    expect(html).not.toContain("bg-ocre");
+    // O preenchimento de repouso: o segmento do filtro carrega `aria-pressed:bg-ocre` em todos os botões.
+    expect(html).not.toMatch(/(?<=["\s])bg-ocre(?=["\s])/);
     expect(html).not.toMatch(/SUPERADO|GANHANDO|º de/);
   });
 

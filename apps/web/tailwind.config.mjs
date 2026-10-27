@@ -24,6 +24,7 @@ const config = {
         botaoTexto: "var(--c-botao-texto)",
         botaoBorda: "var(--c-botao-borda)",
         botaoBordaHover: "var(--c-botao-borda-hover)",
+        ocreTextoHover: "var(--c-ocre-texto-hover)",
         selecionado: "var(--c-selecionado)",
         foco: "var(--c-foco)",
         destaque: "var(--c-destaque)",

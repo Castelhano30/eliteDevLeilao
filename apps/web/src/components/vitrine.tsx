@@ -8,6 +8,8 @@ import { ConnectionBanner } from "@/components/connection-banner";
 import { Button } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { FilterTabs } from "@/components/ui/filter-tabs";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
 import { Canhoto } from "@/components/lots/canhoto";
 import { LotCard } from "@/components/lots/lot-card";
 import { apiGet } from "@/lib/api-client";
@@ -168,39 +170,37 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
         ) : null}
       </p>
 
-      <section aria-label="Filtros" className="flex flex-wrap items-end gap-4 pb-8">
-        <div className="min-w-[min(100%,260px)] flex-1">
-          <label htmlFor={searchId} className="t-mono-rotulo mb-2 block">
-            Buscar
-          </label>
-          <input
-            id={searchId}
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Marca, modelo, ano…"
-            className="h-12 w-full rounded-nenhum border-2 border-linha bg-fundo px-3 text-[16px] text-tinta placeholder:text-tinta2"
-          />
-        </div>
-        <div className="min-w-[min(100%,200px)]">
-          <label htmlFor={brandId} className="t-mono-rotulo mb-2 block">
-            Marca
-          </label>
-          <select
-            id={brandId}
-            value={filters.brand}
-            onChange={(event) => setFilters((current) => ({ ...current, brand: event.target.value }))}
-            className="h-12 w-full rounded-nenhum border-2 border-linha bg-fundo px-3 text-[16px] text-tinta"
-          >
-            <option value="">Todas</option>
-            {(data?.brands ?? []).map((brand) => (
-              <option key={brand} value={brand}>
-                {brand}
-              </option>
-            ))}
-          </select>
-        </div>
-        <FilterTabs label="Status" tabs={TABS} value={filters.status} onChange={(status) => setFilters((current) => ({ ...current, status }))} />
+      {/* Contêiner para o trilho de status ganhar a linha própria quando os três controles não cabem lado a lado. */}
+      <section aria-label="Filtros" className="@container flex flex-wrap items-end gap-x-4 gap-y-3 pb-6">
+        <SearchField
+          id={searchId}
+          label="Buscar"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Marca, modelo, ano…"
+          className="min-w-[min(100%,260px)] flex-[1_1_260px]"
+        />
+        <SelectField
+          id={brandId}
+          label="Marca"
+          value={filters.brand}
+          onChange={(event) => setFilters((current) => ({ ...current, brand: event.target.value }))}
+          className="min-w-[min(100%,200px)] flex-[0_1_200px]"
+        >
+          <option value="">Todas</option>
+          {(data?.brands ?? []).map((brand) => (
+            <option key={brand} value={brand}>
+              {brand}
+            </option>
+          ))}
+        </SelectField>
+        <FilterTabs
+          label="Status"
+          tabs={TABS}
+          value={filters.status}
+          onChange={(status) => setFilters((current) => ({ ...current, status }))}
+          className="flex-[0_1_auto] @max-[55rem]:w-full"
+        />
       </section>
 
       <div aria-busy={query.isFetching ? "true" : undefined}>
