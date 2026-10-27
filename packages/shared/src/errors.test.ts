@@ -6,6 +6,10 @@ describe("errors", () => {
     for (const code of ERROR_CODES) expect(ERROR_HTTP_STATUS[code]).toBeGreaterThanOrEqual(400);
   });
 
+  it("corpo grande demais responde 413", () => {
+    expect(ERROR_HTTP_STATUS.PAYLOAD_TOO_LARGE).toBe(413);
+  });
+
   it("valida o envelope de erro", () => {
     const ok = errorEnvelopeSchema.safeParse({
       error: { code: "VALIDATION", message: "x", details: { fields: { email: "x" } } },

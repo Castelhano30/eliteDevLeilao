@@ -18,6 +18,7 @@ export const ERROR_CODES = [
   "EXTERNAL_UNAVAILABLE",
   "INTERNAL",
   "RATE_LIMITED",
+  "PAYLOAD_TOO_LARGE",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -41,9 +42,11 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   EXTERNAL_UNAVAILABLE: 503,
   INTERNAL: 500,
   RATE_LIMITED: 429,
+  PAYLOAD_TOO_LARGE: 413,
 };
 
 export const INTERNAL_ERROR_MESSAGE = "Algo travou do nosso lado. Tente de novo em instantes.";
+export const PAYLOAD_TOO_LARGE_MESSAGE = "A requisição passou de 100 KB. Envie menos dados.";
 export const RATE_LIMITED_MESSAGE = "Calma, uma coisa de cada vez. Tente de novo em instantes.";
 
 export const errorEnvelopeSchema = z.object({

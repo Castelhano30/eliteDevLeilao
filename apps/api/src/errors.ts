@@ -2,6 +2,7 @@ import type { ErrorRequestHandler, RequestHandler } from "express";
 import {
   ERROR_HTTP_STATUS,
   INTERNAL_ERROR_MESSAGE,
+  PAYLOAD_TOO_LARGE_MESSAGE,
   RATE_LIMITED_MESSAGE,
   type ErrorCode,
   type ErrorEnvelope,
@@ -26,6 +27,7 @@ const DEFAULT_MESSAGES: Record<ErrorCode, string> = {
   EXTERNAL_UNAVAILABLE: "Um serviço externo não respondeu. Tente de novo em instantes.",
   INTERNAL: INTERNAL_ERROR_MESSAGE,
   RATE_LIMITED: RATE_LIMITED_MESSAGE,
+  PAYLOAD_TOO_LARGE: PAYLOAD_TOO_LARGE_MESSAGE,
 };
 
 export class AppError extends Error {
@@ -56,6 +58,10 @@ function isBodyParseError(err: unknown): boolean {
   return typeof err === "object" && err !== null && (err as { type?: string }).type === "entity.parse.failed";
 }
 
+function isBodyTooLarge(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { type?: string }).type === "entity.too.large";
+}
+
 /** Toda resposta de erro sai no envelope; o inesperado vira INTERNAL sem stack para o cliente. */
 export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   if (err instanceof AppError) {
@@ -65,6 +71,11 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   if (isBodyParseError(err)) {
     const invalidJson = new AppError("VALIDATION", undefined, "O corpo da requisição não é um JSON válido.");
     res.status(invalidJson.status).json(invalidJson.toEnvelope());
+    return;
+  }
+  if (isBodyTooLarge(err)) {
+    const tooLarge = new AppError("PAYLOAD_TOO_LARGE");
+    res.status(tooLarge.status).json(tooLarge.toEnvelope());
     return;
   }
   req.log.error({ err, requestId: req.id }, "erro não tratado");

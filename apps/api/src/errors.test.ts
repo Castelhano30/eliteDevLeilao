@@ -58,4 +58,12 @@ describe("envelope de erro", () => {
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION");
   });
+
+  it("corpo acima de 100 KB vira 413 no envelope, sem log de erro", async () => {
+    const { app, lines } = buildApp();
+    const res = await request(app).post("/eco").send({ blob: "x".repeat(120 * 1024) });
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({ error: { code: "PAYLOAD_TOO_LARGE", message: "A requisição passou de 100 KB. Envie menos dados." } });
+    expect(lines.join("")).not.toContain("erro não tratado");
+  });
 });
