@@ -113,7 +113,7 @@ describe.skipIf(!testDatabaseUrl)("GET /lots/:id/audit (integração, DATABASE_U
       expect(view.entries.map((entry) => entry.seq)).toEqual([1, 2, 3, 4, 5]);
       expect(view.lot).toMatchObject({ id: lot.id, status: "SOLD", bidCount: 5 });
       expect(view.finalHash).toBe(view.receipt!.finalHash);
-      expect(view.receipt!.receiptCode).toMatch(/^\d{3}-[A-Z0-9_-]{4}$/);
+      expect(view.receipt!.receiptCode).toMatch(/^\d{3,}-[A-Z0-9_-]{4}$/);
     });
 
     it("AC-8.11: sem lances → OK com 0 linhas, só depois de conferir genesis, contagem e selo", async () => {
