@@ -17,6 +17,7 @@ import { requestContext } from "./middleware/request-context";
 import { accountRouter } from "./routes/account";
 import { authRouter } from "./routes/auth";
 import { healthRouter } from "./routes/health";
+import { myBidsRouter } from "./routes/my-bids";
 import { receiptsRouter } from "./routes/receipts";
 import { catalogRouter, lotsRouter } from "./routes/lots";
 import { makeAuthService } from "./services/auth.service";
@@ -24,6 +25,7 @@ import { makeBidService } from "./services/bid.service";
 import { makeCancelService } from "./services/cancel.service";
 import { makeCatalogService } from "./services/catalog.service";
 import { makeLotService, type LotService } from "./services/lot.service";
+import { makeMyBidsService } from "./services/my-bids.service";
 import { makeReceiptService } from "./services/receipt.service";
 import { makeSettlementService, type SettlementService } from "./services/settlement.service";
 import { makeWalletService } from "./services/wallet.service";
@@ -123,6 +125,7 @@ export function composeApp({
   const settlement = makeSettlementService({ db, clock });
   const settlementJob = makeSettlementJob({ db, clock, settlement, publisher, logger });
   const receiptService = makeReceiptService({ db });
+  const myBidsService = makeMyBidsService({ db, clock });
 
   app.use(healthRouter(db));
   app.use(authRouter(authService, env.AUTH_RATE_LIMIT_MAX));
@@ -130,6 +133,7 @@ export function composeApp({
   app.use(catalogRouter(auth, catalogService));
   app.use(lotsRouter(auth, lotService, bidService, cancelService, clock, publisher));
   app.use(receiptsRouter(receiptService));
+  app.use(myBidsRouter(auth, myBidsService));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
