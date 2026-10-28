@@ -28,7 +28,8 @@ export function BidTicketList({ items, tab, onTab, nowMs, announcement }: BidTic
     <>
       {empty === "total" ? (
         <FeedbackState variant="vazio">
-          {MY_BIDS_TEXT.empty}
+          <span className="block">{MY_BIDS_TEXT.emptyIntro}</span>
+          <strong className="mt-3 block text-tinta">{MY_BIDS_TEXT.empty}</strong>
           <span className="mt-4 block">
             <Link href="/" className={buttonClasses("secundario")}>
               {MY_BIDS_TEXT.emptyAction}

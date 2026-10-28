@@ -130,9 +130,10 @@ describe("BidTicketList — abas e vazios", () => {
     expect(html).not.toContain("<li ");
   });
 
-  it("vazio total: frase da §8 e 'Ver a vitrine' secundário, sem abas nem ocre (AC-7.18)", () => {
+  it("vazio total: explicação do arremate, frase de vazio e 'Ver a vitrine' secundário, sem abas nem ocre (AC-7.18)", () => {
     const html = render([]);
-    expect(html).toContain("Nada aqui. Ou você é muito prudente, ou ainda não chegou a hora.");
+    expect(html).toContain("Arremate é cada lote em que você dá lance.");
+    expect(html).toContain("Você ainda não tem arremates.");
     expect(html).toContain('href="/"');
     expect(html).toContain("Ver a vitrine");
     expect(html).not.toContain("bg-ocre");

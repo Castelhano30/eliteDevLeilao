@@ -66,7 +66,8 @@ describe("bidderLotState (R-7.2, AC-7.12)", () => {
 describe("MY_BIDS_TEXT (S07 §8)", () => {
   it("traz os textos canônicos da fatia", () => {
     expect(MY_BIDS_TEXT.title).toBe("MEUS ARREMATES");
-    expect(MY_BIDS_TEXT.empty).toBe("Nada aqui. Ou você é muito prudente, ou ainda não chegou a hora.");
+    expect(MY_BIDS_TEXT.emptyIntro).toBe("Arremate é cada lote em que você dá lance. Aqui você acompanha se está ganhando, se foi superado ou se já levou o carro.");
+    expect(MY_BIDS_TEXT.empty).toBe("Você ainda não tem arremates. Escolha um carro na vitrine e dê o seu primeiro lance.");
     expect(MY_BIDS_TEXT.emptyAction).toBe("Ver a vitrine");
     expect(MY_BIDS_TEXT.emptyTab).toBe("Nenhum lote nesta aba. Troque de aba para ver o resto.");
     expect(MY_BIDS_TEXT.loading).toBe("Carregando…");

@@ -53,7 +53,8 @@ export interface MyBidsResponse {
 /** Textos de Meus arremates (S07 §8). Os marcados "(a revisar)" na fatia seguem para a revisão de voz da S09. */
 export const MY_BIDS_TEXT = {
   title: "MEUS ARREMATES",
-  empty: "Nada aqui. Ou você é muito prudente, ou ainda não chegou a hora.",
+  emptyIntro: "Arremate é cada lote em que você dá lance. Aqui você acompanha se está ganhando, se foi superado ou se já levou o carro.",
+  empty: "Você ainda não tem arremates. Escolha um carro na vitrine e dê o seu primeiro lance.",
   emptyAction: "Ver a vitrine",
   emptyTab: "Nenhum lote nesta aba. Troque de aba para ver o resto.",
   loading: "Carregando…",
