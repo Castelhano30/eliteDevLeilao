@@ -77,9 +77,8 @@ model Item {
   referencePriceCents BigInt
   /// "YYYY-MM", ou o texto cru da FIPE.
   referenceMonth      String
-  /// Só GET /items/:id/image lê esta coluna (R-2.15).
-  imageData           Bytes?
-  imageMime           String?
+  /// Quantas fotos o lote tem (0 a 5); diz se há imagem sem tocar nos blobs (R-2.15).
+  imageCount          Int      @default(0)
   imageCredit         String?
   imageCreditUrl      String?
   /// Resposta bruta do detalhe da FIPE.
@@ -87,6 +86,18 @@ model Item {
   /// Quando a entrada do catálogo foi realmente buscada (não "agora" se veio de cache).
   fetchedAt           DateTime @db.Timestamp(3)
   lots                Lot[]
+  images              ItemImage[]
+}
+
+/// Foto do item. Só GET /items/:id/image(s) lê `data` (R-2.15); posição 0 é a capa. Sem nome de arquivo.
+model ItemImage {
+  itemId   String
+  position Int
+  mime     String
+  data     Bytes
+  item     Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, position])
 }
 
 model Lot {
