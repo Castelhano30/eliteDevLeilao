@@ -21,3 +21,11 @@ describe("alvos de toque de pelo menos 44×44px", () => {
     expect(read("./painel-screen.tsx")).toContain('className="inline-flex min-h-alvo items-center text-[15px] font-bold leading-[1.4]"');
   });
 });
+
+describe("linha de status da Vitrine no celular", () => {
+  it("os pontos separadores só aparecem de sm em diante: a linha quebra e um ponto ficaria pendurado no fim", () => {
+    const source = read("./vitrine.tsx");
+    expect(source.match(/<span aria-hidden="true" className="hidden sm:inline">·<\/span>/g)).toHaveLength(3);
+    expect(source).not.toContain('<span aria-hidden="true">·</span>');
+  });
+});

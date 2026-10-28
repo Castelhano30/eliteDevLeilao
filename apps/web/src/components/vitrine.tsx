@@ -136,22 +136,23 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
         <p>Referência: Tabela FIPE. Nenhum carro de verdade troca de dono aqui.</p>
       </section>
 
-      <p className="t-mono-rotulo flex flex-wrap items-center gap-x-3 gap-y-1 mt-10 mb-6 border-b border-borda pb-3">
+      {/* Os pontos separadores só aparecem de sm em diante: no celular a linha quebra e um ponto ficaria pendurado no fim da linha. */}
+      <p className="t-mono-rotulo flex flex-wrap items-center gap-x-4 gap-y-1 mt-10 mb-6 border-b border-borda pb-3 sm:gap-x-3">
         <span className="inline-flex items-center gap-2">
           <span aria-hidden="true" className="inline-block h-[10px] w-[10px] rounded-circulo bg-ferrugem" style={{ animation: "la-pulsa 1.2s infinite" }} />
           Pátio aberto
         </span>
         {counts ? (
           <>
-            <span aria-hidden="true">·</span>
+            <span aria-hidden="true" className="hidden sm:inline">·</span>
             <span>{plural(counts.live, "lote ao vivo", "lotes ao vivo")}</span>
-            <span aria-hidden="true">·</span>
+            <span aria-hidden="true" className="hidden sm:inline">·</span>
             <span>{plural(counts.scheduled, "agendado", "agendados")}</span>
           </>
         ) : null}
         {now > 0 ? (
           <>
-            <span aria-hidden="true">·</span>
+            <span aria-hidden="true" className="hidden sm:inline">·</span>
             <span>{formatBrasiliaClock(now)}</span>
           </>
         ) : null}
