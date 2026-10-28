@@ -29,6 +29,7 @@ import { Field } from "@/components/ui/field";
 import { LotTag } from "@/components/ui/lot-tag";
 import { PageShell } from "@/components/ui/page-shell";
 import { apiGet, apiPost, apiPostForm } from "@/lib/api-client";
+import { formatWhen } from "@/lib/format";
 import { buildLotForm, imageBodyFields, needsDiscardConfirmation, planImageSubmit, type ImageMode } from "@/lib/lot-photos";
 import { useLotPhotos } from "@/lib/use-lot-photos";
 import { serverNow } from "@/lib/server-clock";
@@ -156,6 +157,8 @@ export function CriarLoteForm() {
   const [mode, setMode] = useState<ImageMode>("url");
   /** Troca de modo à espera do "sim" do diálogo (há fotos que seriam descartadas). */
   const [pendingMode, setPendingMode] = useState<ImageMode | null>(null);
+  /** "Tem certeza?" antes de agendar: guarda título e início do que foi conferido. */
+  const [confirming, setConfirming] = useState<{ title: string; startsAt: string } | null>(null);
   const lotPhotos = useLotPhotos();
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -280,7 +283,8 @@ export function CriarLoteForm() {
     if (first) requestAnimationFrame(() => document.getElementById(first[1])?.focus());
   }
 
-  async function submit(event?: FormEvent) {
+  /** `confirmed`: o leiloeiro já respondeu "Sim, agendar" (ou é a nova tentativa depois de uma falha). */
+  async function submit(event?: FormEvent, confirmed = false) {
     event?.preventDefault();
     // Fotos ainda sendo reduzidas: esperar, senão iria menos foto do que a escolhida (ou "escolha ao menos uma").
     if (submitting || lotPhotos.busy) return;
@@ -296,6 +300,10 @@ export function CriarLoteForm() {
       return;
     }
     setErrors({});
+    if (!confirmed) {
+      setConfirming({ title: check.data.title, startsAt: check.data.startsAt });
+      return;
+    }
     setSubmitting(true);
     const result = plan.kind === "multipart"
       ? await apiPostForm<CreateLotResponse>("/lots", buildLotForm(check.data, lotPhotos.photos))
@@ -375,7 +383,7 @@ export function CriarLoteForm() {
             <Button
               loading={consulting}
               loadingText="Consultando…"
-              onClick={() => (submitFailure === "fipe" && !fipeErrored ? void submit() : retryFailed())}
+              onClick={() => (submitFailure === "fipe" && !fipeErrored ? void submit(undefined, true) : retryFailed())}
             >
               Tentar de novo
             </Button>
@@ -573,7 +581,7 @@ export function CriarLoteForm() {
           </Group>
 
           {submitFailure === "other" ? (
-            <FeedbackState variant="erro" onRetry={() => void submit()}>
+            <FeedbackState variant="erro" onRetry={() => void submit(undefined, true)}>
               Não deu para agendar agora.
             </FeedbackState>
           ) : null}
@@ -606,6 +614,21 @@ export function CriarLoteForm() {
           {!noPhoto && mode === "url" && previewImage && credit ? <p className="t-body-legenda mt-3 text-tinta2">{credit}</p> : null}
         </aside>
       </div>
+      <Dialog
+        open={confirming !== null}
+        onClose={() => setConfirming(null)}
+        title={LOT_TEXT.scheduleConfirmTitle}
+        cancelLabel={LOT_TEXT.scheduleConfirmBack}
+        confirm={{
+          label: LOT_TEXT.scheduleConfirmYes,
+          onConfirm: () => {
+            setConfirming(null);
+            void submit(undefined, true);
+          },
+        }}
+      >
+        {confirming ? <p>{LOT_TEXT.scheduleConfirmBody(confirming.title, formatWhen(confirming.startsAt))}</p> : null}
+      </Dialog>
       <Dialog
         open={pendingMode !== null}
         onClose={() => setPendingMode(null)}

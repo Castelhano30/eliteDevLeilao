@@ -188,6 +188,12 @@ describe("fotos do aparelho (galeria do lote)", () => {
     expect(LOT_TEXT.discardPhotosTitle(1)).toBe("A foto escolhida será descartada.");
     expect(LOT_TEXT.imageNotFound).toBe("Não encontramos uma foto desse carro. Cole o link de uma imagem, envie suas fotos ou use a ilustração do pátio.");
     expect(LOT_TEXT.imageUnavailable).toBe("Não conseguimos buscar a foto agora. Cole o link de uma imagem, envie suas fotos ou use a ilustração do pátio.");
+    expect(LOT_TEXT.scheduleConfirmTitle).toBe("Tem certeza que quer agendar este lote?");
+    expect(LOT_TEXT.scheduleConfirmBody("Corolla 2015", "25/10 10:00")).toBe(
+      "“Corolla 2015” aparece em “Agendados” e abre sozinho para lances em 25/10 10:00 (horário de Brasília).",
+    );
+    expect(LOT_TEXT.scheduleConfirmYes).toBe("Sim, agendar");
+    expect(LOT_TEXT.scheduleConfirmBack).toBe("Revisar");
     expect(LOT_TEXT.discardPhotosBody).toBe("Voltando para a URL, as fotos que você escolheu não vão junto no lote.");
   });
 
