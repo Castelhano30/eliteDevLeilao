@@ -41,7 +41,7 @@ export function PlacaLance({ cents, label }: PlacaLanceProps) {
             ) : (
               <span
                 key={`${index}-${char}`}
-                className="relative inline-flex items-center justify-center rounded-placa bg-painel font-extrabold"
+                className="relative inline-flex items-center justify-center rounded-md bg-painel font-extrabold"
                 style={{
                   width: 32,
                   height: 48,

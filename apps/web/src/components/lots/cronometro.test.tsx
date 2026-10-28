@@ -99,3 +99,112 @@ describe("Cronometro: CSS do fantasma", () => {
     expect(html).toContain("whitespace-nowrap");
   });
 });
+
+describe("Cronometro: pele da Rev. 05", () => {
+  const SERVER_NOW = "2026-10-23T12:00:00.000Z";
+  const at = (offsetMs: number) => new Date(Date.parse(SERVER_NOW) + offsetMs).toISOString();
+  const SEC = 1_000;
+  const MIN = 60 * SEC;
+  const HOUR = 60 * MIN;
+
+  function render(opts: { status?: "LIVE" | "SCHEDULED" | "CLOSING" | "SOLD" | "UNSOLD" | "CANCELLED"; endsInMs?: number; originalEndsInMs?: number; size?: "sala" | "cartao" } = {}) {
+    const { status = "LIVE", size = "cartao" } = opts;
+    // Agendado conta até o início (daqui a 1 h) e o fim original é o fim: não há prorrogação.
+    const endsInMs = status === "SCHEDULED" ? 2 * HOUR : (opts.endsInMs ?? 30 * MIN);
+    const originalEndsInMs = status === "SCHEDULED" ? endsInMs : (opts.originalEndsInMs ?? endsInMs);
+    return renderToStaticMarkup(
+      <Cronometro status={status} startsAt={at(status === "SCHEDULED" ? HOUR : -HOUR)} endsAt={at(endsInMs)} originalEndsAt={at(originalEndsInMs)} size={size} serverTime={SERVER_NOW} />,
+    );
+  }
+  const border = (html: string) => /style="border:([^"]*)"/.exec(html)?.[1];
+  const labelOf = (html: string) => /<span class="inline-flex items-center gap-1 text-\[12px\][^>]*>(.*?)<\/span><div/.exec(html)?.[1] ?? "";
+
+  it("display de 12px de raio sobre o painel; cartão com padding 8/12 e Sala com 10/14", () => {
+    const cartao = render({ size: "cartao" });
+    expect(cartao).toContain("rounded-xl");
+    expect(cartao).toContain("bg-painel");
+    expect(cartao).toContain("px-3 py-2");
+    expect(cartao).not.toMatch(/rounded-nenhum|relative inline-flex/);
+    expect(render({ size: "sala" })).toContain("px-[14px] py-[10px]");
+  });
+
+  it("rótulo de 12px/700 em caixa-alta; dígitos em 700 com tabular-nums e sem quebra", () => {
+    const html = render();
+    expect(html).toContain("text-[12px] font-bold uppercase");
+    expect(html).toContain("la-mostrador");
+    expect(html).toMatch(/role="timer"[^>]*class="la-mostrador relative whitespace-nowrap font-bold leading-none"/);
+  });
+
+  it("normal: fio de 1px linha, rótulo RESTAM (cartão) ou TEMPO RESTANTE (Sala), sem ícone", () => {
+    const cartao = render();
+    expect(border(cartao)).toBe("1px solid var(--c-linha)");
+    expect(labelOf(cartao)).toBe("RESTAM");
+    expect(cartao).not.toContain("<svg");
+    expect(labelOf(render({ size: "sala" }))).toBe("TEMPO RESTANTE");
+  });
+
+  it("últimos 2 min: borda de 2px em ledAlerta, rótulo em ledAlerta com ícone de alerta e dígitos pulsando", () => {
+    const html = render({ endsInMs: 95 * SEC });
+    expect(border(html)).toBe("2px solid var(--c-led-alerta)");
+    expect(html).toContain("ÚLTIMOS 2 MIN");
+    expect(html).toMatch(/<span class="inline-flex[^"]*"[^>]*style="color:var\(--c-led-alerta\)"><svg aria-hidden="true"/);
+    expect(html.match(/la-pulsa/g)).toHaveLength(1);
+    expect(html).not.toContain("--c-ferrugem");
+  });
+
+  it("prorrogado: rótulo PRORROGADO, fio de 1px e o selo +2 MIN", () => {
+    const html = render({ endsInMs: 30 * MIN, originalEndsInMs: 10 * MIN });
+    expect(labelOf(html)).toBe("PRORROGADO");
+    expect(border(html)).toBe("1px solid var(--c-linha)");
+    expect(html).toContain("+2 MIN");
+  });
+
+  it("prorrogado nos últimos 2 min: rótulo, ícone e borda de alerta mais o selo", () => {
+    const html = render({ endsInMs: 90 * SEC, originalEndsInMs: -5 * MIN });
+    expect(html).toContain("ÚLTIMOS 2 MIN");
+    expect(border(html)).toBe("2px solid var(--c-led-alerta)");
+    expect(html).toContain("+2 MIN");
+    expect(html).toContain("<svg");
+  });
+
+  it("+2 MIN entra no fluxo, na linha dos dígitos e depois deles: sem position absolute, sem rotação e fora do rótulo", () => {
+    const html = render({ endsInMs: 30 * MIN, originalEndsInMs: 10 * MIN });
+    expect(html).not.toMatch(/absolute"[^>]*>\+2 MIN|rotate|right:-14|top:-14/);
+    const row = /<div class="flex flex-wrap items-center gap-x-2 gap-y-1">(.*)<\/div><\/div>$/.exec(html)?.[1] ?? "";
+    expect(row).toContain('role="timer"');
+    expect(row.indexOf("+2 MIN")).toBeGreaterThan(row.indexOf('role="timer"'));
+    expect(labelOf(html)).not.toContain("+2 MIN");
+    for (const token of ["inline-flex", "shrink-0", "rounded-full", "bg-led", "text-painel", "font-extrabold", "text-[12px]"]) expect(html).toContain(token);
+  });
+
+  it("o selo tem 20px no cartão e 24px na Sala", () => {
+    const opts = { endsInMs: 30 * MIN, originalEndsInMs: 10 * MIN };
+    expect(render({ ...opts, size: "cartao" })).toContain("text-painel h-5");
+    expect(render({ ...opts, size: "sala" })).toContain("text-painel h-6");
+  });
+
+  it.each([
+    ["CLOSING", 30 * MIN],
+    ["LIVE", -5 * SEC],
+  ] as const)("apurando (%s com o fim passado): borda de 2px em ledAlerta, rótulo APURANDO…, 00:00 sem pulso", (status, endsInMs) => {
+    const html = render({ status, endsInMs });
+    expect(labelOf(html)).toBe("APURANDO…");
+    expect(border(html)).toBe("2px solid var(--c-led-alerta)");
+    expect(html).not.toContain("la-pulsa");
+    expect(html).toContain('aria-label="Tempo restante 00:00"');
+    expect(html).not.toContain("<svg");
+  });
+
+  it.each(["SOLD", "UNSOLD"] as const)("%s: ENCERRADO, 00:00 e fio de 1px", (status) => {
+    const html = render({ status });
+    expect(labelOf(html)).toBe("ENCERRADO");
+    expect(border(html)).toBe("1px solid var(--c-linha)");
+  });
+
+  it("agendado: ABRE EM com fio de 1px e sem selo", () => {
+    const html = render({ status: "SCHEDULED" });
+    expect(labelOf(html)).toBe("ABRE EM");
+    expect(border(html)).toBe("1px solid var(--c-linha)");
+    expect(html).not.toContain("+2 MIN");
+  });
+});

@@ -169,3 +169,4 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-repaginacao-azul-etiqueta-cronometro.md`
   summary: O selo "+2 MIN" do Cronômetro, no tamanho cartão, cobre parte do rótulo "ÚLTIMOS 2 MIN".
   evidence: `SeloProrrogacao` (`right -14`, `top -14`) sai da caixa do relógio; no cartão a caixa tem ~125 px e o rótulo ocupa quase toda a largura, então o selo (~82 px) cobre uns 58 px dele. Visto em `.tmp/repag/etapa3/cartao-prorrogado-noite.png`. Já era assim antes da repaginação.
+  resolved: Repaginação Rev. 05, etapa 7: o `SeloProrrogacao` entrou no fluxo do cronômetro, na linha dos dígitos e à direita deles (sem `position: absolute`); se a linha não couber, desce para baixo dos dígitos e nunca toca o rótulo (`cronometro.test.tsx`, medido no Chrome em 320 px).
