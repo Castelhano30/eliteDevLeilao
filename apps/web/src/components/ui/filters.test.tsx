@@ -14,6 +14,12 @@ const renderTabs = (props: Record<string, unknown> = {}) =>
   renderToStaticMarkup(<FilterTabs label="Status" tabs={tabs} value="LIVE" onChange={() => undefined} {...props} />);
 
 describe("FilterTabs: controle segmentado", () => {
+  it("em tela estreita os segmentos quebram de linha: nada fica cortado atrás de uma rolagem lateral", () => {
+    const group = /<div role="group"[^>]*>/.exec(renderTabs())?.[0] ?? "";
+    expect(group).toContain("flex-wrap");
+    expect(group).not.toContain("w-max");
+  });
+
   it("é um grupo nomeado com um botão aria-pressed por segmento, na ordem dada, e só o ativo marcado", () => {
     const html = renderTabs();
     expect(html).toContain('role="group"');

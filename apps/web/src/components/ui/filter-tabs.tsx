@@ -28,12 +28,13 @@ const COUNT =
 
 /**
  * Controle segmentado: grupo de botões `aria-pressed`, um selecionado por vez, num trilho de pílula de 44px.
- * O invólucro tem 6px de folga (com margem negativa igual) para o anel de foco não ser cortado quando o trilho rola na horizontal em tela estreita.
+ * Em tela estreita os segmentos quebram para uma segunda linha em vez de rolar para o lado (o último rótulo ficava cortado, sem pista de rolagem).
+ * O invólucro tem 6px de folga (com margem negativa igual) para o anel de foco não ser cortado.
  */
 export function FilterTabs<Value extends string>({ label, tabs, value, onChange, className = "" }: FilterTabsProps<Value>) {
   return (
     <div className={`-m-1.5 w-fit max-w-full overflow-x-auto p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`.trim()}>
-      <div role="group" aria-label={label} className="inline-flex h-11 w-max min-w-full items-center gap-1 rounded-full border border-linha bg-papel p-[3px]">
+      <div role="group" aria-label={label} className="inline-flex min-h-11 min-w-full flex-wrap items-center gap-x-1 gap-y-2 rounded-[22px] border border-linha bg-papel p-[3px]">
         {tabs.map((tab) => {
           const active = tab.value === value;
           return (
