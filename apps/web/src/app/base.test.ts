@@ -32,6 +32,7 @@ describe("base global", () => {
   it("o body é uma coluna de pelo menos a altura da janela", () => {
     const body = rule("body");
     expect(body).toMatch(/min-height:\s*100vh/);
+    expect(body).toMatch(/min-height:\s*100dvh/);
     expect(body).toMatch(/display:\s*flex/);
     expect(body).toMatch(/flex-direction:\s*column/);
   });

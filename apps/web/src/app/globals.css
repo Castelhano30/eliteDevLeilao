@@ -187,6 +187,8 @@ body {
   line-height: 1.45;
   /* Coluna: o rodapé encosta no pé da janela em página curta (o `main` cresce com `flex-1`). */
   min-height: 100vh;
+  /* Celular: a altura útil muda com a barra do navegador; `dvh` acompanha, `vh` fica de reserva. */
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
