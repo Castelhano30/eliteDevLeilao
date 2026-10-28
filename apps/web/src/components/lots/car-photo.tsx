@@ -7,7 +7,7 @@ export interface CarPhotoProps {
   /** Caminho relativo da API (snapshot) ou URL absoluta (prévia do Criar lote). */
   imageUrl: string | null;
   title: string;
-  /** "cartao": 176 px de altura; "sala"/"previa": 16:9 fluido. */
+  /** "cartao": 200 px de altura e cantos de cima herdados do cartão; "sala"/"previa": 16:9 fluido. */
   size: "cartao" | "sala" | "previa";
   /** Legendas aparecem na Sala e na prévia; nunca no cartão (evita link aninhado). */
   showCaption?: boolean;
@@ -15,7 +15,7 @@ export interface CarPhotoProps {
   creditUrl?: string | null;
   /** Prévia: carrega a URL digitada sem mandar o Referer. */
   noReferrer?: boolean;
-  /** Encerrado: foto a .55. */
+  /** Encerrado: véu `painel` a 25% sobre a foto. Escurece nos dois temas e não usa `opacity`, então o texto em volta não perde contraste. */
   dimmed?: boolean;
 }
 
@@ -42,7 +42,7 @@ export function CarPhoto({ imageUrl, title, size, showCaption = false, credit, c
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const broken = src !== null && failedSrc === src;
   const showImage = src !== null && !broken;
-  const frame = size === "cartao" ? { height: 176 } : { aspectRatio: "16 / 9" };
+  const frame = size === "cartao" ? { height: 200 } : { aspectRatio: "16 / 9" };
   const link = safeHref(creditUrl);
 
   let caption: ReactNode = null;
@@ -53,14 +53,13 @@ export function CarPhoto({ imageUrl, title, size, showCaption = false, credit, c
   }
 
   return (
-    <figure className="m-0">
+    <figure className="m-0 rounded-t-[inherit]">
       <div
-        className="flex w-full items-center justify-center overflow-hidden bg-suave"
+        className="relative flex w-full items-center justify-center overflow-hidden rounded-t-[inherit] bg-suave"
         style={{
           ...frame,
           backgroundImage: "radial-gradient(var(--c-pontos) 1.3px, transparent 1.7px)",
           backgroundSize: "8px 8px",
-          opacity: dimmed ? 0.55 : 1,
         }}
       >
         {showImage ? (
@@ -76,6 +75,7 @@ export function CarPhoto({ imageUrl, title, size, showCaption = false, credit, c
         ) : (
           <CarIllustration />
         )}
+        {dimmed ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-painel/25" /> : null}
       </div>
       {caption ? <figcaption className="t-body-legenda mt-2 text-tinta2">{caption}</figcaption> : null}
     </figure>

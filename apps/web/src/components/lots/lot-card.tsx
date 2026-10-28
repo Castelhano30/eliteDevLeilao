@@ -110,7 +110,7 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
           </span>
         ) : null}
       </div>
-      <div className="relative">
+      <div className="relative rounded-t-[inherit]">
         <CarPhoto imageUrl={card.imageUrl} title={card.title} size="cartao" dimmed={ended} noReferrer={preview} />
         {ended ? (
           <span className="absolute inset-0 flex items-center justify-center">
