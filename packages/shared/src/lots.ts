@@ -133,6 +133,11 @@ export interface LotStateCar {
   referencePriceCents: number;
   referenceMonth: string;
   imageUrl: string | null;
+  /**
+   * Fotos da galeria, caminhos relativos na ordem de exibição: a capa é "/items/{itemId}/image" (igual a `imageUrl`)
+   * e as demais "/items/{itemId}/images/{posição}". Vazio sem imagem. A Sala só monta a galeria com mais de uma foto.
+   */
+  gallery: string[];
   imageCredit: string | null;
   imageCreditUrl: string | null;
 }
@@ -188,6 +193,23 @@ export interface MyLotsResponse {
   serverTime: string;
 }
 
+/** Fotos do aparelho no `POST /lots` multipart (a primeira é a capa). */
+export const LOT_IMAGE_MAX_COUNT = 5;
+/** Teto por foto, no navegador (depois da redução) e no servidor (defesa). */
+export const LOT_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
+/** Teto do corpo multipart inteiro. */
+export const LOT_UPLOAD_MAX_BYTES = 20 * 1024 * 1024;
+/** Teto do campo `payload` (o JSON do lote) no multipart. */
+export const LOT_PAYLOAD_MAX_BYTES = 64 * 1024;
+/** Só estes tipos valem no envio de fotos, conferidos pelos bytes. */
+export const LOT_UPLOAD_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+export type LotUploadMime = (typeof LOT_UPLOAD_MIME_TYPES)[number];
+/** Redução no navegador antes de enviar: lado maior e qualidade do JPEG (nunca amplia). */
+export const LOT_IMAGE_RESIZE_MAX_SIDE = 1600;
+export const LOT_IMAGE_RESIZE_QUALITY = 0.85;
+
+const MEGABYTE = 1024 * 1024;
+
 export const LOT_TEXT = {
   idsRequired: "Escolha marca, modelo e ano.",
   titleRequired: "Dê um título ao lote.",
@@ -204,6 +226,20 @@ export const LOT_TEXT = {
   notFoundTitle: "Lote não encontrado.",
   notFoundBody: "Esse lote não existe, ou já foi para a gaveta.",
   cancelledBody: "O leiloeiro cancelou este lote. Nada foi vendido e todo saldo travado voltou.",
+  imagesBoth: "Escolha uma URL ou fotos do aparelho. As duas juntas não valem.",
+  imagesTooMany: `Envie no máximo ${LOT_IMAGE_MAX_COUNT} fotos.`,
+  imageTooBig: `Cada foto aceita até ${LOT_IMAGE_MAX_BYTES / MEGABYTE} MB.`,
+  imageType: "Use fotos JPEG, PNG ou WebP.",
+  uploadTooLarge: `As fotos passaram de ${LOT_UPLOAD_MAX_BYTES / MEGABYTE} MB no total. Envie menos fotos.`,
+  payloadMissing: "Os dados do lote não chegaram completos. Tente de novo.",
+  imagesRequired: "Escolha ao menos uma foto ou use a ilustração padrão do pátio.",
+  imagesOverflow: `Só cabem ${LOT_IMAGE_MAX_COUNT} fotos. As demais ficaram de fora.`,
+  imageUnreadable: (name: string) => `Não deu para ler ${name}. Use JPEG, PNG ou WebP.`,
+  discardPhotosTitle: (count: number) =>
+    count === 1 ? "A foto escolhida será descartada." : `As ${count} fotos escolhidas serão descartadas.`,
+  discardPhotosBody: "Voltando para a URL, as fotos que você escolheu não vão junto no lote.",
+  discardPhotosConfirm: "Descartar fotos",
+  discardPhotosKeep: "Manter fotos",
 } as const;
 
 export const LOT_TITLE_MAX = 120;

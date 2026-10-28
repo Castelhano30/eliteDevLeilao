@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  LOT_IMAGE_MAX_BYTES,
+  LOT_IMAGE_MAX_COUNT,
+  LOT_IMAGE_RESIZE_MAX_SIDE,
+  LOT_IMAGE_RESIZE_QUALITY,
+  LOT_PAYLOAD_MAX_BYTES,
   LOT_TEXT,
+  LOT_UPLOAD_MAX_BYTES,
+  LOT_UPLOAD_MIME_TYPES,
   isHttpUrl,
   lotStatus,
   minimumNextCents,
@@ -153,5 +160,49 @@ describe("validateCreateLot", () => {
     expect(isHttpUrl("HTTP://A.B/x")).toBe(true);
     expect(isHttpUrl("javascript:alert(1)")).toBe(false);
     expect(isHttpUrl("")).toBe(false);
+  });
+});
+
+describe("fotos do aparelho (galeria do lote)", () => {
+  it("constantes de upload e de redução", () => {
+    expect(LOT_IMAGE_MAX_COUNT).toBe(5);
+    expect(LOT_IMAGE_MAX_BYTES).toBe(4 * 1024 * 1024);
+    expect(LOT_UPLOAD_MAX_BYTES).toBe(20 * 1024 * 1024);
+    expect(LOT_PAYLOAD_MAX_BYTES).toBe(64 * 1024);
+    expect(LOT_IMAGE_RESIZE_MAX_SIDE).toBe(1600);
+    expect(LOT_IMAGE_RESIZE_QUALITY).toBe(0.85);
+    expect([...LOT_UPLOAD_MIME_TYPES]).toEqual(["image/jpeg", "image/png", "image/webp"]);
+  });
+
+  it("textos canônicos do upload", () => {
+    expect(LOT_TEXT.imagesBoth).toBe("Escolha uma URL ou fotos do aparelho. As duas juntas não valem.");
+    expect(LOT_TEXT.imagesTooMany).toBe("Envie no máximo 5 fotos.");
+    expect(LOT_TEXT.imageTooBig).toBe("Cada foto aceita até 4 MB.");
+    expect(LOT_TEXT.imageType).toBe("Use fotos JPEG, PNG ou WebP.");
+    expect(LOT_TEXT.uploadTooLarge).toBe("As fotos passaram de 20 MB no total. Envie menos fotos.");
+    expect(LOT_TEXT.payloadMissing).toBe("Os dados do lote não chegaram completos. Tente de novo.");
+    expect(LOT_TEXT.imagesRequired).toBe("Escolha ao menos uma foto ou use a ilustração padrão do pátio.");
+    expect(LOT_TEXT.imagesOverflow).toBe("Só cabem 5 fotos. As demais ficaram de fora.");
+    expect(LOT_TEXT.imageUnreadable("a.gif")).toBe("Não deu para ler a.gif. Use JPEG, PNG ou WebP.");
+    expect(LOT_TEXT.discardPhotosTitle(3)).toBe("As 3 fotos escolhidas serão descartadas.");
+    expect(LOT_TEXT.discardPhotosTitle(1)).toBe("A foto escolhida será descartada.");
+    expect(LOT_TEXT.discardPhotosBody).toBe("Voltando para a URL, as fotos que você escolheu não vão junto no lote.");
+  });
+
+  it("o contrato JSON do lote não muda: sem campo de foto, o corpo atual continua valendo", () => {
+    const result = validateCreateLot(
+      {
+        brandId: "56",
+        modelId: "2204",
+        yearId: "2015-5",
+        title: "Corolla",
+        startingBidCents: 100_000,
+        minIncrementCents: 10_000,
+        startsAt: "2026-10-25T13:00:00.000Z",
+        endsAt: "2026-10-26T13:00:00.000Z",
+      },
+      Date.parse("2026-10-23T12:00:00.000Z"),
+    );
+    expect(result.ok).toBe(true);
   });
 });
