@@ -464,3 +464,9 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - Testes (`lot-card.test.tsx`, 584 no web): a ordem agora é foto, etiqueta, selo, título; um teste novo confere que os dois ficam depois da `figure` e antes do título; a asserção do padding do corpo mudou. Nenhuma asserção de texto, `aria` ou `role` mudou.
 - Verificação: typecheck e lint exit 0; web 584. Chrome real, claro e noite, 320, 360, 768 e 1280px: etiqueta a 11–12px da borda esquerda e a 21px do topo da foto (fim em 80px, dentro dos 200px), selo a 13px da direita e 12px do topo, sem sobreposição entre os dois, sem rolagem horizontal. Prints em `.tmp/repag/ajuste-cartao3/`.
 - Em produção ainda está a versão anterior (`7701b4c`); esta rodada está só commitada na branch local.
+
+## 27/10/2026 — Deploy da terceira rodada de ajustes do cartão (aprovado pelo Felipe)
+
+- Com a aprovação do Felipe ("ficou bom"), `9191b0e` foi para a branch e para o `main` (fast-forward de `cab3d99`). Antes do push: shared 154, API 508, web 584 e build do web exit 0.
+- CI do GitHub verde nos dois runs (40614210172 e 40614213669). Railway: `@lanceauto/web` `SUCCESS` em `9191b0e`; `@lanceauto/api` `SKIPPED` (nada de `apps/api` mudou; segue ativo o deploy anterior).
+- Smoke no link público, só leitura (`.tmp/smoke-repag-prod2.cjs`), claro e noite, 360 e 1280px: Vitrine 200 com 9 cartões, a etiqueta dentro da foto nos 9, o selo "Ao vivo" sobre o canto superior direito da foto, sem rolagem horizontal e sem erro de console. Nada foi escrito em produção. Prints em `.tmp/repag/smoke-prod2/`.
