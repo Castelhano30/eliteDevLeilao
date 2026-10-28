@@ -41,6 +41,18 @@ describe.skipIf(!testDatabaseUrl)("rate limit de POST /lots", () => {
     expect((await create(app, maria.auth)).status).toBe(400);
   });
 
+  it("o multipart conta no mesmo limite: 10 envios com foto dão 400, o 11º dá 429 antes de ler o corpo", async () => {
+    const { app } = makeTestApp(prisma);
+    const joao = await makeUser(app, "Joao", { role: "AUCTIONEER" });
+    const photo = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(64, 1)]);
+    const upload = (body: string) =>
+      request(app).post("/lots").set("Authorization", joao.auth).field("payload", body).attach("images", photo, { filename: "a.jpg", contentType: "image/jpeg" });
+    for (let i = 1; i <= 10; i++) expect((await upload("{}")).status, `envio ${i}`).toBe(400);
+    const blocked = await upload("{quebrado");
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.error.code).toBe("RATE_LIMITED");
+  });
+
   it("licitante continua recebendo 403 e visitante 401, antes de contar no limite", async () => {
     const { app } = makeTestApp(prisma);
     const ana = await makeUser(app, "Ana", { depositCents: 100 });

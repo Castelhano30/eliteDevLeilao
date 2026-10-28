@@ -109,7 +109,7 @@ describe.skipIf(!testDatabaseUrl)("lotes (integração)", () => {
           cancelledAt: null,
           settledAt: null,
         },
-        car: { brand: "Toyota", model: "Corolla XEi 2.0", year: 2015, fuel: "Flex", referencePriceCents: 8_006_100, referenceMonth: "2026-10", imageUrl: null },
+        car: { brand: "Toyota", model: "Corolla XEi 2.0", year: 2015, fuel: "Flex", referencePriceCents: 8_006_100, referenceMonth: "2026-10", imageUrl: null, gallery: [] },
       });
       const second = await request(app).post("/lots").set("Authorization", auth).send(body());
       expect(second.body.lot.number).toBe(first.body.lot.number + 1);
@@ -276,7 +276,8 @@ describe.skipIf(!testDatabaseUrl)("lotes (integração)", () => {
         const res = await request(app).post("/lots").set("Authorization", auth).send(body({ imageUrl: `${img.url}${path}` }));
         expect(res.body.imageStatus).toBe("FAILED");
       }
-      expect(await prisma.item.count({ where: { NOT: { imageData: null } } })).toBe(0);
+      expect(await prisma.item.count({ where: { imageCount: { gt: 0 } } })).toBe(0);
+      expect(await prisma.itemImage.count()).toBe(0);
       for (const url of ["ftp://x.com/a.png", "uma foto"]) {
         const res = await request(app).post("/lots").set("Authorization", auth).send(body({ imageUrl: url }));
         expect(res.body.error.details.fields).toEqual({ imageUrl: LOT_TEXT.urlInvalid });
@@ -488,7 +489,7 @@ describe.skipIf(!testDatabaseUrl)("lotes (integração)", () => {
       expect(res.body.lots).toHaveLength(2);
     });
 
-    it("AC-2.18c: listas e estado não leem Item.imageData; imageUrl ⇔ imageMime", async () => {
+    it("AC-2.18c: listas e estado não leem ItemImage.data; imageUrl ⇔ imageCount > 0", async () => {
       const logged = new PrismaClient({ datasources: { db: { url: testDatabaseUrl } }, log: [{ emit: "event", level: "query" }] });
       const queries: string[] = [];
       logged.$on("query", (event) => queries.push(event.query));
@@ -502,7 +503,7 @@ describe.skipIf(!testDatabaseUrl)("lotes (integração)", () => {
         await request(app).get(`/lots/${lot.id}`);
         await request(app).get("/my/lots").set("Authorization", a.auth);
         expect(queries.length).toBeGreaterThan(0);
-        expect(queries.filter((q) => q.includes("imageData"))).toEqual([]);
+        expect(queries.filter((q) => q.includes("ItemImage"))).toEqual([]);
         const images = list.body.lots.map((l: { imageUrl: string | null }) => l.imageUrl);
         expect(images.filter(Boolean)).toEqual([`/items/${lot.itemId}/image`]);
         expect(images.filter((url: string | null) => url === null)).toHaveLength(1);

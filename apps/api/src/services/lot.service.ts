@@ -3,7 +3,10 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import {
   AUTH_TEXT,
   EVENTS,
+  LOT_IMAGE_MAX_BYTES,
+  LOT_IMAGE_MAX_COUNT,
   LOT_TEXT,
+  LOT_UPLOAD_MIME_TYPES,
   buildSearchText,
   lotDateErrors,
   lotStatus,
@@ -29,6 +32,7 @@ import { toDate, type Clock } from "../infra/clock";
 import type { CatalogPort } from "../infra/fipe";
 import type { DownloadedImage, ImageDownloader } from "../infra/image-store";
 import type { Logger } from "../infra/logger";
+import type { UploadedImage } from "../middleware/lot-upload";
 import type { ImageSuggestionPort } from "../infra/wikipedia";
 import { SHOWCASE_ROOM } from "../socket";
 import {
@@ -66,8 +70,24 @@ export interface LotServiceDeps {
 export interface CreateLotOptions {
   /** Só o seed: aceita início no passado e duração curta (T11). */
   allowPast?: boolean;
-  /** Só o seed: imagem lida de arquivo local, sem download. */
-  image?: DownloadedImage | null;
+  /** Só o seed: imagem lida de arquivo local, sem download (lista de uma imagem, ou vazia para a ilustração). */
+  images?: DownloadedImage[];
+  /** Fotos do aparelho (multipart): sem download, sem crédito, exclusivas com `imageUrl`. A primeira é a capa. */
+  uploads?: UploadedImage[];
+}
+
+const UPLOAD_MIMES: readonly string[] = LOT_UPLOAD_MIME_TYPES;
+
+/** Defesa em profundidade: o middleware já conferiu, mas o service não confia em quem o chama. */
+function uploadErrors(input: CreateLotInput, uploads: UploadedImage[]): Record<string, string> {
+  if (uploads.length === 0) return {};
+  if (input.imageUrl) return { images: LOT_TEXT.imagesBoth };
+  if (uploads.length > LOT_IMAGE_MAX_COUNT) return { images: LOT_TEXT.imagesTooMany };
+  if (uploads.some((upload) => upload.data.length > LOT_IMAGE_MAX_BYTES)) return { images: LOT_TEXT.imageTooBig };
+  if (uploads.some((upload) => upload.data.length === 0 || !UPLOAD_MIMES.includes(upload.mime))) {
+    return { images: LOT_TEXT.imageType };
+  }
+  return {};
 }
 
 const lotNotFound = () => new AppError("NOT_FOUND", undefined, LOT_TEXT.notFoundTitle);
@@ -119,6 +139,9 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
      */
     async createLot(auctioneerId: string, input: CreateLotInput, options: CreateLotOptions = {}): Promise<CreateLotResult> {
       const now = clock.now();
+      const uploads = options.uploads ?? [];
+      const imageFields = uploadErrors(input, uploads);
+      if (Object.keys(imageFields).length > 0) throw new AppError("VALIDATION", { fields: imageFields });
       const startsAt = toDate(input.startsAt);
       const endsAt = toDate(input.endsAt);
       if (!options.allowPast) {
@@ -132,21 +155,26 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
       const detail = await catalog.detail(input.brandId, input.modelId, input.yearId);
       const { car } = detail;
 
-      let image: DownloadedImage | null = null;
+      let stored: { data: Buffer; mime: string }[] = [];
       let imageStatus: StoredImageStatus = "NONE";
-      if (options.image !== undefined) {
-        image = options.image;
-        imageStatus = image ? "STORED" : "NONE";
+      if (uploads.length > 0) {
+        stored = uploads;
+        imageStatus = "STORED";
+      } else if (options.images !== undefined) {
+        stored = options.images;
+        imageStatus = stored.length > 0 ? "STORED" : "NONE";
       } else if (input.imageUrl) {
-        image = await imageStore.download(input.imageUrl);
+        const image = await imageStore.download(input.imageUrl);
+        if (image) stored = [image];
         imageStatus = image ? "STORED" : "FAILED";
         if (!image) logger?.info({ auctioneerId }, "imagem do lote não pôde ser baixada; segue com a ilustração");
       }
+      // Foto do aparelho nunca tem crédito; o seed grava o do fixture; só a URL passa pela conferência da Wikipedia.
       const noCredit = { credit: null, creditUrl: null };
       const { credit, creditUrl } =
-        image === null
+        stored.length === 0 || uploads.length > 0
           ? noCredit
-          : options.image !== undefined
+          : options.images !== undefined
             ? { credit: input.imageCredit ?? null, creditUrl: input.imageCreditUrl ?? null }
             : await resolveCredit(input, car.brand, car.model);
 
@@ -181,8 +209,12 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
                 fuel: car.fuel,
                 referencePriceCents: BigInt(car.referencePriceCents),
                 referenceMonth: car.referenceMonth,
-                imageData: image ? new Uint8Array(image.data) : null,
-                imageMime: image?.mime ?? null,
+                imageCount: stored.length,
+                images: {
+                  createMany: {
+                    data: stored.map((image, position) => ({ position, mime: image.mime, data: new Uint8Array(image.data) })),
+                  },
+                },
                 imageCredit: credit,
                 imageCreditUrl: creditUrl,
                 rawData: (detail.raw ?? {}) as Prisma.InputJsonValue,
@@ -347,20 +379,21 @@ export function makeLotService({ db, clock, auditKey, catalog, images, imageStor
     },
 
     /**
-     * Metadados da imagem do item, sem ler o blob. O snapshot é imutável, então o ETag sai do próprio id
-     * e a revalidação (304) nunca toca em `imageData`.
+     * Metadados de uma foto do item (posição 0 é a capa), sem ler o blob. O snapshot é imutável, então o ETag sai
+     * do id e da posição e a revalidação (304) nunca toca em `ItemImage.data`. A capa mantém o ETag de antes da galeria.
      */
-    async getItemImageMeta(itemId: string): Promise<{ mime: string; etag: string }> {
-      const item = await db.item.findUnique({ where: { id: itemId }, select: { imageMime: true } });
-      if (!item?.imageMime) throw imageNotFound();
-      return { mime: item.imageMime, etag: `"img-${itemId}"` };
+    async getItemImageMeta(itemId: string, position = 0): Promise<{ mime: string; etag: string }> {
+      if (!Number.isInteger(position) || position < 0 || position >= LOT_IMAGE_MAX_COUNT) throw imageNotFound();
+      const image = await db.itemImage.findUnique({ where: { itemId_position: { itemId, position } }, select: { mime: true } });
+      if (!image) throw imageNotFound();
+      return { mime: image.mime, etag: position === 0 ? `"img-${itemId}"` : `"img-${itemId}-${position}"` };
     },
 
-    /** Bytes da imagem do item. Único lugar que lê `Item.imageData`. */
-    async getItemImageData(itemId: string): Promise<Buffer> {
-      const item = await db.item.findUnique({ where: { id: itemId }, select: { imageData: true } });
-      if (!item?.imageData) throw imageNotFound();
-      return Buffer.from(item.imageData);
+    /** Bytes de uma foto do item. Único lugar que lê `ItemImage.data`. */
+    async getItemImageData(itemId: string, position = 0): Promise<Buffer> {
+      const image = await db.itemImage.findUnique({ where: { itemId_position: { itemId, position } }, select: { data: true } });
+      if (!image) throw imageNotFound();
+      return Buffer.from(image.data);
     },
   };
 }

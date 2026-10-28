@@ -18,6 +18,8 @@ export interface InsertLotOptions {
   cancelledAt?: string | null;
   settledAt?: string | null;
   bidCount?: number;
+  /** Fotos do item, a primeira é a capa. `image` é atalho para uma só. */
+  images?: { data: Buffer; mime: string }[];
   image?: { data: Buffer; mime: string } | null;
 }
 
@@ -28,6 +30,7 @@ export interface InsertLotOptions {
 export async function insertLot(prisma: PrismaClient, options: InsertLotOptions) {
   const { auctioneerId, title = "Lote de teste", brand = "Toyota", model = "Corolla XEi 2.0", year = 2015 } = options;
   const id = options.id ?? randomUUID();
+  const photos = options.images ?? (options.image ? [options.image] : []);
   const startingBidCents = BigInt(options.startingBidCents ?? 1_000_000);
   const minIncrementCents = BigInt(options.minIncrementCents ?? 10_000);
   const startsAt = new Date(options.startsAt);
@@ -59,8 +62,12 @@ export async function insertLot(prisma: PrismaClient, options: InsertLotOptions)
           fuel: "Flex",
           referencePriceCents: 8_000_000n,
           referenceMonth: "2026-10",
-          imageData: options.image ? new Uint8Array(options.image.data) : null,
-          imageMime: options.image?.mime ?? null,
+          imageCount: photos.length,
+          images: {
+            createMany: {
+              data: photos.map((photo, position) => ({ position, mime: photo.mime, data: new Uint8Array(photo.data) })),
+            },
+          },
           rawData: {},
           fetchedAt: new Date("2026-10-23T12:00:00.000Z"),
         },

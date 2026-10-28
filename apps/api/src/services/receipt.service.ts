@@ -44,7 +44,7 @@ export function makeReceiptService({ db }: ReceiptServiceDeps) {
                   fuel: true,
                   referencePriceCents: true,
                   referenceMonth: true,
-                  imageMime: true,
+                  imageCount: true,
                   imageCredit: true,
                 },
               },
@@ -55,7 +55,7 @@ export function makeReceiptService({ db }: ReceiptServiceDeps) {
       if (!receipt) throw receiptNotFound();
       const { lot } = receipt;
       const { item } = lot;
-      const hasImage = item.imageMime !== null;
+      const hasImage = item.imageCount > 0;
       return {
         lotNumber: lot.number,
         receiptCode: receiptCode(lot.number, receipt.token),
