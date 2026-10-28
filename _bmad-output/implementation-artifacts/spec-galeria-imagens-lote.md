@@ -2,7 +2,7 @@
 title: 'Galeria de imagens do lote: URL ou fotos do aparelho'
 type: 'feature'
 created: '2026-10-28'
-status: 'draft'
+status: 'ready-for-dev'
 baseline_commit: '21132de8af7311d5686bcd91536b5f45c50dfaf0'
 route: 'dispatch'
 review_loop_iteration: 0
