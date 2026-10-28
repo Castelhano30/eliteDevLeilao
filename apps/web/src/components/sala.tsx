@@ -124,12 +124,27 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
   const status = lot.status;
   const ended = status === "SOLD" || status === "UNSOLD";
 
+  // À direita do cronômetro: o selo "Ao vivo" em cima e a etiqueta do lote embaixo.
+  const lateral = (
+    <>
+      {status === "LIVE" ? <Stamp variant="ao-vivo" /> : null}
+      <LotTag number={lot.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} />
+    </>
+  );
+  const relogio = <Cronometro size="sala" status={status} startsAt={lot.startsAt} endsAt={lot.endsAt} originalEndsAt={lot.originalEndsAt} serverTime={state.serverTime} />;
+  const linhaRelogio = (
+    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-4">
+      {relogio}
+      <div className="ml-auto flex flex-col items-end gap-3">{lateral}</div>
+    </div>
+  );
+
   let panel: ReactNode;
   if (status === "CANCELLED") {
     // Sem formulário nem CTA de lance para ninguém; o histórico fica (lê só o banco) e a linha CANCEL é da Auditoria (S08).
     panel = (
       <div className="space-y-5">
-        <Cronometro size="sala" status={status} startsAt={lot.startsAt} endsAt={lot.endsAt} originalEndsAt={lot.originalEndsAt} serverTime={state.serverTime} />
+        {linhaRelogio}
         <div>
           <Stamp variant="cancelado" size="carimbo" animate={sawActive} />
         </div>
@@ -145,7 +160,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
     panel = (
       <div className="space-y-5">
         <p className="t-body-lead">Este lote abre em {when(lot.startsAt)}.</p>
-        <Cronometro size="sala" status={status} startsAt={lot.startsAt} endsAt={lot.endsAt} originalEndsAt={lot.originalEndsAt} serverTime={state.serverTime} />
+        {linhaRelogio}
         <p className="t-mono">
           Lance inicial {formatBRL(lot.startingBidCents)} · Incremento {formatBRL(lot.minIncrementCents)} · Fecha {closes.day} às {closes.time} (Brasília)
         </p>
@@ -160,6 +175,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
         viewer={user ? { role: user.role } : null}
         authLoading={authStatus === "loading" || authStatus === "error"}
         blockReason={blockReason}
+        lateral={lateral}
       />
     );
   }
@@ -182,10 +198,6 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
           <h1 className="mt-6 font-bold uppercase [overflow-wrap:anywhere]" style={{ fontSize: "clamp(34px, 4vw, 56px)", lineHeight: 1 }}>
             {lot.title}
           </h1>
-          <div className="mt-5 flex flex-wrap items-center gap-4">
-            <LotTag number={lot.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} />
-            {status === "LIVE" ? <Stamp variant="ao-vivo" /> : null}
-          </div>
           <FichaCarro car={car} />
         </section>
 

@@ -587,3 +587,9 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - O `h1` encolheu de `clamp(40px, 5vw, 72px)` para `clamp(34px, 4vw, 56px)`, porque agora mora numa coluna de 560px: a 1280px o título cabe em duas linhas.
 - Em tela estreita a ordem é foto, título, etiqueta, ficha e só depois o painel.
 - Web 706, typecheck e lint exit 0. Chrome real (build local contra a API de produção, só leitura), claro e noite, 360, 768, 1280 e 1909px: sem rolagem horizontal, sem erro de página. Prints em `.tmp/repag/sala-ficha/`. Só commitado na branch local: sem push nem deploy.
+
+## 28/10/2026 — Sala: selo "Ao vivo" e etiqueta do lote ao lado do cronômetro (ajuste do Felipe)
+- Corrige a ordem anterior: o selo "Ao vivo" e a etiqueta do lote saem de baixo do título e vão para o painel, **à direita do cronômetro**, alinhados à direita: o selo em cima, a etiqueta embaixo (a 1280px, selo em y=25 e etiqueta logo abaixo, dentro do painel de 560px). Sob a foto ficam só o nome do carro e a ficha.
+- `BidPanel` ganhou a prop opcional `lateral`; os painéis de lote cancelado e agendado usam a mesma linha (`linhaRelogio` em `sala.tsx`). Em tela estreita (360px) o bloco desce para baixo do cronômetro, ainda à direita.
+- A etiqueta (cerca de 100px de altura) é mais alta que o cronômetro (78px), então o "Lance atual" desce uns 60px a 1280px. Fica assim por ora.
+- Web 706, typecheck e lint exit 0; Chrome real (build local contra a API de produção, só leitura), claro e noite, 360, 768, 1280 e 1909px, sem rolagem horizontal nem erro. Só na branch local: sem push nem deploy.
