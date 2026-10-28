@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useId, type ReactNode } from "react";
 import { brasiliaDayAndTime, brasiliaWeekday, formatBRL, type LotCard as LotCardDto, type MyLotResult } from "@lanceauto/shared";
 import { LotTag } from "@/components/ui/lot-tag";
-import { Stamp } from "@/components/ui/stamp";
+import { Stamp, type StampVariant } from "@/components/ui/stamp";
 import { bidsText, endedCardLines } from "@/lib/ended-card";
-import { lotCardHref, opensLabel } from "@/lib/lots";
+import { countdownState, lotCardHref, opensLabel } from "@/lib/lots";
+import { useServerNow } from "@/lib/use-server-clock";
 import { CarPhoto } from "./car-photo";
 import { Cronometro } from "./cronometro";
 
@@ -23,14 +24,54 @@ export interface LotCardProps {
 
 const ROTATE = { LIVE: -4, CLOSING: -4, SCHEDULED: 3, SOLD: -2, UNSOLD: -2, CANCELLED: -2 } as const;
 
-/** Cartão do lote (§10.1). O cartão inteiro é o link; o nome acessível é o título. */
+// Classes literais, para o Tailwind gerá-las. Casco: 16px de raio, fio `borda`, nível 1. O cartão clicável sobe 2px no hover (só sem
+// `prefers-reduced-motion`), vai ao nível 2 e troca a borda; pressionado volta à posição. A prévia (`div`) não reage a nada.
+const SHELL = "relative flex h-full flex-col overflow-hidden rounded-2xl border border-borda bg-papel text-tinta no-underline shadow-cartao";
+const INTERACTIVE =
+  "transition-[transform,box-shadow,border-color] duration-200 ease-out motion-safe:hover:-translate-y-0.5 hover:border-cartaoHover hover:shadow-painel hover:!text-tinta motion-safe:active:translate-y-0 active:shadow-cartao";
+
+/** Relógio de 14px do "Apurando o resultado…": o aviso não vai só por cor. */
+function ClockGlyph() {
+  return (
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+/** Rótulo, lance em destaque (28px/800) e a linha de apoio: o bloco da esquerda do rodapé. */
+function BidBlock({ label, value, children }: { label: string; value: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <p className="t-rotulo-cartao">{label}</p>
+      <p className="t-lance-cartao mt-1 break-all">{value}</p>
+      {children}
+    </div>
+  );
+}
+
+/** Cartão do lote (§10.1, DESIGN 4.6). O cartão inteiro é o link; o nome acessível é o título. Foto, faixa da etiqueta e corpo, de cima para baixo. */
 export function LotCard({ card, serverTime, preview = false, emptyNote, resultado }: LotCardProps) {
   const titleId = useId();
+  const now = useServerNow(serverTime);
   const { status } = card;
   const live = status === "LIVE" || status === "CLOSING";
   const ended = status === "SOLD" || status === "UNSOLD";
   const validStart = !Number.isNaN(Date.parse(card.startsAt));
   const meta = preview && !card.year ? "— · — · FIPE —" : `${card.year} · ${card.fuel} · FIPE ${formatBRL(card.referencePriceCents)}`;
+
+  // O selo acompanha o relógio: nos últimos 2 min ou prorrogado ele fica âmbar, com o mesmo texto "Ao vivo" (só leitura, sem regra nova).
+  const clock = countdownState({ status, startsAt: card.startsAt, endsAt: card.endsAt, originalEndsAt: card.originalEndsAt }, now);
+  const closing = status === "LIVE" && now > 0 && clock.variant !== "encerrado" && (clock.variant === "ultimos" || clock.extended);
+
+  let seal: ReactNode = null;
+  if (status === "LIVE") seal = <Stamp variant={closing ? "encerrando" : "ao-vivo"} size="pequeno" />;
+  else if (status === "SCHEDULED") seal = <Stamp variant="agendado" size="pequeno" label={validStart ? opensLabel(card.startsAt) : "ABRE —"} />;
+  else if (status === "SOLD" || status === "UNSOLD" || status === "CANCELLED") {
+    const variant: StampVariant = status === "SOLD" ? "arrematado" : status === "UNSOLD" ? "sem-lances" : "cancelado";
+    seal = <Stamp variant={variant} size="pequeno" />;
+  }
 
   let footer: ReactNode;
   if (emptyNote) {
@@ -38,11 +79,16 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
   } else if (live) {
     footer = (
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="t-mono-rotulo">{card.currentBidCents === null ? "LANCE INICIAL" : "LANCE ATUAL"}</p>
-          <p className="text-[20px] break-all font-extrabold">{formatBRL(card.currentBidCents ?? card.startingBidCents)}</p>
-          <p className="t-mono mt-1 text-tinta2">{status === "CLOSING" ? "Apurando o resultado…" : bidsText(card.bidCount)}</p>
-        </div>
+        <BidBlock label={card.currentBidCents === null ? "LANCE INICIAL" : "LANCE ATUAL"} value={formatBRL(card.currentBidCents ?? card.startingBidCents)}>
+          {status === "CLOSING" ? (
+            <p className="t-meta-cartao mt-1 inline-flex items-center gap-1 !text-alerta">
+              <ClockGlyph />
+              Apurando o resultado…
+            </p>
+          ) : (
+            <p className="t-meta-cartao mt-1">{bidsText(card.bidCount)}</p>
+          )}
+        </BidBlock>
         <Cronometro
           size="cartao"
           status={status}
@@ -57,17 +103,15 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
     const { day, time } = validStart ? brasiliaDayAndTime(card.startsAt) : { day: "—", time: "—" };
     footer = (
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="t-mono-rotulo">LANCE INICIAL</p>
-          <p className="text-[20px] break-all font-extrabold">{formatBRL(card.startingBidCents)}</p>
-          <p className="t-mono mt-1 text-tinta2">incremento {formatBRL(card.minIncrementCents)}</p>
-        </div>
-        <div className="border-2 border-linha bg-papel px-3 py-2 text-center">
-          <p className="t-mono-rotulo-pequeno">ABERTURA</p>
-          <p className="text-[26px] font-extrabold leading-none">
+        <BidBlock label="LANCE INICIAL" value={formatBRL(card.startingBidCents)}>
+          <p className="t-meta-cartao mt-1">incremento {formatBRL(card.minIncrementCents)}</p>
+        </BidBlock>
+        <div className="rounded-xl border border-borda bg-suave px-3 py-2 text-center">
+          <p className="t-rotulo-cartao">ABERTURA</p>
+          <p className="mt-1 text-[22px] font-extrabold leading-none">
             {validStart ? brasiliaWeekday(card.startsAt).toUpperCase() : ""} {day}
           </p>
-          <p className="t-mono-dado">{time}</p>
+          <p className="mt-1 text-[14px] font-medium leading-none">{time}</p>
         </div>
       </div>
     );
@@ -75,13 +119,13 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
     const lines = endedCardLines(resultado, card.bidCount);
     footer = (
       <div>
-        <p className="t-mono-rotulo">RESULTADO</p>
+        <p className="t-rotulo-cartao">RESULTADO</p>
         {lines?.kind === "sold" ? (
           <>
             <p className="t-mono mt-1">{lines.headline}</p>
-            <p className="text-[22px] font-extrabold">{lines.value}</p>
-            <p className="t-mono text-tinta2">{lines.bids}</p>
-            {lines.fipe ? <p className="t-mono mt-1 text-tinta2">{lines.fipe}</p> : null}
+            <p className="text-[24px] font-extrabold leading-tight tabular-nums">{lines.value}</p>
+            <p className="t-meta-cartao">{lines.bids}</p>
+            {lines.fipe ? <p className="t-meta-cartao mt-1">{lines.fipe}</p> : null}
           </>
         ) : lines ? (
           <p className="t-mono mt-1">{lines.headline}</p>
@@ -91,7 +135,9 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
               ? `${formatBRL(card.currentBidCents)} · ${bidsText(card.bidCount)}`
               : status === "SOLD"
                 ? "Arrematado"
-                : "Sem lances"}
+                : status === "CANCELLED"
+                  ? "Lote cancelado"
+                  : "Sem lances"}
           </p>
         )}
       </div>
@@ -100,39 +146,28 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
 
   const body = (
     <>
-      {/* Faixa própria: a etiqueta fica fora da foto e o carimbo/chip de data ao lado dela, sem cobrir nada. */}
-      <div className="flex flex-wrap items-start justify-between gap-x-3 px-4 pt-1">
-        <LotTag number={preview ? "NOVO" : card.number} tone={ended ? "papel" : "ocre"} rotate={ROTATE[status]} size="compacto" />
-        {live && status === "LIVE" ? <Stamp variant="ao-vivo" size="pequeno" className="mr-1 mt-4" /> : null}
-        {status === "SCHEDULED" ? (
-          <span className="t-mono mt-4 border-2 border-linha bg-papel px-2 py-1 text-[12px]">
-            {validStart ? opensLabel(card.startsAt) : "ABRE —"}
-          </span>
-        ) : null}
-      </div>
+      {/* Foto no topo: herda os cantos do cartão. Nenhum selo, etiqueta ou texto a cobre. */}
       <div className="relative rounded-t-[inherit]">
-        <CarPhoto imageUrl={card.imageUrl} title={card.title} size="cartao" dimmed={ended} noReferrer={preview} />
-        {ended ? (
-          <span className="absolute inset-0 flex items-center justify-center">
-            <Stamp variant={status === "SOLD" ? "arrematado" : "sem-lances"} size="pequeno" className="max-w-[calc(100%-24px)]" />
-          </span>
-        ) : null}
+        <CarPhoto imageUrl={card.imageUrl} title={card.title} size="cartao" dimmed={ended || status === "CANCELLED"} noReferrer={preview} />
       </div>
-      <div className="p-4">
-        <h3 id={titleId} className="text-[26px] font-bold uppercase leading-none [overflow-wrap:anywhere]">
+      {/* Faixa da etiqueta: a etiqueta à esquerda (o cordão sobe para o espaço vazio da faixa) e o selo ou a data de abertura à direita, alinhado à base. */}
+      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1 px-4 sm:px-5">
+        <LotTag number={preview ? "NOVO" : card.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} rotate={ROTATE[status]} size="compacto" />
+        {seal ? <span className="mb-[6px] max-w-full">{seal}</span> : null}
+      </div>
+      <div className="flex flex-1 flex-col px-4 pb-4 sm:px-5 sm:pb-5">
+        <h3 id={titleId} className="t-titulo-cartao [overflow-wrap:anywhere]">
           {card.title}
         </h3>
-        <p className="mt-2 text-[13px] text-tinta2">{meta}</p>
-        <div className="my-4 border-t-2 border-dashed border-tracejado" />
-        {footer}
+        <p className="t-meta-cartao mb-4 mt-1">{meta}</p>
+        <div className="mt-auto border-t border-borda pt-4">{footer}</div>
       </div>
     </>
   );
 
-  const shell = "relative block rounded-nenhum border-2 border-linha bg-papel text-tinta no-underline shadow-cartao";
-  if (preview) return <div className={shell}>{body}</div>;
+  if (preview) return <div className={SHELL}>{body}</div>;
   return (
-    <Link href={lotCardHref(card)} aria-labelledby={titleId} className={`${shell} hover:!text-tinta`}>
+    <Link href={lotCardHref(card)} aria-labelledby={titleId} className={`${SHELL} ${INTERACTIVE}`}>
       {body}
     </Link>
   );

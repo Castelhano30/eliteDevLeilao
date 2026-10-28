@@ -25,6 +25,7 @@
   --c-botao-borda-hover: var(--c-ocre);
   --c-ocre-texto-hover: var(--c-ocre-hover);
   --c-etiqueta-contorno: var(--f-azul-profundo);
+  --c-cartao-hover: color-mix(in srgb, var(--c-ocre) 40%, var(--c-borda));
   --c-selecionado: #e8efff;
   --c-foco: #174bc2;
   --c-destaque: #0033a0;
@@ -70,6 +71,7 @@
 --c-botao-borda-hover: var(--c-ocre-texto);
 --c-ocre-texto-hover: var(--c-ocre-texto);
 --c-etiqueta-contorno: var(--c-ocre-texto);
+--c-cartao-hover: var(--c-destaque);
 --c-selecionado: #001e63;
 --c-foco: #8aaaff;
 --c-destaque: #3d6dff;
@@ -115,6 +117,7 @@
   --c-botao-borda-hover: var(--c-ocre-texto);
   --c-ocre-texto-hover: var(--c-ocre-texto);
   --c-etiqueta-contorno: var(--c-ocre-texto);
+  --c-cartao-hover: var(--c-destaque);
   --c-selecionado: #001e63;
   --c-foco: #8aaaff;
   --c-destaque: #3d6dff;
