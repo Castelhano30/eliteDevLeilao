@@ -8,7 +8,7 @@ import { RODAPE_CONTEUDO } from "@/lib/rodape-conteudo";
 import { useAuth } from "./auth-provider";
 
 // Classes literais, para o Tailwind gerá-las. `!`: a regra global `a { color }` fica fora de layer e venceria a utility sem ele.
-const LINK_BASE = "t-rodape-link inline-flex min-h-alvo items-center no-underline hover:underline hover:underline-offset-[3px]";
+const LINK_BASE = "t-rodape-link inline-flex min-h-alvo min-w-alvo items-center no-underline hover:underline hover:underline-offset-[3px]";
 const LINK = `${LINK_BASE} !text-tinta2 hover:!text-tinta`;
 // A página atual troca a cor (não soma outra utility `!`: a de `tinta2` venceria) e mantém a sua no hover.
 const LINK_ATUAL = `${LINK_BASE} !text-ocreTexto hover:!text-ocreTexto`;

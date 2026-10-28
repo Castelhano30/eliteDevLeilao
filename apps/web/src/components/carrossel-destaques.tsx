@@ -134,7 +134,7 @@ export function CarrosselDestaques({ slides = SLIDES_VITRINE, intervalMs = INTER
       </div>
 
       {total > 1 ? (
-        <div className="mt-3 flex items-center justify-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
           <button type="button" className={CONTROLE} aria-label="Imagem anterior" onClick={() => irPara(indiceVizinho(index, total, -1))}>
             <Icone><path d="m15 18-6-6 6-6" /></Icone>
           </button>
@@ -146,7 +146,7 @@ export function CarrosselDestaques({ slides = SLIDES_VITRINE, intervalMs = INTER
                 aria-label={`Ir para a imagem ${i + 1} de ${total}`}
                 aria-current={i === index ? "true" : undefined}
                 onClick={() => irPara(i)}
-                className="group inline-flex h-11 w-8 items-center justify-center"
+                className="group inline-flex h-11 w-11 items-center justify-center"
               >
                 <span className={`block h-2.5 rounded-full transition-all duration-150 ${i === index ? "w-6 bg-ocreTexto" : "w-2.5 bg-linha group-hover:bg-ocreTexto"}`} />
               </button>

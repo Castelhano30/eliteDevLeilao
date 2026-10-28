@@ -83,7 +83,7 @@ function LotLink({ lot }: { lot: LotCardDto }) {
   return (
     <span className="flex items-center gap-3">
       <span className="t-mono-dado shrink-0 rounded-md bg-ocre px-2 py-1 text-sobreOcre">{formatLotNumber(lot.number)}</span>
-      <Link href={`/lotes/${lot.id}`} className="text-[15px] font-bold leading-[1.4]">
+      <Link href={`/lotes/${lot.id}`} className="inline-flex min-h-alvo items-center text-[15px] font-bold leading-[1.4]">
         {lot.title}
       </Link>
     </span>
