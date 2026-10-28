@@ -34,9 +34,10 @@ describe("SiteFooter: estrutura e landmarks", () => {
     expect(html.match(/<nav /g)).toHaveLength(1);
     expect(html).toContain('<nav aria-label="Rodapé"');
     for (const titulo of Object.values(RODAPE_CONTEUDO.colunas)) expect(html).toContain(`>${titulo}</p>`);
-    expect(html).toContain(RODAPE_CONTEUDO.avisosLegais);
+    for (const politica of RODAPE_CONTEUDO.politicas) expect(html).toContain(`>${politica}</li>`);
     expect(html).toContain(RODAPE_CONTEUDO.direitos);
-    expect(html).toContain(RODAPE_CONTEUDO.apresentacao);
+    expect(html).toContain(RODAPE_CONTEUDO.apresentacao.titulo);
+    expect(html).toContain(RODAPE_CONTEUDO.apresentacao.texto);
   });
 
   it("os títulos de coluna são parágrafos, não títulos: o índice da página não muda", () => {
@@ -49,31 +50,45 @@ describe("SiteFooter: estrutura e landmarks", () => {
     expect(html).toContain("flex-[2_1_280px]");
     expect(html.match(/flex-\[1_1_160px\]/g)).toHaveLength(3);
     expect(html).toContain("max-w-[36ch]");
-    expect(html).toContain("max-w-[80ch]");
   });
 });
 
-describe("SiteFooter: conteúdo provisório e links", () => {
+describe("SiteFooter: conteúdo e links", () => {
   const html = render();
 
-  it("todo texto provisório vem entre colchetes e sem href", () => {
-    for (const texto of [...RODAPE_CONTEUDO.navegueProvisorios, ...RODAPE_CONTEUDO.contatoProvisorios, RODAPE_CONTEUDO.apresentacao, RODAPE_CONTEUDO.avisosLegais]) {
-      expect(texto).toMatch(/^\[.*\]\.?$/);
-      expect(html).toContain(texto);
+  it("o que ainda falta definir vem entre colchetes e sem href", () => {
+    for (const texto of RODAPE_CONTEUDO.navegueProvisorios) {
+      expect(texto).toMatch(/^\[.*\]$/);
+      expect(html).toMatch(new RegExp(`<span class="[^"]*text-tinta2">${texto.replace(/[[\]]/g, "\\$&")}</span>`));
     }
-    expect(RODAPE_CONTEUDO.direitos).toContain("[ano]");
-    for (const texto of RODAPE_CONTEUDO.navegueProvisorios) expect(html).toMatch(new RegExp(`<span class="[^"]*text-tinta2">${texto.replace(/[[\]]/g, "\\$&")}</span>`));
   });
 
-  it("só tem <a> para rota que existe: nada de Sobre, Termos ou Privacidade", () => {
-    const links = hrefs(html);
-    expect(links).toEqual(["/", "/", "/#como-funciona", "/entrar?aba=entrar", "/entrar"]);
-    expect(html).not.toMatch(/href="(?!\/)/);
-    expect(html).not.toMatch(/Sobre o LanceAuto<\/a>|Termos de uso<\/a>|Privacidade<\/a>/);
+  it("direitos e frase de apresentação definitivos, sem colchetes", () => {
+    expect(RODAPE_CONTEUDO.direitos).toBe("© 2026 LanceAuto. Todos os direitos reservados.");
+    expect(RODAPE_CONTEUDO.apresentacao.titulo).toBe("Sua próxima conquista começa com um lance.");
+    expect(html).not.toMatch(/\[ano\]|\[Frase|\[Texto de direitos/);
   });
 
-  it("não inventa CNPJ, endereço nem telefone", () => {
-    expect(html).not.toMatch(/CNPJ|\d{2}\.\d{3}\.\d{3}\/|\(\d{2}\)\s?\d{4,5}-\d{4}|Rua |Av\./);
+  it("contato: e-mail e telefone são links, o horário é texto", () => {
+    expect(html).toContain('<a href="mailto:suporte@lanceauto.com"');
+    expect(html).toContain(">E-mail: suporte@lanceauto.com</a>");
+    expect(html).toContain('<a href="tel:9999999999"');
+    expect(html).toContain(">Telefone: (99) 9999-9999</a>");
+    expect(html).toMatch(/<span class="[^"]*text-tinta2">Atendimento: 08:00 às 22:00<\/span>/);
+  });
+
+  it("termos e políticas são texto, sem <a>: ainda não têm página", () => {
+    expect(RODAPE_CONTEUDO.politicas).toEqual(["Termos de uso", "Política de privacidade", "Regras dos leilões", "Política da carteira"]);
+    expect(html).not.toMatch(/(?:Sobre o LanceAuto|Termos de uso|Política[^<]*|Regras dos leilões)<\/a>/);
+  });
+
+  it("só tem <a> para rota que existe, e-mail e telefone", () => {
+    expect(hrefs(html)).toEqual(["/", "/", "/#como-funciona", "/entrar?aba=entrar", "/entrar", "mailto:suporte@lanceauto.com", "tel:9999999999"]);
+    expect(html).not.toMatch(/href="(?!\/|mailto:|tel:)/);
+  });
+
+  it("não inventa CNPJ nem endereço", () => {
+    expect(html).not.toMatch(/CNPJ|\d{2}\.\d{3}\.\d{3}\/|Rua |Av\./);
   });
 
   it("três círculos de 44px para as redes, com role img, sem href", () => {
@@ -113,7 +128,7 @@ describe("SiteFooter: Sua conta por papel", () => {
     state.auth = { user: null, status };
     const html = render();
     expect(html).toContain("min-h-[88px]");
-    expect(hrefs(html)).toEqual(["/", "/", "/#como-funciona"]);
+    expect(hrefs(html)).toEqual(["/", "/", "/#como-funciona", "mailto:suporte@lanceauto.com", "tel:9999999999"]);
     expect(html).toContain(">Sua conta</p>");
   });
 });
@@ -142,8 +157,8 @@ describe("SiteFooter: página atual", () => {
 describe("SiteFooter: versão mínima", () => {
   const html = render({ variant: "minimo" });
 
-  it("só os avisos e os direitos: sem logo, sem colunas, sem links", () => {
-    expect(html).toContain(RODAPE_CONTEUDO.avisosLegais);
+  it("só as políticas e os direitos: sem logo, sem colunas, sem links", () => {
+    for (const politica of RODAPE_CONTEUDO.politicas) expect(html).toContain(politica);
     expect(html).toContain(RODAPE_CONTEUDO.direitos);
     expect(html).not.toContain("<nav");
     expect(html).not.toContain("<a ");

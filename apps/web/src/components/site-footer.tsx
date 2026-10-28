@@ -12,7 +12,7 @@ const LINK_BASE = "t-rodape-link inline-flex min-h-alvo items-center no-underlin
 const LINK = `${LINK_BASE} !text-tinta2 hover:!text-tinta`;
 // A página atual troca a cor (não soma outra utility `!`: a de `tinta2` venceria) e mantém a sua no hover.
 const LINK_ATUAL = `${LINK_BASE} !text-ocreTexto hover:!text-ocreTexto`;
-const PROVISORIO = "t-rodape-link inline-flex min-h-alvo items-center text-tinta2";
+const TEXTO = "t-rodape-link inline-flex min-h-alvo items-center text-tinta2";
 const LARGURA = "min(100% - 2 * var(--gutter-lateral), 1320px)";
 // Reserva a altura da lista de "Sua conta" (dois itens) enquanto a sessão carrega, para a coluna não saltar.
 const LISTA_CONTA = "min-h-[88px]";
@@ -40,6 +40,28 @@ function Coluna({ titulo, children, className = "" }: { titulo: string; children
       <p className="t-rodape-titulo text-tinta">{titulo}</p>
       <ul className={`mt-3 ${className}`.trim()}>{children}</ul>
     </div>
+  );
+}
+
+function Contato() {
+  const { email, telefone, horario } = RODAPE_CONTEUDO.contato;
+  return (
+    <>
+      <li><a href={email.href} className={LINK}>{`E-mail: ${email.texto}`}</a></li>
+      <li><a href={telefone.href} className={LINK}>{`Telefone: ${telefone.texto}`}</a></li>
+      <li><span className={TEXTO}>{`Atendimento: ${horario}`}</span></li>
+    </>
+  );
+}
+
+/** Termos e políticas, por enquanto só texto: o `<a>` nasce com a rota. Também aparece no rodapé mínimo. */
+function Politicas() {
+  return (
+    <ul className="flex flex-wrap gap-x-6 gap-y-1">
+      {RODAPE_CONTEUDO.politicas.map((texto) => (
+        <li key={texto} className="t-rodape-legal">{texto}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -108,7 +130,7 @@ export interface SiteFooterProps {
 
 /**
  * Rodapé global (DESIGN 4.13), espelho do cabeçalho: faixa `papel` com fio de 1px no claro e linha azul de 2px no noite.
- * Todo texto é provisório (`lib/rodape-conteudo.ts`); só vira `<a>` o que tem rota.
+ * Textos em `lib/rodape-conteudo.ts`; só vira `<a>` o que tem rota (ou e-mail e telefone).
  */
 export function SiteFooter({ variant = "completo", hideOnPrint = false }: SiteFooterProps) {
   const completo = variant === "completo";
@@ -120,33 +142,32 @@ export function SiteFooter({ variant = "completo", hideOnPrint = false }: SiteFo
             <div className="flex flex-wrap gap-8">
               <div className="min-w-0 flex-[2_1_280px]">
                 <Logo />
-                <p className="t-rodape-legal mt-4 max-w-[36ch]">{RODAPE_CONTEUDO.apresentacao}</p>
+                <p className="t-rodape-link mt-4 max-w-[36ch] text-tinta">{RODAPE_CONTEUDO.apresentacao.titulo}</p>
+                <p className="t-rodape-legal mt-2 max-w-[36ch]">{RODAPE_CONTEUDO.apresentacao.texto}</p>
               </div>
               <nav aria-label="Rodapé" className="flex min-w-0 flex-[3_1_480px] flex-wrap gap-8">
                 <Coluna titulo={RODAPE_CONTEUDO.colunas.navegue}>
                   <li><FooterLink href="/">Vitrine</FooterLink></li>
                   <li><FooterLink href="/#como-funciona">Como funciona</FooterLink></li>
                   {RODAPE_CONTEUDO.navegueProvisorios.map((texto) => (
-                    <li key={texto}><span className={PROVISORIO}>{texto}</span></li>
+                    <li key={texto}><span className={TEXTO}>{texto}</span></li>
                   ))}
                 </Coluna>
                 <ColunaConta />
                 <Coluna titulo={RODAPE_CONTEUDO.colunas.contato}>
-                  {RODAPE_CONTEUDO.contatoProvisorios.map((texto) => (
-                    <li key={texto}><span className={PROVISORIO}>{texto}</span></li>
-                  ))}
+                  <Contato />
                   <li><Redes /></li>
                 </Coluna>
               </nav>
             </div>
             <div className="mt-8 border-t border-borda pt-6">
-              <p className="t-rodape-legal max-w-[80ch]">{RODAPE_CONTEUDO.avisosLegais}</p>
+              <Politicas />
               <p className="t-rodape-legal mt-4">{RODAPE_CONTEUDO.direitos}</p>
             </div>
           </>
         ) : (
           <>
-            <p className="t-rodape-legal max-w-[80ch]">{RODAPE_CONTEUDO.avisosLegais}</p>
+            <Politicas />
             <p className="t-rodape-legal mt-4">{RODAPE_CONTEUDO.direitos}</p>
           </>
         )}
