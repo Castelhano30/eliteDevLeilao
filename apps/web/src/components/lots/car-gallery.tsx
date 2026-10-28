@@ -26,7 +26,7 @@ function Chevron({ direction }: { direction: "left" | "right" }) {
 
 /**
  * Galeria da Sala (lote com mais de uma foto): a foto em destaque em 16:9 com `contain`, setas, miniaturas clicáveis
- * (até 5 colunas, nunca menos de 44 px de alvo) e teclado: ←/→ trocam (com volta), Home/End vão às pontas e
+ * (pequenas, 48×32, com alvo de toque de 44 px) e teclado: ←/→ trocam (com volta), Home/End vão às pontas e
  * Enter/Espaço escolhem a miniatura. A foto de agora é anunciada como "Foto N de M". Foto que não carrega mostra
  * a ilustração naquele lugar, sem derrubar as outras. Sem crédito: foto do aparelho não tem.
  */
@@ -91,11 +91,12 @@ export function CarGallery({ gallery, title, dimmed = false }: CarGalleryProps) 
       <p className="sr-only" role="status" aria-live="polite">
         {photoPosition(current, count)}
       </p>
-      <ul aria-label="Miniaturas" className="mt-3 grid list-none grid-cols-5 gap-2 p-0">
+      {/* Miniaturas pequenas (48×32): o que importa é a foto em destaque. A área de toque sobe a 44px por um pseudo-elemento, como no FilterTabs. */}
+      <ul aria-label="Miniaturas" className="mt-2 flex list-none flex-wrap justify-center gap-2 p-0">
         {sources.map((src, position) => {
           const active = position === current;
           return (
-            <li key={gallery[position]} className="min-w-0">
+            <li key={gallery[position]}>
               <button
                 type="button"
                 ref={(node) => {
@@ -104,19 +105,23 @@ export function CarGallery({ gallery, title, dimmed = false }: CarGalleryProps) 
                 aria-label={photoPosition(position, count)}
                 aria-current={active ? "true" : undefined}
                 onClick={() => dispatch({ type: "select", index: position })}
-                className={`relative block aspect-square min-h-11 w-full overflow-hidden rounded-lg border bg-suave p-0 ${
-                  active ? "border-ocre shadow-[0_0_0_1px_var(--c-ocre)]" : "border-borda hover:border-tinta2"
-                }`}
+                className="relative block h-8 w-12 rounded-md p-0 before:absolute before:inset-x-0 before:-inset-y-[6px] before:content-['']"
               >
-                {failed.has(src) ? (
-                  <span className="flex h-full w-full items-center justify-center">
-                    <CarIllustration />
-                  </span>
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element -- miniatura vinda da API (outro domínio), sem otimizador
-                  <img ref={checkLoaded(src)} src={src} alt="" loading="lazy" className="h-full w-full object-cover" onError={() => markFailed(src)} />
-                )}
-                {dimmed ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-painel/25" /> : null}
+                <span
+                  className={`absolute inset-0 overflow-hidden rounded-md border bg-suave ${
+                    active ? "border-ocre shadow-[0_0_0_1px_var(--c-ocre)]" : "border-borda opacity-80 hover:border-tinta2 hover:opacity-100"
+                  }`}
+                >
+                  {failed.has(src) ? (
+                    <span className="flex h-full w-full items-center justify-center">
+                      <CarIllustration />
+                    </span>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element -- miniatura vinda da API (outro domínio), sem otimizador
+                    <img ref={checkLoaded(src)} src={src} alt="" loading="lazy" className="h-full w-full object-cover" onError={() => markFailed(src)} />
+                  )}
+                  {dimmed ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-painel/25" /> : null}
+                </span>
               </button>
             </li>
           );

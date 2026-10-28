@@ -19,8 +19,10 @@ describe("CarGallery", () => {
     expect(html.match(/aria-label="Foto \d de 3"/g)).toHaveLength(3);
     expect(html).toContain('aria-label="Foto 1 de 3" aria-current="true"');
     expect(html).not.toContain('aria-label="Foto 2 de 3" aria-current');
-    expect(html).toContain("grid-cols-5");
-    expect(html).toContain("min-h-11");
+    // Miniaturas pequenas (48×32), com a área de toque de 44 px vinda do pseudo-elemento.
+    expect(html).toContain("h-8 w-12");
+    expect(html).toContain("before:-inset-y-[6px]");
+    expect(html).not.toContain("aspect-square");
   });
 
   it("setas, região viva com a foto de agora e rótulo da galeria", () => {
