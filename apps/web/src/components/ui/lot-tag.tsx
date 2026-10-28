@@ -1,6 +1,9 @@
 const CHAMFER = "polygon(18px 0, 100% 0, 100% 100%, 18px 100%, 0 calc(100% - 18px), 0 18px)";
 const CHAMFER_INNER = "polygon(17px 0, 100% 0, 100% 100%, 17px 100%, 0 calc(100% - 17px), 0 17px)";
 
+const CHAMFER_LINHA = "polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 calc(100% - 10px), 0 10px)";
+const CHAMFER_LINHA_INTERNO = "polygon(9px 0, 100% 0, 100% 100%, 9px 100%, 0 calc(100% - 9px), 0 9px)";
+
 export interface LotTagProps {
   /** Número do lote (aparece com três dígitos, `018`) ou um texto curto, como "NOVO" antes de o lote existir. */
   number: number | string;
@@ -8,8 +11,8 @@ export interface LotTagProps {
   tone?: "ocre" | "papel";
   /** Inclinação de -4° a +3° (-2° nos encerrados). */
   rotate?: number;
-  /** Compacto para a faixa do cartão da Vitrine; o padrão serve às telas com título grande. */
-  size?: "padrao" | "compacto";
+  /** Compacto para a faixa do cartão da Vitrine; o padrão serve às telas com título grande; linha (28px, sem laço nem inclinação) corre ao lado de um título e tem a altura do selo. */
+  size?: "padrao" | "compacto" | "linha";
 }
 
 /**
@@ -23,6 +26,17 @@ export function LotTag({ number, tone = "ocre", rotate = tone === "papel" ? -2 :
   // Contorno de 2px: azul profundo no claro e `ocreTexto` no noite (o azul principal não aparece como borda sobre o escuro).
   const contour = tone === "ocre" ? "var(--c-etiqueta-contorno)" : "var(--c-linha)";
   const compact = size === "compacto";
+  if (size === "linha") {
+    return (
+      <span className="inline-flex h-7 align-middle" style={{ clipPath: CHAMFER_LINHA, padding: 2, background: contour }}>
+        <span className="relative flex items-center gap-1.5 pl-6 pr-3" style={{ clipPath: CHAMFER_LINHA_INTERNO, background: fill, color: ink }}>
+          <span className="absolute left-[8px] top-1/2 h-2 w-2 -translate-y-1/2 rounded-circulo border-2 bg-fundo" style={{ borderColor: contour }} aria-hidden="true" />
+          <span className="text-[10px] tracking-[0.14em]">LOTE</span>
+          <span className="text-[16px] font-extrabold leading-none">{typeof number === "number" ? String(number).padStart(3, "0") : number}</span>
+        </span>
+      </span>
+    );
+  }
   return (
     <span className="inline-block align-top" style={{ padding: "18px 4px 6px 2px" }}>
       <span className="relative inline-block" style={{ transform: `rotate(${rotate}deg)` }}>

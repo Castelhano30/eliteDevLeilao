@@ -124,27 +124,14 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
   const status = lot.status;
   const ended = status === "SOLD" || status === "UNSOLD";
 
-  // À direita do cronômetro: o selo "Ao vivo" em cima e a etiqueta do lote embaixo.
-  const lateral = (
-    <>
-      {status === "LIVE" ? <Stamp variant="ao-vivo" /> : null}
-      <LotTag number={lot.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} size="compacto" rotate={ended || status === "CANCELLED" ? -1 : -2} />
-    </>
-  );
   const relogio = <Cronometro size="sala" status={status} startsAt={lot.startsAt} endsAt={lot.endsAt} originalEndsAt={lot.originalEndsAt} serverTime={state.serverTime} />;
-  const linhaRelogio = (
-    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-4">
-      {relogio}
-      <div className="ml-auto flex flex-col items-end">{lateral}</div>
-    </div>
-  );
 
   let panel: ReactNode;
   if (status === "CANCELLED") {
     // Sem formulário nem CTA de lance para ninguém; o histórico fica (lê só o banco) e a linha CANCEL é da Auditoria (S08).
     panel = (
       <div className="space-y-5">
-        {linhaRelogio}
+        {relogio}
         <div>
           <Stamp variant="cancelado" size="carimbo" animate={sawActive} />
         </div>
@@ -160,7 +147,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
     panel = (
       <div className="space-y-5">
         <p className="t-body-lead">Este lote abre em {when(lot.startsAt)}.</p>
-        {linhaRelogio}
+        {relogio}
         <p className="t-mono">
           Lance inicial {formatBRL(lot.startingBidCents)} · Incremento {formatBRL(lot.minIncrementCents)} · Fecha {closes.day} às {closes.time} (Brasília)
         </p>
@@ -175,7 +162,6 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
         viewer={user ? { role: user.role } : null}
         authLoading={authStatus === "loading" || authStatus === "error"}
         blockReason={blockReason}
-        lateral={lateral}
       />
     );
   }
@@ -195,19 +181,24 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
       <div className="flex flex-wrap justify-center gap-x-12 gap-y-6">
         <section aria-label="Ficha do carro" className="min-w-0" style={{ flex: "1 1 400px", maxWidth: 560 }}>
           <CarPhoto imageUrl={car.imageUrl} title={lot.title} size="sala" showCaption credit={car.imageCredit} creditUrl={car.imageCreditUrl} dimmed={ended} />
-          <h1 className="mt-6 font-bold uppercase [overflow-wrap:anywhere]" style={{ fontSize: "clamp(34px, 4vw, 56px)", lineHeight: 1 }}>
-            {lot.title}
-          </h1>
+          {/* O título e o par selo + etiqueta correm na mesma linha; o par é um bloco só e desce junto se não couber. */}
+          <div className="mt-6">
+            <h1 className="inline font-bold uppercase [overflow-wrap:anywhere]" style={{ fontSize: "clamp(34px, 4vw, 56px)", lineHeight: 1 }}>
+              {lot.title}
+            </h1>
+            <span className="ml-3 inline-flex items-center gap-2 align-middle">
+              {status === "LIVE" ? <Stamp variant="ao-vivo" /> : null}
+              <LotTag number={lot.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} size="linha" />
+            </span>
+          </div>
           <FichaCarro car={car} />
+          <Link href={auditPath(id)} className={`${buttonClasses("secundario")} mt-6 w-full !min-h-alvo`}>
+            {AUDIT_TEXT.auditThisLot}
+          </Link>
         </section>
 
         <section aria-label="Painel do lote" className="min-w-0" style={{ flex: "1 1 440px", maxWidth: 560 }}>
           {panel}
-          <p className="mt-8">
-            <Link href={auditPath(id)} className={`${buttonClasses("secundario")} !min-h-alvo`}>
-              {AUDIT_TEXT.auditThisLot}
-            </Link>
-          </p>
         </section>
       </div>
     </>,

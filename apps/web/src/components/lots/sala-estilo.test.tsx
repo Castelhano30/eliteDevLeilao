@@ -98,6 +98,28 @@ describe("Histórico de lances", () => {
   it("sem lances mostra o texto de sempre", () => {
     expect(renderToStaticMarkup(<BidHistory bids={[]} myPseudonym={null} />)).toContain("Nenhum lance ainda");
   });
+
+  const muitos = (n: number): BidDTO[] =>
+    Array.from({ length: n }, (_, i) => ({ seq: n - i, kind: "BID", pseudonym: "Licitante 38DF", amountCents: 1_000_000 + (n - i) * 50_000, at: at(-(i + 1) * 60_000) }));
+
+  it("mostra só os cinco mais novos, com a contagem total e a paginação para os demais", () => {
+    const paginado = renderToStaticMarkup(<BidHistory bids={muitos(13)} myPseudonym={null} />);
+    expect(paginado.match(/<li /g)).toHaveLength(5);
+    expect(paginado).toContain(">Nº 13<");
+    expect(paginado).not.toContain(">Nº 8<");
+    expect(paginado).toContain("13 LANCES");
+    expect(paginado).toContain(`<nav aria-label="Páginas do histórico"`);
+    expect(paginado).toMatch(/Página 1 de 3/);
+    expect(paginado).toMatch(/<button[^>]*disabled=""[^>]*>Anterior<\/button>/);
+    expect(paginado).not.toMatch(/<button[^>]*disabled=""[^>]*>Próxima<\/button>/);
+  });
+
+  it("até cinco lances não tem paginação", () => {
+    const html = renderToStaticMarkup(<BidHistory bids={muitos(5)} myPseudonym={null} />);
+    expect(html.match(/<li /g)).toHaveLength(5);
+    expect(html).not.toContain("<nav");
+    expect(renderToStaticMarkup(<BidHistory bids={muitos(6)} myPseudonym={null} />)).toContain("<nav");
+  });
 });
 
 describe("Painel de lance", () => {

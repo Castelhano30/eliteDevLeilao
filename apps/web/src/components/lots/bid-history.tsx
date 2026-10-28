@@ -2,9 +2,13 @@
 
 import { useState } from "react";
 import { BID_TEXT, formatBRL, type BidDTO } from "@lanceauto/shared";
+import { buttonClasses } from "@/components/ui/button";
 import { clockTime } from "@/lib/format";
 import { bidCountLabel } from "@/lib/lots";
 import { ChipLicitante } from "./chip-licitante";
+
+/** Lances por página: o resto fica nas páginas seguintes, para o painel não crescer sem fim. */
+export const BIDS_PER_PAGE = 5;
 
 export interface BidHistoryProps {
   bids: BidDTO[];
@@ -13,12 +17,17 @@ export interface BidHistoryProps {
 }
 
 /**
- * Histórico de lances (§9.5): mais novo primeiro. Não é região live: o placar anuncia a mudança de situação.
+ * Histórico de lances (§9.5): mais novo primeiro, cinco por página. Não é região live: o placar anuncia a mudança de situação.
  * A linha que chega depois da primeira pintura entra com `la-entra` e o flash `la-marca`.
  */
 export function BidHistory({ bids, myPseudonym }: BidHistoryProps) {
   // Só a linha que aparece depois da primeira pintura anima; a carga inicial entra parada.
   const [baseline] = useState(() => bids[0]?.seq ?? 0);
+  // Um lance novo entra no topo da página 1 e empurra os demais; quem está em outra página fica nela.
+  const [page, setPage] = useState(0);
+  const pages = Math.max(1, Math.ceil(bids.length / BIDS_PER_PAGE));
+  const current = Math.min(page, pages - 1);
+  const visible = bids.slice(current * BIDS_PER_PAGE, (current + 1) * BIDS_PER_PAGE);
   return (
     <section aria-labelledby="historico-lances">
       <div className="mb-3 flex items-baseline justify-between gap-3">
@@ -31,7 +40,7 @@ export function BidHistory({ bids, myPseudonym }: BidHistoryProps) {
         <p className="t-body-nota">{BID_TEXT.noBidsYet}</p>
       ) : (
         <ol>
-          {bids.map((bid) => (
+          {visible.map((bid) => (
             <li
               key={bid.seq}
               className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-borda py-3"
@@ -47,6 +56,19 @@ export function BidHistory({ bids, myPseudonym }: BidHistoryProps) {
           ))}
         </ol>
       )}
+      {pages > 1 ? (
+        <nav aria-label="Páginas do histórico" className="mt-3 flex items-center justify-between gap-3 border-t border-borda pt-3">
+          <button type="button" className={buttonClasses("secundario", false, "compacto")} disabled={current === 0} onClick={() => setPage(current - 1)}>
+            Anterior
+          </button>
+          <span className="t-mono-dado">
+            Página {current + 1} de {pages}
+          </span>
+          <button type="button" className={buttonClasses("secundario", false, "compacto")} disabled={current === pages - 1} onClick={() => setPage(current + 1)}>
+            Próxima
+          </button>
+        </nav>
+      ) : null}
     </section>
   );
 }

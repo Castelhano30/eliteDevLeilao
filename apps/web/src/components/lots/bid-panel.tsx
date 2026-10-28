@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { formatBRL, type LotState } from "@lanceauto/shared";
 import { Cronometro } from "@/components/lots/cronometro";
 import { PlacaLance } from "@/components/lots/placa-lance";
@@ -28,8 +28,6 @@ export interface BidPanelProps {
   authLoading: boolean;
   /** Sem conexão ou com o estado desatualizado: o botão de lance fica inerte. */
   blockReason: BidBlockReason | null;
-  /** Etiqueta do lote e selo: ficam à direita do cronômetro (no celular descem para baixo dele). */
-  lateral?: ReactNode;
 }
 
 /**
@@ -38,7 +36,7 @@ export interface BidPanelProps {
  * enquanto a Sala confere o resultado. Depois do martelo o mesmo painel segue montado e mostra o resultado
  * (S05 §9.1): a região viva é a mesma, então a mudança de situação é anunciada.
  */
-export function BidPanel({ id, state, viewer, authLoading, blockReason, lateral }: BidPanelProps) {
+export function BidPanel({ id, state, viewer, authLoading, blockReason }: BidPanelProps) {
   const { lot } = state;
   const now = useServerNow(state.serverTime);
   const hammered = isHammered(lot, now);
@@ -89,17 +87,14 @@ export function BidPanel({ id, state, viewer, authLoading, blockReason, lateral 
   return (
     <div className="space-y-6 rounded-2xl border border-borda bg-papel p-6 shadow-cartao">
       <div>
-        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-4">
-          <Cronometro
-            size="sala"
-            status={lot.status}
-            startsAt={lot.startsAt}
-            endsAt={lot.endsAt}
-            originalEndsAt={lot.originalEndsAt}
-            serverTime={state.serverTime}
-          />
-          {lateral ? <div className="ml-auto flex flex-col items-end">{lateral}</div> : null}
-        </div>
+        <Cronometro
+          size="sala"
+          status={lot.status}
+          startsAt={lot.startsAt}
+          endsAt={lot.endsAt}
+          originalEndsAt={lot.originalEndsAt}
+          serverTime={state.serverTime}
+        />
         {extended ? (
           <p className="t-body-nota mt-3">
             Lance nos 2 minutos finais: o relógio ganhou +2 min. Novo fim às <span>{clockTime(lot.endsAt)}</span>. Ninguém leva

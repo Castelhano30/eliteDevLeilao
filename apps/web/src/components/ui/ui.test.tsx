@@ -204,6 +204,16 @@ describe("LotTag", () => {
     expect(renderToStaticMarkup(<LotTag number="NOVO" />)).toContain(">NOVO<");
   });
 
+  it("a versão em linha tem 28px, a altura do selo, sem laço nem inclinação", () => {
+    const html = renderToStaticMarkup(<LotTag number={18} size="linha" />);
+    expect(html).toContain("inline-flex h-7");
+    expect(html).toContain(">LOTE<");
+    expect(html).toContain(">018<");
+    expect(html).not.toContain("<svg");
+    expect(html).not.toContain("rotate");
+    expect(renderToStaticMarkup(<Stamp variant="ao-vivo" />)).toContain("h-7");
+  });
+
   it("o laço fica dentro da caixa e a caixa reserva o espaço dele", () => {
     const html = renderToStaticMarkup(<LotTag number={18} />);
     // Nenhum deslocamento negativo à esquerda: o laço não passa da borda do componente.
