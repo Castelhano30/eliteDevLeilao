@@ -14,7 +14,7 @@ export interface RoleTicketsProps {
   error?: string;
 }
 
-/** "Eu sou": dois bilhetes de papel que são radios escondidos de forma acessível (nunca `display:none`). */
+/** "Eu sou": dois bilhetes selecionáveis (`rounded-xl`) que são radios escondidos de forma acessível (nunca `display:none`). O foco é o anel global do rótulo. */
 export function RoleTickets({ value, onChange, error }: RoleTicketsProps) {
   const name = useId();
   return (
@@ -26,8 +26,8 @@ export function RoleTickets({ value, onChange, error }: RoleTicketsProps) {
           return (
             <label
               key={option.role}
-              className={`block cursor-pointer rounded-nenhum border-[3px] border-linha px-4 py-3 has-[:focus-visible]:outline-[3px] has-[:focus-visible]:outline-offset-[3px] has-[:focus-visible]:outline-tinta ${
-                checked ? "bg-ocre text-sobreOcre shadow-botao" : "bg-papel text-tinta"
+              className={`relative block cursor-pointer rounded-xl border px-4 py-3 text-tinta ${
+                checked ? "border-ocre bg-selecionado" : "border-borda bg-papel hover:border-tinta2"
               }`}
             >
               <input
@@ -38,8 +38,14 @@ export function RoleTickets({ value, onChange, error }: RoleTicketsProps) {
                 onChange={() => onChange(option.role)}
                 className="sr-only"
               />
-              <span className="t-cartaz-subtitulo block">{option.title}</span>
-              <span className={`t-body-nota block ${checked ? "!text-sobreOcre" : ""}`}>{option.note}</span>
+              {checked ? (
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="absolute right-3 top-3 text-ocreTexto">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="m8 12.5 3 3 5-6" />
+                </svg>
+              ) : null}
+              <span className="block pr-8 text-[16px] font-extrabold leading-tight">{option.title}</span>
+              <span className="t-body-nota mt-1 block">{option.note}</span>
             </label>
           );
         })}

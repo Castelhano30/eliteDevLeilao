@@ -17,7 +17,7 @@ export interface VerdictBoxProps {
 
 function Counter({ label, alert = false, children }: { label: string; alert?: boolean; children: React.ReactNode }) {
   return (
-    <div className="min-w-0 border-t-2 border-dashed border-tracejado pt-2">
+    <div className="min-w-0 border-t border-borda pt-2">
       <dt className="t-mono-rotulo">{label}</dt>
       <dd className={`t-mono-dado mt-1 ${alert ? "font-bold text-ferrugem" : ""}`}>{children}</dd>
     </div>
@@ -29,7 +29,7 @@ export function VerdictBox({ view, verifying, stale, onVerify }: VerdictBoxProps
   const ok = view?.verdict.code === "OK";
   const counters = view ? counterView(view.verdict, { hasReceipt: view.receipt !== null }) : null;
   return (
-    <section aria-label="Veredito" className="border-[3px] border-linha bg-papel p-6" style={{ boxShadow: "6px 6px 0 var(--c-sombra)" }}>
+    <section aria-label="Veredito" className="rounded-2xl border border-borda bg-papel p-6 shadow-cartao">
       {verifying || !view ? (
         <VerifyingIndicator />
       ) : (
@@ -47,7 +47,7 @@ export function VerdictBox({ view, verifying, stale, onVerify }: VerdictBoxProps
         {view && !verifying ? (
           <p className="t-mono-dado flex flex-wrap items-center gap-3 text-tinta2">
             <span>{verifiedAtLabel(view.verifiedAt)}</span>
-            {stale ? <span className="t-mono-rotulo border-2 border-dashed border-ferrugem px-2 py-[2px] font-semibold text-ferrugem">{AUDIT_TEXT.stale}</span> : null}
+            {stale ? <span className="t-mono-rotulo rounded-full border border-ferrugem px-2 py-[2px] font-semibold text-ferrugem">{AUDIT_TEXT.stale}</span> : null}
           </p>
         ) : null}
         <Button

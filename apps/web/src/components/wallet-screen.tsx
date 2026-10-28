@@ -40,13 +40,13 @@ async function fetchLedgerPage(cursor: string | null): Promise<WalletPageDto> {
 
 function Equation({ total, committed, available }: { total?: number; committed?: number; available?: number }) {
   const show = (cents?: number) => (cents === undefined ? "R$ …" : formatBRL(cents));
-  const card = "min-w-0 flex-1 rounded-nenhum border-2 border-linha bg-papel p-5";
+  const card = "min-w-0 flex-1 rounded-2xl border border-borda bg-papel p-5 shadow-cartao";
   const glyph = "t-display-titulo self-center text-center";
   return (
     <div className="flex flex-col gap-3 lg:flex-row" role="group" aria-label="Saldo">
       <div className={card}>
         <p className="t-mono-rotulo mb-2">Total</p>
-        <p className="text-[24px] break-all font-extrabold" aria-label={total === undefined ? undefined : show(total)}>
+        <p className="text-[24px] break-all font-extrabold tabular-nums" aria-label={total === undefined ? undefined : show(total)}>
           {show(total)}
         </p>
       </div>
@@ -55,14 +55,14 @@ function Equation({ total, committed, available }: { total?: number; committed?:
       </span>
       <div className={card}>
         <p className="t-mono-rotulo mb-2">Comprometido</p>
-        <p className="text-[24px] break-all font-extrabold">{show(committed)}</p>
+        <p className="text-[24px] break-all font-extrabold tabular-nums">{show(committed)}</p>
       </div>
       <span aria-hidden="true" className={glyph}>
         =
       </span>
-      <div className={`${card} !border-[3px]`}>
+      <div className={`${card} cartao-disponivel`}>
         <p className="t-mono-rotulo mb-2">Disponível</p>
-        <p className="text-[24px] break-all font-extrabold">{show(available)}</p>
+        <p className="text-[40px] break-all font-extrabold leading-[1.1] tabular-nums">{show(available)}</p>
       </div>
     </div>
   );
@@ -166,7 +166,7 @@ export function WalletScreen() {
         ) : (
           <Equation total={wallet?.totalCents} committed={wallet?.committedCents} available={wallet?.availableCents} />
         )}
-        <div className="rounded-nenhum border-2 border-dashed border-tracejado bg-papel p-4">
+        <div className="rounded-2xl border border-borda bg-papel p-4">
           <p className="t-mono-rotulo mb-2">Comprometido</p>
           {leadingLots.length === 0 ? (
             <p className="t-body">Nada travado no momento.</p>

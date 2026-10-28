@@ -52,7 +52,7 @@ export function AuditTable({ view, verifying }: { view: AuditView; verifying: bo
           <Fade row={row}>
             <span className="flex flex-wrap items-center gap-2">
               <span className="t-mono-dado">{cell.pseudonym}</span>
-              {cell.mine ? <span className="border-2 border-linha bg-ocre px-2 text-[12px] font-semibold text-sobreOcre">{AUDIT_TEXT.mine}</span> : null}
+              {cell.mine ? <span className="rounded-full bg-selecionado px-2 text-[12px] font-bold text-ocreTexto">{AUDIT_TEXT.mine}</span> : null}
             </span>
           </Fade>
         );

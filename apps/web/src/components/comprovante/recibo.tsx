@@ -6,32 +6,31 @@ import { Perforation } from "@/components/ui/perforation";
 import { Stamp } from "@/components/ui/stamp";
 import { CodigoDeBarras } from "./codigo-de-barras";
 
-const BAND = "bg-papel px-4 py-[14px] border-dashed border-tracejado";
+const BAND = "bg-papel px-4 py-[14px]";
 
 /** Linha rótulo/valor do recibo: em tela estreita o valor desce para baixo do rótulo (reflow, sem rolagem lateral). */
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-wrap gap-x-4">
       <dt className="t-mono-rotulo min-w-[170px] shrink-0 pt-[6px]">{label}</dt>
-      <dd className="t-mono-recibo m-0 min-w-0 flex-1 [overflow-wrap:anywhere]">{children}</dd>
+      <dd className="t-mono-recibo m-0 min-w-0 flex-1 tabular-nums [overflow-wrap:anywhere]">{children}</dd>
     </div>
   );
 }
 
 /**
- * Recibo em cinco faixas sobrepostas (cabeçalho, picote, corpo, picote, rodapé), girado -1° com sombra dura (§10).
+ * Recibo em cinco faixas (cabeçalho, picote, corpo, picote, rodapé) num cartão `papel`, `rounded-xl`, fio e nível 2 (§10, DESIGN 4.12): sem
+ * rotação e sem sombra dura. O picote é o tracejado que sobra, com os recortes semicirculares recortados pelo cartão.
  * O hash é o HMAC-SHA256 completo, selecionável e que quebra em qualquer ponto; o código de barras é decorativo.
  */
 export function Recibo({ receipt }: { receipt: ReceiptDTO }) {
-  // 8 px a menos de largura: a sombra deslocada e a rotação de -1° cabem na coluna e a página não ganha rolagem lateral.
   const { car } = receipt;
   return (
     <article
       aria-label={`Recibo ${receipt.receiptCode}`}
-      className="mx-auto w-[calc(100%-8px)] max-w-[760px]"
-      style={{ transform: "rotate(-1deg)", filter: "drop-shadow(8px 8px 0 var(--c-sombra))" }}
+      className="mx-auto w-full max-w-[760px] overflow-hidden rounded-xl border border-borda bg-papel shadow-painel"
     >
-      <div className={`${BAND} flex flex-wrap items-center justify-between gap-4 border-2`}>
+      <div className={`${BAND} flex flex-wrap items-center justify-between gap-4`}>
         <div className="flex min-w-0 items-center gap-5">
           <LotTag number={receipt.lotNumber} tone="papel" />
           <p className="min-w-0 text-[32px] font-bold uppercase leading-none [overflow-wrap:anywhere]">{car.title}</p>
@@ -39,7 +38,7 @@ export function Recibo({ receipt }: { receipt: ReceiptDTO }) {
         <Stamp variant="arrematado" />
       </div>
       <Perforation />
-      <dl className={`${BAND} m-0 border-x-2`}>
+      <dl className={`${BAND} m-0`}>
         <Row label="Lote">{formatLotNumber(receipt.lotNumber)}</Row>
         <Row label="Carro">{car.title}</Row>
         <Row label="Ano / combustível">
@@ -59,10 +58,10 @@ export function Recibo({ receipt }: { receipt: ReceiptDTO }) {
         </Row>
       </dl>
       <Perforation />
-      <div className={`${BAND} space-y-4 border-2 border-t-0`}>
+      <div className={`${BAND} space-y-4`}>
         <div>
           <p className="t-mono-rotulo">{RECEIPT_TEXT.hashLabel}</p>
-          <p className="mt-1 select-all text-[15px] leading-[1.5] [overflow-wrap:anywhere]">{receipt.finalHash}</p>
+          <p className="mt-1 select-all text-[14px] leading-[1.5] tabular-nums [overflow-wrap:anywhere]">{receipt.finalHash}</p>
           <Link href={receipt.auditUrl} className="t-body-nota mt-1 inline-flex min-h-alvo items-center underline underline-offset-4">
             {AUDIT_TEXT.verifyOnAudit}
           </Link>
@@ -70,7 +69,7 @@ export function Recibo({ receipt }: { receipt: ReceiptDTO }) {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="t-mono-rotulo">Nº do comprovante</p>
-            <p className="text-[22px] font-semibold">{receipt.receiptCode}</p>
+            <p className="text-[22px] font-semibold tabular-nums">{receipt.receiptCode}</p>
           </div>
           <div className="min-w-[160px] flex-1">
             <CodigoDeBarras hash={receipt.finalHash} />

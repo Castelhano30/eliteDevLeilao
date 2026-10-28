@@ -25,8 +25,8 @@ async function fetchReceipt(token: string, signal?: AbortSignal): Promise<Receip
 function Esqueleto() {
   return (
     <div aria-hidden="true" className="flex flex-wrap gap-8">
-      <div className="min-h-[420px] min-w-0 border-2 border-dashed border-tracejado bg-papel" style={{ flex: "1 1 480px" }} />
-      <div className="min-h-[260px] min-w-0 border-2 border-dashed border-tracejado bg-suave" style={{ flex: "1 1 360px" }} />
+      <div className="min-h-[420px] min-w-0 rounded-xl border border-borda bg-papel" style={{ flex: "1 1 480px" }} />
+      <div className="min-h-[260px] min-w-0 rounded-xl border border-borda bg-suave" style={{ flex: "1 1 360px" }} />
     </div>
   );
 }
@@ -63,7 +63,7 @@ export function Comprovante({ token, initial }: { token: string; initial?: Recei
         </div>
       ) : (
         <div className="flex flex-wrap gap-x-10 gap-y-10">
-          <div className="min-w-0 pb-2 pr-2" style={{ flex: "1 1 480px" }}>
+          <div className="min-w-0" style={{ flex: "1 1 480px" }}>
             <Recibo receipt={receipt} />
           </div>
           <div className="min-w-0 space-y-6" style={{ flex: "1 1 360px" }}>

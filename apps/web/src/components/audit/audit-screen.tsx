@@ -7,6 +7,7 @@ import { AUDIT_TEXT, problemBanner, receiptPath, verdictAnnouncement } from "@la
 import { useAuth } from "@/components/auth-provider";
 import { buttonClasses } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
+import { Notice } from "@/components/ui/notice";
 import { LotTag } from "@/components/ui/lot-tag";
 import { PageShell } from "@/components/ui/page-shell";
 import { AuditNotFoundError, AuditRequestError, auditKey, fetchAudit } from "@/lib/audit-query";
@@ -124,9 +125,9 @@ export function AuditScreen({ id }: { id: string }) {
           <VerdictBox view={view} verifying={verifying} stale={state === "stale"} onVerify={verify} />
 
           {banner ? (
-            <div role="alert" className="border-[3px] border-ferrugem bg-papel p-4 text-ferrugem">
-              <p className="t-body font-semibold">{banner}</p>
-            </div>
+            <Notice kind="erro">
+              <p className="font-semibold">{banner}</p>
+            </Notice>
           ) : null}
 
           {view ? (

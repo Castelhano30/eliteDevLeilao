@@ -374,6 +374,26 @@ dialog::backdrop {
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="claro"]) .rodape { border-top: 2px solid var(--c-destaque); }
 }
+/* ---------- Cartão "Disponível" da Carteira (DESIGN 4.12) ----------
+   Claro: fundo `ocre` com `sobreOcre`. Noite: `selecionado` (#001E63) com fio `destaque`. O rótulo herda a cor do cartão. */
+.cartao-disponivel {
+  background: var(--c-ocre);
+  border-color: var(--c-ocre);
+  color: var(--c-sobre-ocre);
+}
+.cartao-disponivel .t-mono-rotulo { color: inherit; }
+[data-theme="noite"] .cartao-disponivel {
+  background: var(--c-selecionado);
+  border-color: var(--c-destaque);
+  color: var(--c-tinta);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="claro"]) .cartao-disponivel {
+    background: var(--c-selecionado);
+    border-color: var(--c-destaque);
+    color: var(--c-tinta);
+  }
+}
 .cabecalho-divisor { display: none; flex: 0 0 auto; width: 1px; height: 28px; background: var(--h-divisor); }
 @media (min-width: 768px) {
   .cabecalho-divisor { display: block; }

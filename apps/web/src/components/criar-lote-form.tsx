@@ -20,6 +20,7 @@ import {
 import { LotCard } from "@/components/lots/lot-card";
 import { Button } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
+import { Notice } from "@/components/ui/notice";
 import { Field } from "@/components/ui/field";
 import { LotTag } from "@/components/ui/lot-tag";
 import { PageShell } from "@/components/ui/page-shell";
@@ -67,10 +68,10 @@ type Errors = Partial<Record<(typeof FIELD_ORDER)[number][0], string>>;
 function Group({ number, title, children }: { number: string; title: string; children: ReactNode }) {
   const id = useId();
   return (
-    <fieldset aria-labelledby={id} className="min-w-0 rounded-nenhum border-2 border-linha bg-papel p-4 shadow-cartao">
+    <fieldset aria-labelledby={id} className="min-w-0 rounded-2xl border border-borda bg-papel p-5 shadow-cartao">
       <legend className="sr-only">{`${number} ${title}`}</legend>
-      <h2 id={id} className="t-cartaz-subtitulo mb-5 flex items-baseline gap-3">
-        <span className="text-[18px]">{number}</span>
+      <h2 id={id} className="mb-5 flex items-baseline gap-3 text-[20px] font-extrabold leading-tight">
+        <span className="text-[14px] font-bold tabular-nums text-tinta2">{number}</span>
         {title}
       </h2>
       <div className="space-y-5">{children}</div>
@@ -96,25 +97,30 @@ function CatalogSelect({ id, label, value, onChange, options, disabled, down, pl
       <label htmlFor={id} className="t-mono-rotulo mb-2 block">
         {label}
       </label>
-      <select
-        id={id}
-        value={value}
-        required
-        disabled={disabled}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-erro` : undefined}
-        onChange={(event) => onChange(event.target.value)}
-        className={`min-h-12 w-full rounded-nenhum border-2 bg-fundo px-3 text-[16px] text-tinta ${
-          error ? "border-ferrugem" : "border-linha"
-        } ${down ? "border-dashed opacity-50" : ""} disabled:bg-suave`}
-      >
-        <option value="">{placeholder}</option>
-        {(options ?? []).map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.name}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          id={id}
+          value={value}
+          required
+          disabled={disabled}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${id}-erro` : undefined}
+          onChange={(event) => onChange(event.target.value)}
+          className={`min-h-12 w-full appearance-none rounded-xl border bg-papel px-3 pr-10 text-[16px] text-tinta transition-[border-color] duration-150 ease-out hover:border-tinta2 focus-visible:border-foco disabled:cursor-not-allowed disabled:border-borda disabled:bg-suave disabled:text-tinta2 ${
+            error ? "border-ferrugem shadow-[0_0_0_1px_var(--c-ferrugem)]" : "border-linha"
+          } ${down ? "opacity-50" : ""}`}
+        >
+          <option value="">{placeholder}</option>
+          {(options ?? []).map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name}
+            </option>
+          ))}
+        </select>
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none absolute right-[14px] top-1/2 -translate-y-1/2 text-tinta2">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </div>
       {error ? (
         <p id={`${id}-erro`} className="t-body-nota mt-2 !text-ferrugem">
           {error}
@@ -325,10 +331,10 @@ export function CriarLoteForm() {
       <p className="t-body-lead mt-4">Escolha o carro na Tabela FIPE, ajuste as regras e solte no pátio.</p>
 
       {fipeDown ? (
-        <div role="alert" className="mt-8 border-2 border-dashed border-ferrugem bg-papel p-4">
-          <p className="t-cartaz-subtitulo text-ferrugem">{CATALOG_TEXT.fipeUnavailable}</p>
-          <p className="t-body mt-2">{CATALOG_TEXT.fipeUnavailableBody}</p>
-          <div className="mt-4">
+        <Notice
+          kind="erro"
+          className="mt-8"
+          footer={
             <Button
               loading={consulting}
               loadingText="Consultando…"
@@ -336,14 +342,17 @@ export function CriarLoteForm() {
             >
               Tentar de novo
             </Button>
-          </div>
-        </div>
+          }
+        >
+          <p className="font-extrabold">{CATALOG_TEXT.fipeUnavailable}</p>
+          <p className="mt-1">{CATALOG_TEXT.fipeUnavailableBody}</p>
+        </Notice>
       ) : null}
 
       {errorCount > 1 ? (
-        <div role="alert" className="t-body mt-8 border-2 border-dashed border-ferrugem px-4 py-3 !text-ferrugem">
+        <Notice kind="erro" className="mt-8">
           Corrija os campos marcados.
-        </div>
+        </Notice>
       ) : null}
 
       <div className="mt-8 flex flex-wrap items-start gap-8">
@@ -393,7 +402,7 @@ export function CriarLoteForm() {
             />
             {catalogNotFound && !fipeDown ? <FeedbackState variant="vazio">{catalogNotFound}</FeedbackState> : null}
             {hasCar && car ? (
-              <div className="border-2 border-linha bg-fundo p-4">
+              <div className="rounded-xl border border-borda bg-suave p-4">
                 <p className="t-mono-rotulo">REFERÊNCIA FIPE · {formatReferenceMonth(car.referenceMonth)}</p>
                 <p className="mt-1 text-[24px] font-extrabold">{formatBRL(car.referencePriceCents)}</p>
                 <p className="t-mono mt-1 text-tinta2">
