@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { formatBRL, type LedgerEntryDto } from "@lanceauto/shared";
+import { BarraDePaginas } from "@/components/ui/barra-de-paginas";
 import { buttonClasses } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { FeedbackState } from "@/components/ui/feedback-state";
-import { filtrarPorPeriodo, paginar } from "@/lib/extrato";
+import { EXTRATO_POR_PAGINA, filtrarPorPeriodo } from "@/lib/extrato";
+import { paginar } from "@/lib/paginacao";
 import { describeMovement, formatWhen, lotNumberLabel } from "@/lib/format";
 import { FiltrarExtrato } from "./filtrar-extrato";
 
@@ -66,7 +68,7 @@ export function ExtratoCarteira({ entries }: { entries: readonly LedgerEntryDto[
   }
 
   const filtrado = filtrarPorPeriodo(entries, de, ate);
-  const { items, atual, paginas } = paginar(filtrado, page);
+  const { items, atual, paginas } = paginar(filtrado, page, EXTRATO_POR_PAGINA);
   const filtrando = de !== "" || ate !== "";
 
   const clear = () => {
@@ -107,19 +109,7 @@ export function ExtratoCarteira({ entries }: { entries: readonly LedgerEntryDto[
       ) : (
         <>
           <DataTable caption="Extrato da carteira" captionHidden columns={COLUMNS} rows={items} rowKey={(row) => row.id} minWidth={560} />
-          {paginas > 1 ? (
-            <nav aria-label="Páginas do extrato" className="mt-4 flex items-center justify-between gap-3">
-              <button type="button" className={buttonClasses("secundario", false, "compacto")} disabled={atual === 0} onClick={() => setPage(atual - 1)}>
-                Anterior
-              </button>
-              <span className="t-mono-dado">
-                Página {atual + 1} de {paginas}
-              </span>
-              <button type="button" className={buttonClasses("secundario", false, "compacto")} disabled={atual === paginas - 1} onClick={() => setPage(atual + 1)}>
-                Próxima
-              </button>
-            </nav>
-          ) : null}
+          <BarraDePaginas label="Páginas do extrato" atual={atual} paginas={paginas} onChange={setPage} className="mt-4" />
         </>
       )}
     </>

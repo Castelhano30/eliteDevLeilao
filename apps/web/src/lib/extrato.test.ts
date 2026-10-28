@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dataBr, descreverPeriodo, diaDeBrasilia, EXTRATO_POR_PAGINA, filtrarPorPeriodo, paginar, periodoInvertido } from "./extrato";
+import { dataBr, descreverPeriodo, diaDeBrasilia, EXTRATO_POR_PAGINA, filtrarPorPeriodo, periodoInvertido } from "./extrato";
 
 const mov = (createdAt: string) => ({ createdAt });
 
@@ -43,23 +43,9 @@ describe("filtrarPorPeriodo", () => {
   });
 });
 
-describe("paginar", () => {
-  const itens = Array.from({ length: 23 }, (_, i) => i + 1);
-
-  it("dez por página, a última com o resto", () => {
+describe("EXTRATO_POR_PAGINA", () => {
+  it("são dez movimentos por página", () => {
     expect(EXTRATO_POR_PAGINA).toBe(10);
-    expect(paginar(itens, 0)).toMatchObject({ atual: 0, paginas: 3, items: itens.slice(0, 10) });
-    expect(paginar(itens, 2).items).toEqual([21, 22, 23]);
-  });
-
-  it("até dez itens é uma página só", () => {
-    expect(paginar(itens.slice(0, 10), 0).paginas).toBe(1);
-    expect(paginar([], 0)).toEqual({ items: [], atual: 0, paginas: 1 });
-  });
-
-  it("página fora do que existe é limitada (a lista encolheu)", () => {
-    expect(paginar(itens, 9).atual).toBe(2);
-    expect(paginar(itens, -1).atual).toBe(0);
   });
 });
 

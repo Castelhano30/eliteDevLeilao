@@ -25,19 +25,6 @@ export function filtrarPorPeriodo<T extends { createdAt: string }>(entries: read
   });
 }
 
-export interface PaginaDoExtrato<T> {
-  items: T[];
-  /** Página mostrada, a partir de 0 (já limitada ao que existe). */
-  atual: number;
-  paginas: number;
-}
-
-export function paginar<T>(items: readonly T[], pagina: number, porPagina: number = EXTRATO_POR_PAGINA): PaginaDoExtrato<T> {
-  const paginas = Math.max(1, Math.ceil(items.length / porPagina));
-  const atual = Math.min(Math.max(0, pagina), paginas - 1);
-  return { items: items.slice(atual * porPagina, (atual + 1) * porPagina), atual, paginas };
-}
-
 /** "2026-10-28" para "28/10/2026". */
 export function dataBr(dia: string): string {
   const [ano, mes, d] = dia.split("-");
