@@ -57,8 +57,11 @@ export function SiteHeader() {
               <ProfileMenu />
             </> : <>
               <span aria-hidden="true" className="cabecalho-divisor" />
-              <Link href="/entrar?aba=entrar" className={BOTAO_ENTRAR}>Entrar</Link>
-              <Link href="/entrar" className={BOTAO_CRIAR}>Criar conta</Link>
+              {/* Grade de duas colunas iguais: os botões ficam com a largura do maior ("Criar conta"). */}
+              <span className="inline-grid grid-cols-2 gap-x-3 sm:gap-x-4">
+                <Link href="/entrar?aba=entrar" className={BOTAO_ENTRAR}>Entrar</Link>
+                <Link href="/entrar" className={BOTAO_CRIAR}>Criar conta</Link>
+              </span>
             </>}
           </div>
         ) : null}
