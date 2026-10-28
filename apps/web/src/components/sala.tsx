@@ -10,7 +10,6 @@ import {
   brasiliaDayAndTime,
   cancelledAtLabel,
   formatBRL,
-  formatReferenceMonth,
   type LotState,
   GLOBAL_TEXT,
 } from "@lanceauto/shared";
@@ -21,6 +20,7 @@ import { BidPanel } from "@/components/lots/bid-panel";
 import { CarPhoto } from "@/components/lots/car-photo";
 import { Cronometro } from "@/components/lots/cronometro";
 import { FaixaStatus } from "@/components/lots/faixa-status";
+import { FichaCarro } from "@/components/lots/ficha-carro";
 import { buttonClasses } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { LotTag } from "@/components/ui/lot-tag";
@@ -176,37 +176,20 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
           {GLOBAL_TEXT.staleError}
         </FeedbackState>
       ) : null}
-      <div className="flex flex-wrap gap-6">
-        <section aria-label="Ficha do carro" className="min-w-0" style={{ flex: "1 1 520px" }}>
+      <div className="flex flex-wrap justify-center gap-x-12 gap-y-6">
+        <section aria-label="Ficha do carro" className="min-w-0" style={{ flex: "1 1 400px", maxWidth: 560 }}>
           <CarPhoto imageUrl={car.imageUrl} title={lot.title} size="sala" showCaption credit={car.imageCredit} creditUrl={car.imageCreditUrl} dimmed={ended} />
-          <dl className="mt-6 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))" }}>
-            {[
-              ["Marca", car.brand],
-              ["Modelo", car.model],
-              ["Ano", String(car.year)],
-              ["Combustível", car.fuel || "—"],
-            ].map(([label, value]) => (
-              <div key={label} className="border-t border-borda pt-2">
-                <dt className="t-mono-rotulo">{label}</dt>
-                <dd className="t-body mt-1">{value}</dd>
-              </div>
-            ))}
-            <div className="border-t border-borda pt-2">
-              <dt className="t-mono-rotulo">Preço de referência</dt>
-              <dd className="mt-1 text-[18px] font-bold leading-[1.3]">{formatBRL(car.referencePriceCents)}</dd>
-            </div>
-          </dl>
-          <p className="t-mono-rotulo mt-6">FONTE: TABELA FIPE · {formatReferenceMonth(car.referenceMonth)}</p>
+          <FichaCarro car={car} />
         </section>
 
         <section aria-label="Painel do lote" className="min-w-0" style={{ flex: "1 1 440px", maxWidth: 560 }}>
-          <div className="flex flex-wrap items-center gap-4">
+          <h1 className="font-bold uppercase [overflow-wrap:anywhere]" style={{ fontSize: "clamp(40px, 5vw, 72px)", lineHeight: 0.98 }}>
+            {lot.title}
+          </h1>
+          <div className="mt-6 flex flex-wrap items-center gap-4">
             <LotTag number={lot.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} />
             {status === "LIVE" ? <Stamp variant="ao-vivo" /> : null}
           </div>
-          <h1 className="mt-6 font-bold uppercase [overflow-wrap:anywhere]" style={{ fontSize: "clamp(40px, 5vw, 72px)", lineHeight: 0.98 }}>
-            {lot.title}
-          </h1>
           <div className="mt-6">{panel}</div>
           <p className="mt-8">
             <Link href={auditPath(id)} className={`${buttonClasses("secundario")} !min-h-alvo`}>

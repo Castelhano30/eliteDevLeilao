@@ -64,7 +64,12 @@ describe("CarPhoto: Sala e prévia", () => {
     expect(html).not.toContain('loading="lazy"');
   });
 
-  it("sem foto na Sala: a legenda do estado", () => {
-    expect(render({ size: "sala", showCaption: true, imageUrl: null })).toContain("Pintado à mão pelo pátio");
+  it("sem foto na Sala: nenhuma legenda; a explicação do estado fica na prévia", () => {
+    expect(render({ size: "sala", showCaption: true, imageUrl: null })).not.toContain("<figcaption");
+    expect(render({ size: "previa", showCaption: true, imageUrl: null })).toContain("Pintado à mão pelo pátio");
+  });
+
+  it("o crédito da foto continua na Sala", () => {
+    expect(render({ size: "sala", showCaption: true, credit: "Foto: Fulano" })).toContain("Foto: Fulano");
   });
 });

@@ -47,8 +47,9 @@ export function CarPhoto({ imageUrl, title, size, showCaption = false, credit, c
 
   let caption: ReactNode = null;
   if (showCaption) {
-    if (!src) caption = "Pintado à mão pelo pátio: o leiloeiro não mandou foto";
-    else if (broken) caption = "Imagem ilustrativa";
+    // Na Sala só o crédito aparece (a licença da foto o exige); a explicação do estado fica na prévia do Criar lote.
+    if (!src) caption = size === "previa" ? "Pintado à mão pelo pátio: o leiloeiro não mandou foto" : null;
+    else if (broken) caption = size === "previa" ? "Imagem ilustrativa" : null;
     else if (credit) caption = link ? <a href={link} rel="noopener noreferrer" target="_blank">{credit}</a> : credit;
   }
 
