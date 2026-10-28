@@ -39,6 +39,8 @@ const config = {
         painel: "var(--c-painel)",
         led: "var(--c-led)",
         ledAlerta: "var(--c-led-alerta)",
+        aoVivo: "var(--c-ao-vivo)",
+        sobreAoVivo: "var(--c-sobre-ao-vivo)",
         falha: "var(--c-falha)",
         // Literais fixos: não acompanham o tema.
         faixaPlaca: "var(--f-faixa-placa)",

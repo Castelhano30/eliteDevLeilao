@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type StampVariant = "ao-vivo" | "agendado" | "encerrando" | "arrematado" | "sem-lances" | "integro" | "adulterado" | "cancelado" | "perdido";
+export type StampVariant = "ao-vivo" | "ao-vivo-cartao" | "agendado" | "encerrando" | "arrematado" | "sem-lances" | "integro" | "adulterado" | "cancelado" | "perdido";
 
 type IconName = "dot" | "clock" | "clock-alert" | "check" | "alert" | "ban" | "gavel" | "dash";
 
@@ -8,6 +8,8 @@ type IconName = "dot" | "clock" | "clock-alert" | "check" | "alert" | "ban" | "g
 const NEUTRO_TRACEJADO = "border-dashed border-linha bg-papel text-tinta2";
 const VARIANTS: Record<StampVariant, { label: string; icon: IconName; tone: string; carimbo?: string }> = {
   "ao-vivo": { label: "Ao vivo", icon: "dot", tone: "border-transparent bg-ocre text-sobreOcre" },
+  // No cartão de lote o "Ao vivo" é vermelho, para não se confundir com o azul de link do cartão clicável.
+  "ao-vivo-cartao": { label: "Ao vivo", icon: "dot", tone: "border-transparent bg-aoVivo text-sobreAoVivo" },
   agendado: { label: "Agendado", icon: "clock", tone: "border-ocre/30 bg-selecionado text-ocreTexto" },
   // Mesmo texto do "Ao vivo": nos últimos 2 minutos só a cor e o ícone mudam, e sem pulso.
   encerrando: { label: "Ao vivo", icon: "clock-alert", tone: "border-alerta/40 bg-alertaSuave text-alerta" },

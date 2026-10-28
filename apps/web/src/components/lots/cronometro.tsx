@@ -81,6 +81,8 @@ export function Cronometro({ status, startsAt, endsAt, originalEndsAt, size, lab
   const ariaLabel = closed ? "Tempo restante 00:00" : `${scheduled ? "Abre em" : "Tempo restante"} ${spoken}`;
   // Sem quebra de linha, "26d 10:18:34" a 44 px passa do painel da Sala em telas estreitas: a fonte encolhe com a largura.
   const digits = size === "sala" ? "clamp(32px, 10vw, 44px)" : 24;
+  // Dígitos brancos no cartão e âmbar na Sala; os segmentos apagados seguem a mesma cor.
+  const led = size === "cartao" ? "var(--c-led-cartao)" : "var(--c-led)";
 
   // Borda de 2px em `ledAlerta` nos últimos 2 min e na apuração (o `alerta` do claro dá só 2,65:1 sobre o painel); 1px `linha` nas demais.
   const thick = alert || settling;
@@ -100,13 +102,13 @@ export function Cronometro({ status, startsAt, endsAt, originalEndsAt, size, lab
       </span>
       {/* Linha dos dígitos: o "+2 MIN" entra aqui, à direita; se não couber, desce para baixo dos dígitos. Os dígitos nunca quebram. */}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span role="timer" aria-label={ariaLabel} className="la-mostrador relative whitespace-nowrap font-bold leading-none" style={{ fontSize: digits }}>
+        <span role="timer" aria-label={ariaLabel} className="la-mostrador relative whitespace-nowrap font-bold leading-none" style={{ fontSize: digits, ["--cor-digito" as string]: led }}>
           {/* Segmentos apagados do mostrador: decoração pura, fora do DOM como texto (pseudo-elemento em globals.css). */}
           <span aria-hidden="true" data-ghost={text.replace(/\d/g, "8")} className="la-segmentos-apagados absolute inset-0" />
           <span
             aria-hidden="true"
             className="relative"
-            style={{ color: alert ? accent : "var(--c-led)", animation: alert ? "la-pulsa 1s infinite" : undefined }}
+            style={{ color: alert ? accent : led, animation: alert ? "la-pulsa 1s infinite" : undefined }}
           >
             {text}
           </span>

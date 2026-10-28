@@ -95,10 +95,10 @@ describe("LotCard: interação", () => {
 });
 
 describe("LotCard: ao vivo, encerrando e apurando", () => {
-  it("ao vivo sem lances: selo azul, LANCE INICIAL em 28px, 'Nenhum lance' e o cronômetro RESTAM", () => {
+  it("ao vivo sem lances: selo vermelho, LANCE INICIAL em 28px, 'Nenhum lance' e o cronômetro RESTAM", () => {
     const html = render(card("LIVE"));
     expect(html).toContain("Ao vivo");
-    expect(html).toContain("bg-ocre");
+    expect(html).toContain("bg-aoVivo text-sobreAoVivo");
     expect(html).toContain("LANCE INICIAL");
     expect(html).toMatch(/t-lance-cartao[^>]*>R\$ 10\.000,00</);
     expect(html).toContain("Nenhum lance");
@@ -133,9 +133,16 @@ describe("LotCard: ao vivo, encerrando e apurando", () => {
     expect(html).toContain("+2 MIN");
   });
 
-  it("antes dos últimos 2 minutos o selo é o azul", () => {
+  it("antes dos últimos 2 minutos o selo é o vermelho", () => {
     const html = render(card("LIVE"));
     expect(html).not.toContain("bg-alertaSuave");
+    expect(html).toContain("bg-aoVivo");
+  });
+
+  it("o cronômetro do cartão tem dígitos brancos", () => {
+    const html = render(card("LIVE"));
+    expect(html).toContain("--cor-digito:var(--c-led-cartao)");
+    expect(html).toContain("color:var(--c-led-cartao)");
   });
 
   it("apurando: sem selo, 'Apurando o resultado…' em alerta com relógio e o cronômetro APURANDO…", () => {
@@ -151,11 +158,10 @@ describe("LotCard: ao vivo, encerrando e apurando", () => {
 describe("LotCard: agendado", () => {
   const html = render(card("SCHEDULED", { startsAt: at(2 * HOUR), endsAt: at(5 * HOUR), originalEndsAt: at(5 * HOUR) }));
 
-  it("selo informativo com a data de abertura na faixa da etiqueta", () => {
-    expect(html).toContain("bg-selecionado");
-    expect(html).toMatch(/ABRE (DOM|SEG|TER|QUA|QUI|SEX|SÁB|SAB)/);
-    expect(html.indexOf("ABRE ")).toBeGreaterThan(html.indexOf("</figure>"));
-    expect(html.indexOf("ABRE ")).toBeLessThan(html.indexOf("<h3"));
+  it("sem selo na faixa da etiqueta: a abertura fica só na caixa ABERTURA do rodapé", () => {
+    expect(html).not.toContain("bg-selecionado");
+    expect(html).not.toContain("ABRE ");
+    expect(html).toMatch(/ABERTURA<\/p><p[^>]*>(DOM|SEG|TER|QUA|QUI|SEX|SÁB|SAB) /);
   });
 
   it("rodapé: LANCE INICIAL em 28px, incremento e a caixa ABERTURA de 12px, sem relógio", () => {

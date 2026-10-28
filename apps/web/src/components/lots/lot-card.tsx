@@ -6,7 +6,7 @@ import { brasiliaDayAndTime, brasiliaWeekday, formatBRL, type LotCard as LotCard
 import { LotTag } from "@/components/ui/lot-tag";
 import { Stamp, type StampVariant } from "@/components/ui/stamp";
 import { bidsText, endedCardLines } from "@/lib/ended-card";
-import { countdownState, lotCardHref, opensLabel } from "@/lib/lots";
+import { countdownState, lotCardHref } from "@/lib/lots";
 import { useServerNow } from "@/lib/use-server-clock";
 import { CarPhoto } from "./car-photo";
 import { Cronometro } from "./cronometro";
@@ -66,8 +66,8 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
   const closing = status === "LIVE" && now > 0 && clock.variant !== "encerrado" && (clock.variant === "ultimos" || clock.extended);
 
   let seal: ReactNode = null;
-  if (status === "LIVE") seal = <Stamp variant={closing ? "encerrando" : "ao-vivo"} size="pequeno" />;
-  else if (status === "SCHEDULED") seal = <Stamp variant="agendado" size="pequeno" label={validStart ? opensLabel(card.startsAt) : "ABRE —"} />;
+  // Agendado não tem selo: a data de abertura já está na caixa ABERTURA do rodapé.
+  if (status === "LIVE") seal = <Stamp variant={closing ? "encerrando" : "ao-vivo-cartao"} size="pequeno" />;
   else if (status === "SOLD" || status === "UNSOLD" || status === "CANCELLED") {
     const variant: StampVariant = status === "SOLD" ? "arrematado" : status === "UNSOLD" ? "sem-lances" : "cancelado";
     seal = <Stamp variant={variant} size="pequeno" />;
@@ -150,8 +150,9 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
       <div className="relative rounded-t-[inherit]">
         <CarPhoto imageUrl={card.imageUrl} title={card.title} size="cartao" dimmed={ended || status === "CANCELLED"} noReferrer={preview} />
       </div>
-      {/* Faixa da etiqueta: a etiqueta à esquerda (o cordão sobe para o espaço vazio da faixa) e o selo ou a data de abertura à direita, alinhado à base. */}
-      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1 px-4 sm:px-5">
+      {/* Faixa da etiqueta: a etiqueta à esquerda (o cordão sobe para o espaço vazio da faixa) e o selo à direita, alinhado à base e mais
+          perto da borda que o corpo (8px de respiro em vez de 16/20px). */}
+      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1 pl-4 pr-2 sm:pl-5">
         <LotTag number={preview ? "NOVO" : card.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} rotate={ROTATE[status]} size="compacto" />
         {seal ? <span className="mb-[6px] max-w-full">{seal}</span> : null}
       </div>
