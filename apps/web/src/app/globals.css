@@ -363,6 +363,19 @@ dialog::backdrop {
     border-bottom: 2px solid var(--h-azul);
   }
 }
+/* ---------- Rodapé: o par do cabeçalho, de cabeça para baixo ----------
+   Faixa `papel` com fio de 1px `borda` e a sombra do cabeçalho invertida no claro; no noite a linha azul de 2px e nenhuma sombra
+   (`--sh-rodape` já vale "nada" nos tokens do noite). Cores de texto e de círculos vêm dos tokens globais. */
+.rodape {
+  background: var(--c-papel);
+  color: var(--c-tinta);
+  border-top: 1px solid var(--c-borda);
+  box-shadow: var(--sh-rodape);
+}
+[data-theme="noite"] .rodape { border-top: 2px solid var(--c-destaque); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="claro"]) .rodape { border-top: 2px solid var(--c-destaque); }
+}
 .cabecalho-divisor { display: none; flex: 0 0 auto; width: 1px; height: 28px; background: var(--h-divisor); }
 @media (min-width: 768px) {
   .cabecalho-divisor { display: block; }
