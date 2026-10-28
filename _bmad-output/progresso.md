@@ -638,3 +638,11 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 ### Ajuste do Felipe: cartões um pouco maiores (mesmo dia)
 - A primeira versão ficou pequena e apertada. Meio-termo: 354px (original) para 185px (primeira versão) para **215px a 1280px** (267px no arrematado, com dois botões). Padding volta a 24px; canhoto de 148px (picote em `left-[184px]`); título do carro 22px; selo com título de 18px e `px-4 py-3`; frase de apoio 15px; valores 20px; vão de 16px entre os itens do meio, de 16px na coluna da direita e de 20px entre cartões. Coluna da direita com 208px.
 - Web 709, typecheck e lint exit 0; Chrome real local (`.tmp/arremates-estados.cjs`), claro e noite, 360, 768 e 1280px, sem rolagem horizontal. Só na branch local.
+
+## 28/10/2026 — Carteira: elementos menores e tela mais suave (pedido do Felipe)
+- Mesmo critério de Meus arremates, sem mexer no desenho: só tamanhos e respiro. `wallet-screen.tsx`:
+  - **Título** "Carteira" de 76,8px para 46px a 1280px (30px no celular), com o mesmo `clamp(30px, 3.6vw, 48px)` de Meus arremates; frase de apoio mais junta do título.
+  - **Equação** Total − Comprometido = Disponível: os sinais passaram de 80px (`t-display-titulo`) para 32px; Total e Comprometido de 24px para 22px; Disponível de 40px para 32px. Os cartões mantêm `rounded-2xl`, fio e o fundo azul do Disponível.
+  - **Depositar e Extrato:** títulos de `clamp(30px, 4vw, 48px)` para `clamp(22px, 2.4vw, 30px)`; vão entre as seções de 32px para 40px (mais ar entre os blocos).
+  - Botões de valor rápido, campo, tabela e a caixa "Comprometido" ficaram como estavam.
+- A altura da página a 1280px caiu de 1007px para 925px. Web 709, typecheck e lint exit 0 (`telas-conta.test.tsx` atualizado para os 32px do Disponível). Chrome real local (`.tmp/carteira.cjs`), claro e noite, 360, 768 e 1280px, sem rolagem horizontal nem erro de página. Só na branch local: sem push nem deploy.

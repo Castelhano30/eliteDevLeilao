@@ -41,12 +41,12 @@ async function fetchLedgerPage(cursor: string | null): Promise<WalletPageDto> {
 function Equation({ total, committed, available }: { total?: number; committed?: number; available?: number }) {
   const show = (cents?: number) => (cents === undefined ? "R$ …" : formatBRL(cents));
   const card = "min-w-0 flex-1 rounded-2xl border border-borda bg-papel p-5 shadow-cartao";
-  const glyph = "t-display-titulo self-center text-center";
+  const glyph = "self-center text-center text-[32px] font-extrabold leading-none";
   return (
     <div className="flex flex-col gap-3 lg:flex-row" role="group" aria-label="Saldo">
       <div className={card}>
         <p className="t-mono-rotulo mb-2">Total</p>
-        <p className="text-[24px] break-all font-extrabold tabular-nums" aria-label={total === undefined ? undefined : show(total)}>
+        <p className="text-[22px] break-all font-extrabold tabular-nums" aria-label={total === undefined ? undefined : show(total)}>
           {show(total)}
         </p>
       </div>
@@ -55,14 +55,14 @@ function Equation({ total, committed, available }: { total?: number; committed?:
       </span>
       <div className={card}>
         <p className="t-mono-rotulo mb-2">Comprometido</p>
-        <p className="text-[24px] break-all font-extrabold tabular-nums">{show(committed)}</p>
+        <p className="text-[22px] break-all font-extrabold tabular-nums">{show(committed)}</p>
       </div>
       <span aria-hidden="true" className={glyph}>
         =
       </span>
       <div className={`${card} cartao-disponivel`}>
         <p className="t-mono-rotulo mb-2">Disponível</p>
-        <p className="text-[40px] break-all font-extrabold leading-[1.1] tabular-nums">{show(available)}</p>
+        <p className="text-[32px] break-all font-extrabold leading-[1.1] tabular-nums">{show(available)}</p>
       </div>
     </div>
   );
@@ -157,10 +157,13 @@ export function WalletScreen() {
   ];
 
   return (
-    <PageShell title="Carteira">
-      <p className="t-body-lead mb-8">Dinheiro de mentira, emoção de verdade.</p>
+    <PageShell>
+      <h1 className="font-extrabold uppercase [overflow-wrap:anywhere]" style={{ fontSize: "clamp(30px, 3.6vw, 48px)", lineHeight: 1 }}>
+        Carteira
+      </h1>
+      <p className="t-body-lead mb-6 mt-2">Dinheiro de mentira, emoção de verdade.</p>
 
-      <section aria-label="Saldo" className="mb-8 space-y-4">
+      <section aria-label="Saldo" className="mb-10 space-y-4">
         {summary.isPending ? (
           <FeedbackState variant="carregando">Carregando…</FeedbackState>
         ) : (
@@ -190,8 +193,8 @@ export function WalletScreen() {
         </div>
       </section>
 
-      <section aria-labelledby="depositar" className="mb-8 max-w-[640px]">
-        <h2 id="depositar" className="t-display-secao mb-4">
+      <section aria-labelledby="depositar" className="mb-10 max-w-[640px]">
+        <h2 id="depositar" className="mb-4 font-extrabold uppercase leading-none" style={{ fontSize: "clamp(22px, 2.4vw, 30px)" }}>
           Depositar
         </h2>
         <div className="mb-4 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2" role="group" aria-label="Valores rápidos">
@@ -237,7 +240,7 @@ export function WalletScreen() {
       </section>
 
       <section aria-labelledby="extrato">
-        <h2 id="extrato" className="t-display-secao mb-4">
+        <h2 id="extrato" className="mb-4 font-extrabold uppercase leading-none" style={{ fontSize: "clamp(22px, 2.4vw, 30px)" }}>
           Extrato
         </h2>
         {ledger.isPending ? (

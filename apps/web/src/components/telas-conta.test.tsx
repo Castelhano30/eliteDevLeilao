@@ -111,10 +111,10 @@ describe("Carteira: o cartão Disponível", () => {
     expect(css).toMatch(/:root:not\(\[data-theme="claro"\]\) \.cartao-disponivel \{[^}]*background: var\(--c-selecionado\)/);
   });
 
-  it("a tela usa o cartão com 40px/800 tabular-nums e os outros cartões em rounded-2xl", () => {
+  it("a tela usa o cartão com 32px/800 tabular-nums e os outros cartões em rounded-2xl", () => {
     const source = read("./wallet-screen.tsx");
     expect(source).toContain("cartao-disponivel");
-    expect(source).toContain("text-[40px] break-all font-extrabold leading-[1.1] tabular-nums");
+    expect(source).toContain("text-[32px] break-all font-extrabold leading-[1.1] tabular-nums");
     expect(source).toContain("rounded-2xl border border-borda bg-papel p-5 shadow-cartao");
   });
 });
