@@ -21,6 +21,10 @@ describe("base global", () => {
     expect(rule("main")).toMatch(/overflow-x:\s*clip/);
   });
 
+  it("o título de tela começa em 32px: \"COMPROVANTE\" cabe inteiro em 320px sem partir a palavra", () => {
+    expect(css).toMatch(/\.t-display-titulo \{ font-size: clamp\(32px, 6vw, 80px\)/);
+  });
+
   it("o hover de link não vira vermelho de erro", () => {
     expect(css).not.toMatch(/a:hover\s*\{[^}]*ferrugem/);
   });
