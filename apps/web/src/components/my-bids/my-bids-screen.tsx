@@ -46,8 +46,10 @@ export function MyBidsScreen() {
   return (
     <PageShell>
       <ConnectionBanner view={banner} lastSyncedAt={connection.lastSyncedAt} />
-      <h1 className="t-display-titulo">{MY_BIDS_TEXT.title}</h1>
-      <p className="t-body-lead mb-8 mt-3">Tudo em que você deu lance, do jeito que está agora.</p>
+      <h1 className="font-extrabold uppercase [overflow-wrap:anywhere]" style={{ fontSize: "clamp(30px, 3.6vw, 48px)", lineHeight: 1 }}>
+        {MY_BIDS_TEXT.title}
+      </h1>
+      <p className="t-body-lead mb-6 mt-2">Tudo em que você deu lance, do jeito que está agora.</p>
 
       {!data ? (
         query.isError ? (
