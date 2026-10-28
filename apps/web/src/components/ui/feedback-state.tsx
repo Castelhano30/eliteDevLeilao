@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { Button } from "./button";
 
+/** Texto padrão do estado "carregando"; o esqueleto do cartão de lote o repete em `sr-only`. */
+export const LOADING_TEXT = "Carregando…";
+
 export interface FeedbackStateProps {
   variant: "carregando" | "vazio" | "erro";
   /** Texto da região; "Carregando…" é o padrão do carregando. */
@@ -20,7 +23,7 @@ export function FeedbackState({ variant, children, onRetry, className = "" }: Fe
         isError ? "text-ferrugem" : "text-tinta2"
       } ${className}`.trim()}
     >
-      <p>{children ?? (variant === "carregando" ? "Carregando…" : null)}</p>
+      <p>{children ?? (variant === "carregando" ? LOADING_TEXT : null)}</p>
       {isError && onRetry ? (
         <div className="mt-4">
           <Button variant="secundario" onClick={onRetry}>

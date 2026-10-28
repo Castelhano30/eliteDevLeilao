@@ -12,6 +12,8 @@ import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { Canhoto } from "@/components/lots/canhoto";
 import { LotCard } from "@/components/lots/lot-card";
+import { LOT_GRID_COLUMNS } from "@/components/lots/lot-card-shell";
+import { LotCardSkeletons } from "@/components/lots/lot-card-skeleton";
 import { apiGet } from "@/lib/api-client";
 import { lotCountLabel } from "@/lib/lots";
 import { useConnectionBanner, useConnectionStatus } from "@/lib/realtime/connection-status";
@@ -213,7 +215,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
 
       <div aria-busy={query.isFetching ? "true" : undefined}>
         {!data && query.isPending ? (
-          <FeedbackState variant="carregando" className="min-h-[200px]" />
+          <LotCardSkeletons />
         ) : !data ? (
           <FeedbackState variant="erro" onRetry={() => void query.refetch()}>
             {GLOBAL_TEXT.loadError}
@@ -253,7 +255,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
                       </div>
                       <p className="t-mono-dado">{lotCountLabel(lots.length)}</p>
                     </div>
-                    <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 330px), 1fr))" }}>
+                    <div className="grid gap-6" style={{ gridTemplateColumns: LOT_GRID_COLUMNS }}>
                       {lots.map((lot) => (
                         <LotCard key={lot.id} card={lot} serverTime={serverTime} />
                       ))}

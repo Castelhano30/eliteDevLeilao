@@ -10,6 +10,7 @@ import { countdownState, lotCardHref } from "@/lib/lots";
 import { useServerNow } from "@/lib/use-server-clock";
 import { CarPhoto } from "./car-photo";
 import { Cronometro } from "./cronometro";
+import { LOT_CARD_SHELL } from "./lot-card-shell";
 
 export interface LotCardProps {
   card: LotCardDto;
@@ -26,7 +27,7 @@ const ROTATE = { LIVE: -4, CLOSING: -4, SCHEDULED: 3, SOLD: -2, UNSOLD: -2, CANC
 
 // Classes literais, para o Tailwind gerá-las. Casco: 16px de raio, fio `borda`, nível 1. O cartão clicável sobe 2px no hover (só sem
 // `prefers-reduced-motion`), vai ao nível 2 e troca a borda; pressionado volta à posição. A prévia (`div`) não reage a nada.
-const SHELL = "relative flex h-full flex-col overflow-hidden rounded-2xl border border-borda bg-papel text-tinta no-underline shadow-cartao";
+const SHELL = LOT_CARD_SHELL;
 const INTERACTIVE =
   "transition-[transform,box-shadow,border-color] duration-200 ease-out motion-safe:hover:-translate-y-0.5 hover:border-cartaoHover hover:shadow-painel hover:!text-tinta motion-safe:active:translate-y-0 active:shadow-cartao";
 
