@@ -565,3 +565,10 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - Saíram do rodapé o aviso legal provisório e o item "[Termos de uso]" da coluna Navegue (agora na faixa de políticas). Seguem entre colchetes só "[Sobre o LanceAuto]" e as três redes sociais, que o Felipe não definiu.
 - O número "(99) 9999-9999" e o domínio `lanceauto.com` são placeholders do próprio Felipe; trocar antes da entrega se for ter valor real.
 - `site-footer.test.tsx` atualizado (links esperados, contato, políticas sem `<a>`, sem colchetes nos textos definitivos). Web 701 testes, typecheck e lint exit 0. Sem push nem deploy (branch local `repaginacao-visual`).
+
+## 28/10/2026 — Deploy das etapas 12 a 16 e do rodapé com conteúdo real (aprovado pelo Felipe)
+- Com a aprovação do Felipe ("commitar, push de tudo e deployar"), `c310da9` foi para a branch e para o `main` (fast-forward de `34b21d7`, 8 commits): etapas 12 a 16 da repaginação (Sala, avisos, tabelas, telas de conta e limpeza) e o conteúdo real do rodapé. Nenhuma mudança em `apps/api` nem em `packages/shared`, e nenhuma migração.
+- Antes do push: web 701, typecheck e lint exit 0, build do web exit 0 com todas as rotas. API e shared não rodados de novo (sem diff em relação ao `main`).
+- CI do GitHub verde nos dois runs de `c310da9` (40628985649 e 40628988243); Railway `@lanceauto/api` e `@lanceauto/web` com `success`.
+- Smoke no link público, só leitura (`.tmp/smoke-rodape-prod.cjs`), claro e noite, 360 e 1280px: Vitrine, Entrar e Auditoria com rodapé (Vitrine completo com `mailto:` e `tel:`; Auditoria mínimo, sem `nav`, com as 4 políticas), Sala sem rodapé, só "[Sobre o LanceAuto]" entre colchetes, sem rolagem horizontal e sem erro de console. Prints em `.tmp/repag/smoke-prod-rodape/`. Nada foi escrito em produção.
+- Pendências do Felipe: trocar telefone e domínio de e-mail placeholders, definir "Sobre" e as redes sociais; a decisão do ",00" no lance (etapa 9) segue aberta.
