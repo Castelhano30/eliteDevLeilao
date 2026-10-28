@@ -202,6 +202,8 @@ export function CriarLoteForm() {
   const defaultTitle = model && year ? `${model.name} ${Number.parseInt(year.id, 10)}` : "";
   const title = titleInput ?? defaultTitle;
   const suggestion = preview.data?.suggestedImage;
+  // Sem foto sugerida e sem URL digitada: avisa junto ao campo, em vez de deixá-lo vazio sem explicação.
+  const suggestionMissing = mode === "url" && !noPhoto && urlInput === null && !!preview.data && preview.data.imageStatus !== "FOUND";
   const imageUrl = urlInput ?? suggestion?.url ?? "";
   const credit = creditInput ?? (urlInput === null ? (suggestion?.credit ?? "") : "");
   const creditUrl = urlInput === null && creditInput === null ? suggestion?.creditUrl : undefined;
@@ -448,15 +450,18 @@ export function CriarLoteForm() {
           </Group>
 
           <Group number="02" title="A imagem">
-            <FilterTabs
-              label="Como mandar a imagem"
-              tabs={[
-                { value: "url", label: "URL" },
-                { value: "upload", label: "Enviar fotos" },
-              ]}
-              value={mode}
-              onChange={switchMode}
-            />
+            {/* O FilterTabs tem margem negativa (folga do anel de foco); sozinho ele anula o espaço do grupo e cola no campo de baixo. */}
+            <div>
+              <FilterTabs
+                label="Como mandar a imagem"
+                tabs={[
+                  { value: "url", label: "URL" },
+                  { value: "upload", label: "Enviar fotos" },
+                ]}
+                value={mode}
+                onChange={switchMode}
+              />
+            </div>
             {mode === "url" ? (
               <>
                 <Field
@@ -471,6 +476,9 @@ export function CriarLoteForm() {
                   help={preview.isFetching ? "Buscando imagem…" : undefined}
                   className={noPhoto ? "opacity-50" : undefined}
                 />
+                {suggestionMissing ? (
+                  <Notice kind="alerta">{preview.data?.imageStatus === "UNAVAILABLE" ? LOT_TEXT.imageUnavailable : LOT_TEXT.imageNotFound}</Notice>
+                ) : null}
                 <Field
                   id="cl-credito"
                   label="CRÉDITO DA IMAGEM"
@@ -504,9 +512,6 @@ export function CriarLoteForm() {
               <input type="checkbox" className="h-6 w-6" checked={noPhoto} onChange={(event) => setNoPhoto(event.target.checked)} />
               Sem foto. Usar a ilustração padrão do pátio.
             </label>
-            {mode === "url" && preview.data && preview.data.imageStatus !== "FOUND" && !noPhoto && urlInput === null ? (
-              <FeedbackState variant="vazio">Não encontramos uma foto. Cole uma URL ou use a ilustração do pátio.</FeedbackState>
-            ) : null}
           </Group>
 
           <Group number="03" title="As regras">

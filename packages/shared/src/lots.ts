@@ -237,6 +237,8 @@ export const LOT_TEXT = {
   imageUnreadable: (name: string) => `Não deu para ler ${name}. Use JPEG, PNG ou WebP.`,
   discardPhotosTitle: (count: number) =>
     count === 1 ? "A foto escolhida será descartada." : `As ${count} fotos escolhidas serão descartadas.`,
+  imageNotFound: "Não encontramos uma foto desse carro. Cole o link de uma imagem, envie suas fotos ou use a ilustração do pátio.",
+  imageUnavailable: "Não conseguimos buscar a foto agora. Cole o link de uma imagem, envie suas fotos ou use a ilustração do pátio.",
   discardPhotosBody: "Voltando para a URL, as fotos que você escolheu não vão junto no lote.",
   discardPhotosConfirm: "Descartar fotos",
   discardPhotosKeep: "Manter fotos",

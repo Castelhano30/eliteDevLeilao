@@ -186,6 +186,8 @@ describe("fotos do aparelho (galeria do lote)", () => {
     expect(LOT_TEXT.imageUnreadable("a.gif")).toBe("Não deu para ler a.gif. Use JPEG, PNG ou WebP.");
     expect(LOT_TEXT.discardPhotosTitle(3)).toBe("As 3 fotos escolhidas serão descartadas.");
     expect(LOT_TEXT.discardPhotosTitle(1)).toBe("A foto escolhida será descartada.");
+    expect(LOT_TEXT.imageNotFound).toBe("Não encontramos uma foto desse carro. Cole o link de uma imagem, envie suas fotos ou use a ilustração do pátio.");
+    expect(LOT_TEXT.imageUnavailable).toBe("Não conseguimos buscar a foto agora. Cole o link de uma imagem, envie suas fotos ou use a ilustração do pátio.");
     expect(LOT_TEXT.discardPhotosBody).toBe("Voltando para a URL, as fotos que você escolheu não vão junto no lote.");
   });
 
