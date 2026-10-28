@@ -44,7 +44,7 @@ export function BidTicketList({ items, tab, onTab, nowMs, announcement }: BidTic
               {MY_BIDS_TEXT.emptyTab}
             </FeedbackState>
           ) : (
-            <ul className="m-0 mt-6 flex list-none flex-col gap-4 p-0">
+            <ul className="m-0 mt-6 flex list-none flex-col gap-5 p-0">
               {visible.map((entry) => (
                 <BidTicket key={entry.lot.id} entry={entry} nowMs={nowMs} />
               ))}
