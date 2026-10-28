@@ -21,6 +21,8 @@ import { RefusalMessage } from "@/components/ui/refusal-message";
 import { apiGet, apiPost } from "@/lib/api-client";
 import { describeMovement, formatWhen, lotNumberLabel } from "@/lib/format";
 import { anchorId } from "@/lib/my-bids-events";
+import { maskReais } from "@/lib/money-mask";
+import { DepositConfirmDialog } from "./deposit-confirm-dialog";
 import { WALLET_LEDGER_KEY, WALLET_SUMMARY_KEY } from "./auth-provider";
 import { useWalletSummary } from "./balance-chip";
 import { MoneyField } from "./money-field";
@@ -79,22 +81,28 @@ export function WalletScreen() {
     retry: false,
   });
 
-  const [quick, setQuick] = useState<number | null>(null);
+  // Os atalhos (R$ 10 mil…) preenchem o próprio campo: há um só valor, o que está no input.
   const [custom, setCustom] = useState("");
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [announcement, setAnnouncement] = useState("");
 
-  const customCents = custom === "" ? null : parseReais(custom);
-  const cents = quick ?? customCents;
+  const cents = custom === "" ? null : parseReais(custom);
   const validAmount = cents !== null && cents >= 100 && cents <= MAX_DEPOSIT_CENTS;
 
-  async function deposit() {
-    if (sending) return;
-    if (!validAmount || cents === null) {
+  // O botão da página só abre a confirmação; o depósito é gravado quando a pessoa confirma no diálogo.
+  function askConfirmation() {
+    if (!validAmount) {
       setError(DEPOSIT_AMOUNT_MESSAGE);
       return;
     }
+    setError(null);
+    setConfirming(true);
+  }
+
+  async function deposit() {
+    if (sending || !validAmount || cents === null) return;
     setError(null);
     setSending(true);
     // Sem atualização otimista (INV-1): o saldo só muda depois da resposta.
@@ -111,7 +119,7 @@ export function WalletScreen() {
     }
     queryClient.setQueryData(WALLET_SUMMARY_KEY, result.data.wallet);
     void queryClient.invalidateQueries({ queryKey: WALLET_LEDGER_KEY });
-    setQuick(null);
+    setConfirming(false);
     setCustom("");
     setAnnouncement(
       `Depósito de ${formatBRL(result.data.entry.amountCents)} feito. Disponível agora: ${formatBRL(result.data.wallet.availableCents)}.`,
@@ -158,10 +166,9 @@ export function WalletScreen() {
 
   return (
     <PageShell>
-      <h1 className="font-extrabold uppercase [overflow-wrap:anywhere]" style={{ fontSize: "clamp(30px, 3.6vw, 48px)", lineHeight: 1 }}>
+      <h1 className="mb-6 font-extrabold uppercase [overflow-wrap:anywhere]" style={{ fontSize: "clamp(30px, 3.6vw, 48px)", lineHeight: 1 }}>
         Carteira
       </h1>
-      <p className="t-body-lead mb-6 mt-2">Dinheiro de mentira, emoção de verdade.</p>
 
       <section aria-label="Saldo" className="mb-10 space-y-4">
         {summary.isPending ? (
@@ -199,15 +206,14 @@ export function WalletScreen() {
         </h2>
         <div className="mb-4 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2" role="group" aria-label="Valores rápidos">
           {QUICK_AMOUNTS.map((option) => {
-            const pressed = quick === option.cents;
+            const pressed = cents === option.cents;
             return (
               <button
                 key={option.cents}
                 type="button"
                 aria-pressed={pressed}
                 onClick={() => {
-                  setQuick(option.cents);
-                  setCustom("");
+                  setCustom(maskReais(String(option.cents / 100)).value);
                   setError(null);
                 }}
                 className={`${buttonClasses("atalho")} w-full whitespace-nowrap !px-2 !text-[14px]`}
@@ -222,18 +228,26 @@ export function WalletScreen() {
           value={custom}
           onChange={(masked) => {
             setCustom(masked);
-            setQuick(null);
             setError(null);
           }}
           invalid={error !== null}
           disabled={sending}
         />
         <div className="mt-4 space-y-3">
-          {error ? <RefusalMessage>{error}</RefusalMessage> : null}
-          <Button variant="primario" loading={sending} loadingText="Depositando…" onClick={() => void deposit()}>
+          {error && !confirming ? <RefusalMessage>{error}</RefusalMessage> : null}
+          <Button variant="primario" onClick={askConfirmation}>
             {validAmount && cents !== null ? `Depositar ${formatBRL(cents)}` : "Depositar"}
           </Button>
         </div>
+        <DepositConfirmDialog
+          open={confirming}
+          cents={validAmount ? cents : null}
+          availableCents={wallet?.availableCents}
+          sending={sending}
+          error={error}
+          onConfirm={() => void deposit()}
+          onClose={() => setConfirming(false)}
+        />
         <p role="status" className="sr-only">
           {announcement}
         </p>
