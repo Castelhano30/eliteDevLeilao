@@ -20,7 +20,7 @@ function state(overrides: Partial<LotState["lot"]> = {}, bids: BidDTO[] = []): L
       minimumBidCents: 2_000_000, bidCount: 6, bidderCount: 2, version: 6, entryCount: 6, startsAt: at(-HOUR), endsAt: at(3 * HOUR), originalEndsAt: at(3 * HOUR),
       cancelledAt: null, settledAt: null, myPseudonym: null, myRank: null, myBestBidCents: null, result: null, myReceiptToken: null, ...overrides,
     },
-    car: { brand: "Fiat", model: "Uno", year: 2010, fuel: "Flex", referencePriceCents: 1_980_000, referenceMonth: "2026-10", imageUrl: null, imageCredit: null, imageCreditUrl: null },
+    car: { brand: "Fiat", model: "Uno", year: 2010, fuel: "Flex", referencePriceCents: 1_980_000, referenceMonth: "2026-10", imageUrl: null, gallery: [], imageCredit: null, imageCreditUrl: null },
     bids,
   };
 }

@@ -20,7 +20,7 @@ export interface CarPhotoProps {
 }
 
 /** Silhueta única de carro (o dado não traz carroceria), em `tinta` sobre `suave`. Decorativa. */
-function CarIllustration() {
+export function CarIllustration() {
   return (
     <svg aria-hidden="true" viewBox="0 0 320 140" className="h-[70%] w-[70%]" fill="none" stroke="var(--c-tinta)" strokeWidth="5" strokeLinejoin="round">
       <path d="M20 104 L20 82 Q22 70 40 66 L88 58 L124 30 Q132 24 146 24 L214 24 Q228 24 238 34 L268 62 L292 68 Q302 72 302 84 L302 104 Z" />

@@ -11,8 +11,8 @@ import {
 import { toNumber } from "./mappers";
 
 /**
- * Colunas lidas em toda lista e estado de lote. **Nunca** inclui `Item.imageData` (R-2.15):
- * só `GET /items/:id/image` lê o blob; `imageMime` diz se há imagem.
+ * Colunas lidas em toda lista e estado de lote. **Nunca** lê `ItemImage.data` (R-2.15):
+ * só `GET /items/:id/image(s)` lê o blob; `imageCount` diz quantas fotos há.
  */
 export const LOT_SELECT = {
   id: true,
@@ -37,7 +37,7 @@ export const LOT_SELECT = {
       fuel: true,
       referencePriceCents: true,
       referenceMonth: true,
-      imageMime: true,
+      imageCount: true,
       imageCredit: true,
       imageCreditUrl: true,
     },
@@ -46,9 +46,19 @@ export const LOT_SELECT = {
 
 export type LotRow = Prisma.LotGetPayload<{ select: typeof LOT_SELECT }>;
 
-/** Caminho relativo da imagem do item; `null` ⇔ não há imagem guardada. */
+/** Caminho relativo da capa do item; `null` ⇔ não há imagem guardada. */
 export function itemImagePath(row: Pick<LotRow, "itemId" | "item">): string | null {
-  return row.item.imageMime ? `/items/${row.itemId}/image` : null;
+  return row.item.imageCount > 0 ? `/items/${row.itemId}/image` : null;
+}
+
+/**
+ * Caminhos relativos das fotos da galeria, na ordem de exibição. `[0]` é a capa e é exatamente `imageUrl`
+ * (`/items/:id/image`); as demais seguem `/items/:id/images/N`. Vazio sem imagem.
+ */
+export function itemGalleryPaths(itemId: string, imageCount: number): string[] {
+  return Array.from({ length: imageCount }, (_, position) =>
+    position === 0 ? `/items/${itemId}/image` : `/items/${itemId}/images/${position}`,
+  );
 }
 
 const iso = (date: Date) => date.toISOString();
@@ -200,6 +210,7 @@ export function toLotState(row: LotRow, now: Date, extras: LotStateExtras = NO_E
       referencePriceCents: card.referencePriceCents,
       referenceMonth: row.item.referenceMonth,
       imageUrl: card.imageUrl,
+      gallery: itemGalleryPaths(row.itemId, row.item.imageCount),
       imageCredit: card.imageUrl ? row.item.imageCredit : null,
       imageCreditUrl: card.imageUrl ? row.item.imageCreditUrl : null,
     },

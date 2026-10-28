@@ -6,10 +6,10 @@ export function lotCardHref(card: Pick<LotCard, "id" | "status">): string {
   return `/lotes/${card.id}`;
 }
 
-/** Caminho relativo da API ("/items/…/image") para URL absoluta. URL já absoluta passa direto. */
+/** Caminho relativo da API ("/items/…/image") para URL absoluta. URL absoluta e `blob:` (foto escolhida no aparelho) passam direto. */
 export function assetUrl(path: string | null | undefined): string | null {
   if (!path) return null;
-  if (/^https?:\/\//i.test(path)) return path;
+  if (/^(https?:\/\/|blob:)/i.test(path)) return path;
   return `${API_URL}${path.startsWith("/") ? "" : "/"}${path}`;
 }
 

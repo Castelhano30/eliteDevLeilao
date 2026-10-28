@@ -47,6 +47,7 @@ export function lotState(over: Partial<LotState["lot"]> = {}, bids: BidDTO[] = [
       referencePriceCents: 2_000_000,
       referenceMonth: "2026-10",
       imageUrl: null,
+      gallery: [],
       imageCredit: null,
       imageCreditUrl: null,
     },

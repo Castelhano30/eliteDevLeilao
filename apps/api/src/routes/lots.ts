@@ -1,4 +1,4 @@
-import { Router, type Request } from "express";
+import { Router, type Request, type Response } from "express";
 import {
   BID_TEXT,
   CANCEL_TEXT,
@@ -14,6 +14,7 @@ import { AppError } from "../errors";
 import type { Clock } from "../infra/clock";
 import type { Publisher } from "../infra/publisher";
 import type { AuthMiddleware } from "../middleware/auth";
+import { lotUpload } from "../middleware/lot-upload";
 import { makeRateLimiter } from "../middleware/rate-limit";
 import type { BidService } from "../services/bid.service";
 import type { CancelService } from "../services/cancel.service";
@@ -93,13 +94,21 @@ export function lotsRouter(
     auth.requireAuth,
     auth.requireRole("AUCTIONEER", CATALOG_TEXT.roleNotAllowed),
     makeRateLimiter({ windowMs: 60_000, max: 10, keyGenerator: (req) => `create-lot:${req.user?.id ?? "?"}` }),
+    // Multipart (payload + fotos) só é lido aqui, depois de auth, papel e limitador; corpo JSON passa direto.
+    lotUpload(),
     async (req, res) => {
-    // Corpo e datas antes de qualquer chamada externa (§6.2).
-    const result = validateCreateLot(req.body, clock.now().getTime());
-    if (!result.ok) throw new AppError("VALIDATION", { fields: result.fields });
-    const { response, events } = await lots.createLot(req.user!.id, result.data);
-    publisher.publish(events);
-    res.status(201).json(response);
+      const uploads = req.lotImages ?? [];
+      // Corpo e datas antes de qualquer chamada externa (§6.2).
+      const result = validateCreateLot(req.body, clock.now().getTime());
+      const fields = result.ok ? {} : { ...result.fields };
+      const body = (typeof req.body === "object" && req.body !== null ? req.body : {}) as Record<string, unknown>;
+      if (uploads.length > 0 && typeof body.imageUrl === "string" && body.imageUrl.trim() !== "") {
+        fields.images = LOT_TEXT.imagesBoth;
+      }
+      if (!result.ok || Object.keys(fields).length > 0) throw new AppError("VALIDATION", { fields });
+      const { response, events } = await lots.createLot(req.user!.id, result.data, { uploads });
+      publisher.publish(events);
+      res.status(201).json(response);
     },
   );
 
@@ -155,9 +164,10 @@ export function lotsRouter(
     res.json(await lots.myLots(req.user!.id));
   });
 
-  router.get("/items/:id/image", async (req, res) => {
+  /** Foto do item (a capa é a posição 0): cabeçalhos imutáveis, ETag e 304 sem ler o blob. */
+  async function sendItemImage(req: Request, res: Response, position: number) {
     const id = param(req, "id");
-    const image = await lots.getItemImageMeta(id);
+    const image = await lots.getItemImageMeta(id, position);
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
     res.setHeader("ETag", image.etag);
     // O web vive em outro domínio: a imagem precisa poder ser embutida lá.
@@ -168,7 +178,16 @@ export function lotsRouter(
       res.status(304).end();
       return;
     }
-    res.type(image.mime).send(await lots.getItemImageData(id));
+    res.type(image.mime).send(await lots.getItemImageData(id, position));
+  }
+
+  router.get("/items/:id/image", (req, res) => sendItemImage(req, res, 0));
+
+  // Só a forma canônica (0 a 4, sem zero à esquerda): "00" ou "01" serviriam o mesmo recurso sob outra URL com cache imutável.
+  // Qualquer outra coisa é 404 sem tocar no banco.
+  router.get("/items/:id/images/:position", (req, res) => {
+    const raw = param(req, "position");
+    return sendItemImage(req, res, /^[0-4]$/.test(raw) ? Number(raw) : -1);
   });
 
   return router;

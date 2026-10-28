@@ -96,6 +96,6 @@ describe.skipIf(!testDatabaseUrl)("resiliência com FIPE e Wikipedia fora (S09)"
     expect(res.body.imageStatus).toBe("NONE");
     expect(res.body.car.imageUrl).toBeNull();
     const { item } = await prisma.lot.findUniqueOrThrow({ where: { id: res.body.lot.id }, include: { item: true } });
-    expect(item.imageData).toBeNull();
+    expect(item.imageCount).toBe(0);
   });
 });

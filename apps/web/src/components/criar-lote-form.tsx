@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import {
   CATALOG_TEXT,
+  LOT_TEXT,
   brasiliaLocalToUtcIso,
   formatBRL,
   formatReferenceMonth,
@@ -18,13 +19,19 @@ import {
   type LotCard as LotCardDto,
 } from "@lanceauto/shared";
 import { LotCard } from "@/components/lots/lot-card";
+import { LotPhotosField } from "@/components/lot-photos-field";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { FeedbackState } from "@/components/ui/feedback-state";
+import { FilterTabs } from "@/components/ui/filter-tabs";
 import { Notice } from "@/components/ui/notice";
 import { Field } from "@/components/ui/field";
 import { LotTag } from "@/components/ui/lot-tag";
 import { PageShell } from "@/components/ui/page-shell";
-import { apiGet, apiPost } from "@/lib/api-client";
+import { apiGet, apiPost, apiPostForm } from "@/lib/api-client";
+import { formatWhen } from "@/lib/format";
+import { buildLotForm, imageBodyFields, needsDiscardConfirmation, planImageSubmit, type ImageMode } from "@/lib/lot-photos";
+import { useLotPhotos } from "@/lib/use-lot-photos";
 import { serverNow } from "@/lib/server-clock";
 import { MoneyField } from "./money-field";
 import { MY_LOTS_KEY } from "@/lib/lot-query";
@@ -61,6 +68,7 @@ const FIELD_ORDER = [
   ["imageUrl", "cl-url"],
   ["imageCredit", "cl-credito"],
   ["imageCreditUrl", "cl-credito"],
+  ["images", "cl-fotos"],
 ] as const;
 
 type Errors = Partial<Record<(typeof FIELD_ORDER)[number][0], string>>;
@@ -146,6 +154,12 @@ export function CriarLoteForm() {
   const [urlInput, setUrlInput] = useState<string | null>(null);
   const [creditInput, setCreditInput] = useState<string | null>(null);
   const [noPhoto, setNoPhoto] = useState(false);
+  const [mode, setMode] = useState<ImageMode>("url");
+  /** Troca de modo à espera do "sim" do diálogo (há fotos que seriam descartadas). */
+  const [pendingMode, setPendingMode] = useState<ImageMode | null>(null);
+  /** "Tem certeza?" antes de agendar: guarda título e início do que foi conferido. */
+  const [confirming, setConfirming] = useState<{ title: string; startsAt: string } | null>(null);
+  const lotPhotos = useLotPhotos();
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitFailure, setSubmitFailure] = useState<"fipe" | "other" | null>(null);
@@ -191,6 +205,8 @@ export function CriarLoteForm() {
   const defaultTitle = model && year ? `${model.name} ${Number.parseInt(year.id, 10)}` : "";
   const title = titleInput ?? defaultTitle;
   const suggestion = preview.data?.suggestedImage;
+  // Sem foto sugerida e sem URL digitada: avisa junto ao campo, em vez de deixá-lo vazio sem explicação.
+  const suggestionMissing = mode === "url" && !noPhoto && urlInput === null && !!preview.data && preview.data.imageStatus !== "FOUND";
   const imageUrl = urlInput ?? suggestion?.url ?? "";
   const credit = creditInput ?? (urlInput === null ? (suggestion?.credit ?? "") : "");
   const creditUrl = urlInput === null && creditInput === null ? suggestion?.creditUrl : undefined;
@@ -222,6 +238,26 @@ export function CriarLoteForm() {
     if (creditInput === null) setCreditInput("");
   };
 
+  /** Troca URL por fotos (e vice-versa): o lado que sai é descartado; voltar à URL restaura a sugestão automática. */
+  function switchMode(next: ImageMode) {
+    if (next === mode) return;
+    if (needsDiscardConfirmation(mode, next, lotPhotos.photos.length)) {
+      setPendingMode(next);
+      return;
+    }
+    applyMode(next);
+  }
+  function applyMode(next: ImageMode) {
+    clear("imageUrl", "imageCredit", "imageCreditUrl", "images");
+    if (next === "upload") {
+      setUrlInput(null);
+      setCreditInput(null);
+    } else {
+      lotPhotos.clear();
+    }
+    setMode(next);
+  }
+
   function buildBody() {
     const startsAt = startsLocal ? (brasiliaLocalToUtcIso(startsLocal) ?? startsLocal) : undefined;
     const endsAt = endsLocal ? (brasiliaLocalToUtcIso(endsLocal) ?? endsLocal) : undefined;
@@ -234,13 +270,11 @@ export function CriarLoteForm() {
       minIncrementCents: parseReais(increment) ?? undefined,
       startsAt,
       endsAt,
-      ...(noPhoto
-        ? {}
-        : {
-            imageUrl: imageUrl.trim() || undefined,
-            imageCredit: credit.trim() || undefined,
-            imageCreditUrl: imageUrl.trim() ? creditUrl : undefined,
-          }),
+      ...imageBodyFields(mode, noPhoto, {
+        imageUrl: imageUrl.trim() || undefined,
+        imageCredit: credit.trim() || undefined,
+        imageCreditUrl: imageUrl.trim() ? creditUrl : undefined,
+      }),
     };
   }
 
@@ -249,21 +283,31 @@ export function CriarLoteForm() {
     if (first) requestAnimationFrame(() => document.getElementById(first[1])?.focus());
   }
 
-  async function submit(event?: FormEvent) {
+  /** `confirmed`: o leiloeiro já respondeu "Sim, agendar" (ou é a nova tentativa depois de uma falha). */
+  async function submit(event?: FormEvent, confirmed = false) {
     event?.preventDefault();
-    if (submitting) return;
+    // Fotos ainda sendo reduzidas: esperar, senão iria menos foto do que a escolhida (ou "escolha ao menos uma").
+    if (submitting || lotPhotos.busy) return;
     setSubmitFailure(null);
     setSubmitMessage(null);
     const body = buildBody();
     const check = validateCreateLot(body, serverNow());
-    if (!check.ok) {
-      setErrors(check.fields as Errors);
-      focusFirst(check.fields as Errors);
+    const plan = planImageSubmit(mode, noPhoto, lotPhotos.photos.length);
+    if (!check.ok || plan.kind === "missing") {
+      const fields = { ...(check.ok ? {} : check.fields), ...(plan.kind === "missing" ? { images: plan.error } : {}) } as Errors;
+      setErrors(fields);
+      focusFirst(fields);
       return;
     }
     setErrors({});
+    if (!confirmed) {
+      setConfirming({ title: check.data.title, startsAt: check.data.startsAt });
+      return;
+    }
     setSubmitting(true);
-    const result = await apiPost<CreateLotResponse>("/lots", check.data);
+    const result = plan.kind === "multipart"
+      ? await apiPostForm<CreateLotResponse>("/lots", buildLotForm(check.data, lotPhotos.photos))
+      : await apiPost<CreateLotResponse>("/lots", check.data);
     setSubmitting(false);
     if (result.ok) {
       void queryClient.invalidateQueries({ queryKey: MY_LOTS_KEY });
@@ -295,7 +339,8 @@ export function CriarLoteForm() {
   const fipeColor = consulting ? "var(--c-tinta2)" : fipeDown ? "var(--c-ferrugem)" : "var(--c-verde)";
   const hasCar = Boolean(car) && !fipeDown;
   const startsIso = startsLocal ? brasiliaLocalToUtcIso(startsLocal) : null;
-  const previewImage = noPhoto || !isHttpUrl(imageUrl) ? null : imageUrl;
+  // Prévia: a capa escolhida no aparelho (blob:) ou a URL digitada, a que valer no modo de agora.
+  const previewImage = noPhoto ? null : mode === "upload" ? (lotPhotos.photos[0]?.previewUrl ?? null) : isHttpUrl(imageUrl) ? imageUrl : null;
 
   const previewCard: LotCardDto = {
     id: "previa",
@@ -338,7 +383,7 @@ export function CriarLoteForm() {
             <Button
               loading={consulting}
               loadingText="Consultando…"
-              onClick={() => (submitFailure === "fipe" && !fipeErrored ? void submit() : retryFailed())}
+              onClick={() => (submitFailure === "fipe" && !fipeErrored ? void submit(undefined, true) : retryFailed())}
             >
               Tentar de novo
             </Button>
@@ -413,37 +458,68 @@ export function CriarLoteForm() {
           </Group>
 
           <Group number="02" title="A imagem">
-            <Field
-              id="cl-url"
-              label="URL DA IMAGEM · SUGERIDA AUTOMATICAMENTE"
-              type="url"
-              inputMode="url"
-              value={noPhoto ? "" : imageUrl}
-              onChange={(event) => editUrl(event.target.value)}
-              disabled={noPhoto}
-              error={errors.imageUrl}
-              help={preview.isFetching ? "Buscando imagem…" : undefined}
-              className={noPhoto ? "opacity-50" : undefined}
-            />
-            <Field
-              id="cl-credito"
-              label="CRÉDITO DA IMAGEM"
-              value={noPhoto ? "" : credit}
-              onChange={(event) => {
-                clear("imageCredit", "imageCreditUrl");
-                setCreditInput(event.target.value);
-              }}
-              disabled={noPhoto}
-              error={errors.imageCredit ?? errors.imageCreditUrl}
-              className={noPhoto ? "opacity-50" : undefined}
-            />
+            {/* O FilterTabs tem margem negativa (folga do anel de foco); sozinho ele anula o espaço do grupo e cola no campo de baixo. */}
+            <div>
+              <FilterTabs
+                label="Como mandar a imagem"
+                tabs={[
+                  { value: "url", label: "URL" },
+                  { value: "upload", label: "Enviar fotos" },
+                ]}
+                value={mode}
+                onChange={switchMode}
+              />
+            </div>
+            {mode === "url" ? (
+              <>
+                <Field
+                  id="cl-url"
+                  label="URL DA IMAGEM · SUGERIDA AUTOMATICAMENTE"
+                  type="url"
+                  inputMode="url"
+                  value={noPhoto ? "" : imageUrl}
+                  onChange={(event) => editUrl(event.target.value)}
+                  disabled={noPhoto}
+                  error={errors.imageUrl}
+                  help={preview.isFetching ? "Buscando imagem…" : undefined}
+                  className={noPhoto ? "opacity-50" : undefined}
+                />
+                {suggestionMissing ? (
+                  <Notice kind="alerta">{preview.data?.imageStatus === "UNAVAILABLE" ? LOT_TEXT.imageUnavailable : LOT_TEXT.imageNotFound}</Notice>
+                ) : null}
+                <Field
+                  id="cl-credito"
+                  label="CRÉDITO DA IMAGEM"
+                  value={noPhoto ? "" : credit}
+                  onChange={(event) => {
+                    clear("imageCredit", "imageCreditUrl");
+                    setCreditInput(event.target.value);
+                  }}
+                  disabled={noPhoto}
+                  error={errors.imageCredit ?? errors.imageCreditUrl}
+                  className={noPhoto ? "opacity-50" : undefined}
+                />
+              </>
+            ) : (
+              <LotPhotosField
+                id="cl-fotos"
+                photos={lotPhotos.photos}
+                busy={lotPhotos.busy}
+                messages={lotPhotos.messages}
+                disabled={noPhoto}
+                error={errors.images}
+                onAdd={(files) => {
+                  clear("images");
+                  void lotPhotos.add(files);
+                }}
+                onMakeCover={lotPhotos.makeCover}
+                onRemove={lotPhotos.remove}
+              />
+            )}
             <label className="t-body flex min-h-alvo cursor-pointer items-center gap-3">
               <input type="checkbox" className="h-6 w-6" checked={noPhoto} onChange={(event) => setNoPhoto(event.target.checked)} />
               Sem foto. Usar a ilustração padrão do pátio.
             </label>
-            {preview.data && preview.data.imageStatus !== "FOUND" && !noPhoto && urlInput === null ? (
-              <FeedbackState variant="vazio">Não encontramos uma foto. Cole uma URL ou use a ilustração do pátio.</FeedbackState>
-            ) : null}
           </Group>
 
           <Group number="03" title="As regras">
@@ -505,7 +581,7 @@ export function CriarLoteForm() {
           </Group>
 
           {submitFailure === "other" ? (
-            <FeedbackState variant="erro" onRetry={() => void submit()}>
+            <FeedbackState variant="erro" onRetry={() => void submit(undefined, true)}>
               Não deu para agendar agora.
             </FeedbackState>
           ) : null}
@@ -516,7 +592,7 @@ export function CriarLoteForm() {
               {fipeDown ? (
                 <Button variant="desabilitado">Agendar lote</Button>
               ) : (
-                <Button type="submit" variant="primario" loading={submitting} loadingText="Agendando…">
+                <Button type="submit" variant="primario" loading={submitting || lotPhotos.busy} loadingText={lotPhotos.busy ? "Reduzindo as fotos…" : "Agendando…"}>
                   Agendar lote
                 </Button>
               )}
@@ -535,9 +611,40 @@ export function CriarLoteForm() {
         <aside aria-label="Assim ele aparece na Vitrine" className="min-w-0 pt-6" style={{ flex: "1 1 340px", maxWidth: 440 }}>
           <p className="t-mono-rotulo mb-10">ASSIM ELE APARECE NA VITRINE</p>
           <LotCard card={previewCard} preview emptyNote={hasCar ? undefined : "Sem carro escolhido. A FIPE está de folga."} />
-          {!noPhoto && previewImage && credit ? <p className="t-body-legenda mt-3 text-tinta2">{credit}</p> : null}
+          {!noPhoto && mode === "url" && previewImage && credit ? <p className="t-body-legenda mt-3 text-tinta2">{credit}</p> : null}
         </aside>
       </div>
+      <Dialog
+        open={confirming !== null}
+        onClose={() => setConfirming(null)}
+        title={LOT_TEXT.scheduleConfirmTitle}
+        cancelLabel={LOT_TEXT.scheduleConfirmBack}
+        confirm={{
+          label: LOT_TEXT.scheduleConfirmYes,
+          onConfirm: () => {
+            setConfirming(null);
+            void submit(undefined, true);
+          },
+        }}
+      >
+        {confirming ? <p>{LOT_TEXT.scheduleConfirmBody(confirming.title, formatWhen(confirming.startsAt))}</p> : null}
+      </Dialog>
+      <Dialog
+        open={pendingMode !== null}
+        onClose={() => setPendingMode(null)}
+        title={LOT_TEXT.discardPhotosTitle(lotPhotos.photos.length)}
+        cancelLabel={LOT_TEXT.discardPhotosKeep}
+        confirm={{
+          label: LOT_TEXT.discardPhotosConfirm,
+          destrutivo: true,
+          onConfirm: () => {
+            if (pendingMode) applyMode(pendingMode);
+            setPendingMode(null);
+          },
+        }}
+      >
+        <p>{LOT_TEXT.discardPhotosBody}</p>
+      </Dialog>
     </PageShell>
   );
 }

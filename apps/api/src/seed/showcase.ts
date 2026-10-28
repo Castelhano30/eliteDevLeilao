@@ -81,6 +81,12 @@ export async function readFixtureImage(baseDir: string, car: FixtureCar): Promis
   return { data: await readFile(path.join(baseDir, car.image)), mime };
 }
 
+/** A imagem do fixture como lista de uma foto (a capa), ou lista vazia para a ilustração padrão. */
+export async function readFixtureImages(baseDir: string, car: FixtureCar): Promise<DownloadedImage[]> {
+  const image = await readFixtureImage(baseDir, car);
+  return image ? [image] : [];
+}
+
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
@@ -205,7 +211,7 @@ async function createLotAt(
       imageCredit: car.imageCredit ?? undefined,
       imageCreditUrl: car.imageCreditUrl ?? undefined,
     },
-    { allowPast, image: await readFixtureImage(deps.baseDir, car) },
+    { allowPast, images: await readFixtureImages(deps.baseDir, car) },
   );
   return { id: response.lot.id, number: response.lot.number, title: response.lot.title };
 }

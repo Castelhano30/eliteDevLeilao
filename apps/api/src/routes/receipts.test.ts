@@ -113,6 +113,16 @@ describe.skipIf(!testDatabaseUrl)("comprovante e resultado do lote (integração
       );
     });
 
+    it("lote com fotos: o comprovante mostra só a capa (imageCount > 0), sem a galeria", async () => {
+      const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(64, 1)]);
+      const lot = await soldLot(3_200_000, { images: [{ data: jpeg, mime: "image/jpeg" }, { data: jpeg, mime: "image/jpeg" }] });
+      await closeAll();
+      const res = await request(app).get(`/receipts/${await tokenOf(lot.id)}`);
+      expect(res.status).toBe(200);
+      expect((res.body as ReceiptDTO).car.imageUrl).toBe(`/items/${lot.itemId}/image`);
+      expect(JSON.stringify(res.body)).not.toContain("/images/");
+    });
+
     it("lote prorrogado leva extended e o martelo é o endsAt novo, não o settledAt", async () => {
       const lot = await live();
       await bid(loser, lot.id, 2_000_000);

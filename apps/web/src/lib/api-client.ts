@@ -17,7 +17,7 @@ export type ApiResult<T> =
     };
 
 export interface ApiRequestOptions {
-  /** Leituras esperam até 15 s; escritas, 20 s. */
+  /** Leituras esperam até 15 s; escritas, 20 s; envio de arquivos (`FormData`), 60 s. */
   timeoutMs?: number;
   signal?: AbortSignal;
 }
@@ -32,18 +32,23 @@ export function setUnauthenticatedHandler(handler: UnauthenticatedHandler | null
   onUnauthenticated = handler;
 }
 
+/** Envio com fotos: a redução já aconteceu no navegador, mas o celular pode estar numa rede lenta. */
+const UPLOAD_TIMEOUT_MS = 60_000;
+
 async function apiRequest<T>(
   method: "GET" | "POST",
   path: string,
   body: unknown,
-  { timeoutMs = method === "GET" ? 15_000 : 20_000, signal }: ApiRequestOptions,
+  { timeoutMs = method === "GET" ? 15_000 : body instanceof FormData ? UPLOAD_TIMEOUT_MS : 20_000, signal }: ApiRequestOptions,
 ): Promise<ApiResult<T>> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   signal?.addEventListener("abort", () => controller.abort(), { once: true });
   const token = getToken();
   const headers: Record<string, string> = { Accept: "application/json" };
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  // `FormData` fica sem Content-Type: o navegador põe o multipart com o boundary certo.
+  const isForm = body instanceof FormData;
+  if (body !== undefined && !isForm) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = `Bearer ${token}`;
   const sentAt = clockMark();
   try {
@@ -51,7 +56,7 @@ async function apiRequest<T>(
       method,
       signal: controller.signal,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
     });
     const receivedAt = clockMark();
     const parsed: unknown = await res.json().catch(() => null);
@@ -79,4 +84,9 @@ export function apiGet<T>(path: string, options: ApiRequestOptions = {}): Promis
 /** POST com corpo JSON; também nunca lança. Leva o token da sessão, se houver. */
 export function apiPost<T>(path: string, body: unknown, options: ApiRequestOptions = {}): Promise<ApiResult<T>> {
   return apiRequest<T>("POST", path, body, options);
+}
+
+/** POST multipart (`FormData`): o navegador monta o boundary e o Content-Type. Também nunca lança; prazo de 60 s. */
+export function apiPostForm<T>(path: string, form: FormData, options: ApiRequestOptions = {}): Promise<ApiResult<T>> {
+  return apiRequest<T>("POST", path, form, options);
 }
