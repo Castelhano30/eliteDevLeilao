@@ -154,8 +154,7 @@ describe("LotCard: ao vivo, encerrando e apurando", () => {
 
   it("o cronômetro do cartão tem dígitos brancos", () => {
     const html = render(card("LIVE"));
-    expect(html).toContain("--cor-digito:var(--c-led-cartao)");
-    expect(html).toContain("color:var(--c-led-cartao)");
+    expect(html).toContain("color:var(--c-led-digito)");
   });
 
   it("apurando: sem selo, 'Apurando o resultado…' em alerta com relógio e o cronômetro APURANDO…", () => {

@@ -40,10 +40,10 @@
   --c-painel: #0b1530;
   --c-led: #f2b92b;
   --c-led-alerta: #ff6a3d;
-  /* Iguais nos dois temas: o selo "Ao vivo" do cartão (branco sobre o vermelho, 4,8:1) e os dígitos do cronômetro do cartão. */
+  /* Iguais nos dois temas: o selo "Ao vivo" (branco sobre o vermelho, 4,8:1) e os dígitos do cronômetro (cartão e Sala). */
   --c-ao-vivo: #d92d20;
   --c-sobre-ao-vivo: #ffffff;
-  --c-led-cartao: #ffffff;
+  --c-led-digito: #ffffff;
   --sh-xs: 0 1px 2px rgba(0, 30, 99, 0.2);
   --sh-cartao: 0 1px 2px rgba(0, 30, 99, 0.06), 0 4px 14px -8px rgba(0, 30, 99, 0.22);
   --sh-elevada: 0 8px 24px -12px rgba(0, 30, 99, 0.4);
@@ -256,7 +256,7 @@ label:has(input:focus-visible) {
 /* Algarismos de largura fixa: o fantasma "8" tem a mesma largura do dígito real e os dois alinham dígito a dígito. */
 .la-mostrador { font-variant-numeric: tabular-nums; }
 .la-segmentos-apagados { white-space: nowrap; }
-.la-segmentos-apagados::before { content: attr(data-ghost); opacity: 0.1; color: var(--cor-digito, var(--c-led)); }
+.la-segmentos-apagados::before { content: attr(data-ghost); opacity: 0.1; color: var(--c-led-digito); }
 .t-cronometro { font-size: 40px; font-weight: 700; line-height: 1; }
 
 /* ---------- Movimento ---------- */

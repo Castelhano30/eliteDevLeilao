@@ -13,6 +13,16 @@ describe("Cronometro", () => {
   });
 });
 
+describe("Cronometro: cor dos dígitos", () => {
+  it.each(["sala", "cartao"] as const)("%s: dígitos brancos fora do alerta", (size) => {
+    const html = renderToStaticMarkup(
+      <Cronometro status="LIVE" startsAt="2026-10-23T10:00:00.000Z" endsAt="2026-10-23T15:00:00.000Z" size={size} serverTime="2026-10-23T12:00:00.000Z" />,
+    );
+    expect(html).toContain("color:var(--c-led-digito)");
+    expect(html).not.toContain("color:var(--c-led)");
+  });
+});
+
 describe("Cronometro: mostrador fantasma", () => {
   const SERVER_NOW = "2026-10-23T12:00:00.000Z";
   const at = (offsetMs: number) => new Date(Date.parse(SERVER_NOW) + offsetMs).toISOString();

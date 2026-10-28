@@ -470,3 +470,9 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - Com a aprovação do Felipe ("ficou bom"), `9191b0e` foi para a branch e para o `main` (fast-forward de `cab3d99`). Antes do push: shared 154, API 508, web 584 e build do web exit 0.
 - CI do GitHub verde nos dois runs (40614210172 e 40614213669). Railway: `@lanceauto/web` `SUCCESS` em `9191b0e`; `@lanceauto/api` `SKIPPED` (nada de `apps/api` mudou; segue ativo o deploy anterior).
 - Smoke no link público, só leitura (`.tmp/smoke-repag-prod2.cjs`), claro e noite, 360 e 1280px: Vitrine 200 com 9 cartões, a etiqueta dentro da foto nos 9, o selo "Ao vivo" sobre o canto superior direito da foto, sem rolagem horizontal e sem erro de console. Nada foi escrito em produção. Prints em `.tmp/repag/smoke-prod2/`.
+
+## 27/10/2026 — Sala: selo "Ao vivo" vermelho e dígitos brancos (pedido do Felipe, fora das 16 etapas)
+
+- O vermelho e os dígitos brancos do cartão passaram para a Sala. Em vez de manter duas variantes, unifiquei: o `Stamp` `ao-vivo` agora é vermelho (`bg-aoVivo text-sobreAoVivo`) e a variante `ao-vivo-cartao` saiu; o `Cronometro` usa `--c-led-digito` (era `--c-led-cartao`, token meu da rodada anterior, renomeado) nos dois tamanhos, e os segmentos apagados leem o mesmo token direto (a indireção `--cor-digito` saiu). O `+2 MIN` continua âmbar e o alerta dos últimos 2 min continua `ledAlerta`. O número do Painel do leiloeiro (`painel-screen.tsx`, `--c-led`) não foi tocado: o pedido era a Sala.
+- Testes: `ui.test.tsx` (tom do `ao-vivo`), `lot-card.test.tsx` (token novo) e um teste novo no `cronometro.test.tsx` (Sala e cartão com dígitos brancos fora do alerta). Typecheck e lint exit 0; web 586.
+- Chrome real na Sala do lote ao vivo, claro e noite, 360 e 1280px: selo `rgb(217, 45, 32)` com texto branco, dígitos `rgb(255, 255, 255)`, sem rolagem horizontal. Prints em `.tmp/repag/sala-vivo/`.

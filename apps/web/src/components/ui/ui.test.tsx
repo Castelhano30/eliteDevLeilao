@@ -116,7 +116,7 @@ describe("Stamp", () => {
   });
 
   it.each([
-    ["ao-vivo", "bg-ocre", "text-sobreOcre"],
+    ["ao-vivo", "bg-aoVivo", "text-sobreAoVivo"],
     ["agendado", "bg-selecionado", "text-ocreTexto"],
     ["encerrando", "bg-alertaSuave", "text-alerta"],
     ["integro", "bg-verdeSuave", "text-verde"],

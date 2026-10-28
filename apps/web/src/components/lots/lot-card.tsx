@@ -67,7 +67,7 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
 
   let seal: ReactNode = null;
   // Agendado não tem selo: a data de abertura já está na caixa ABERTURA do rodapé.
-  if (status === "LIVE") seal = <Stamp variant={closing ? "encerrando" : "ao-vivo-cartao"} size="pequeno" />;
+  if (status === "LIVE") seal = <Stamp variant={closing ? "encerrando" : "ao-vivo"} size="pequeno" />;
   else if (status === "SOLD" || status === "UNSOLD" || status === "CANCELLED") {
     const variant: StampVariant = status === "SOLD" ? "arrematado" : status === "UNSOLD" ? "sem-lances" : "cancelado";
     seal = <Stamp variant={variant} size="pequeno" />;
