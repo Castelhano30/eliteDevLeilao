@@ -25,6 +25,13 @@ describe("base global", () => {
     expect(css).toMatch(/\.t-display-titulo \{ font-size: clamp\(32px, 6vw, 80px\)/);
   });
 
+  it("cabeçalho em celular pequeno: vão de 12px (logo e tema na mesma linha em 320px) e saldo em 14px até 374px", () => {
+    const narrow = css.slice(css.indexOf("@media (max-width: 359px)"));
+    expect(narrow.slice(0, narrow.indexOf("}\n}") + 3)).toContain(".site-header { column-gap: 12px; }");
+    expect(css).toContain("@media (max-width: 374px)");
+    expect(css).toMatch(/\.balance-value \{ min-width: 0; font-size: 14px; \}/);
+  });
+
   it("o hover de link não vira vermelho de erro", () => {
     expect(css).not.toMatch(/a:hover\s*\{[^}]*ferrugem/);
   });
