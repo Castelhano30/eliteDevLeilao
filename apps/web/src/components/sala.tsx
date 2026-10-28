@@ -17,7 +17,7 @@ import { useAuth } from "@/components/auth-provider";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { BidHistory } from "@/components/lots/bid-history";
 import { BidPanel } from "@/components/lots/bid-panel";
-import { CarPhoto } from "@/components/lots/car-photo";
+import { SalaFoto } from "@/components/lots/sala-foto";
 import { Cronometro } from "@/components/lots/cronometro";
 import { FaixaStatus } from "@/components/lots/faixa-status";
 import { FichaCarro } from "@/components/lots/ficha-carro";
@@ -180,7 +180,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
       ) : null}
       <div className="flex flex-wrap justify-center gap-x-12 gap-y-6">
         <section aria-label="Ficha do carro" className="min-w-0" style={{ flex: "1 1 400px", maxWidth: 560 }}>
-          <CarPhoto imageUrl={car.imageUrl} title={lot.title} size="sala" showCaption credit={car.imageCredit} creditUrl={car.imageCreditUrl} dimmed={ended} />
+          <SalaFoto car={car} title={lot.title} dimmed={ended} />
           {/* O título e o par selo + etiqueta correm na mesma linha; o par é um bloco só e desce junto se não couber. */}
           <div className="mt-6">
             <h1 className="inline font-bold uppercase [overflow-wrap:anywhere]" style={{ fontSize: "clamp(34px, 4vw, 56px)", lineHeight: 1 }}>
