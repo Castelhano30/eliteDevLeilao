@@ -246,7 +246,7 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
                   <section key={group} aria-labelledby={`secao-${group}`} className="mb-8">
                     <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b-[3px] border-linha pb-3">
                       <div>
-                        <h2 id={`secao-${group}`} className="t-display-secao">
+                        <h2 id={`secao-${group}`} className="text-[length:clamp(24px,3vw,36px)] font-extrabold uppercase leading-none">
                           {title}
                         </h2>
                         <p className="t-body-nota mt-1">{subtitle}</p>

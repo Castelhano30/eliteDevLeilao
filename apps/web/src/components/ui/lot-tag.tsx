@@ -43,7 +43,7 @@ export function LotTag({ number, tone = "ocre", rotate = tone === "papel" ? -2 :
         </svg>
         <span className="inline-block" style={{ clipPath: CHAMFER, padding: 2, background: contour }}>
           <span
-            className={`relative block pl-9 pr-[18px] ${compact ? "pb-[6px] pt-2" : "pb-2 pt-[10px]"}`}
+            className={`relative block ${compact ? "pb-1 pl-8 pr-[14px] pt-[6px]" : "pb-2 pl-9 pr-[18px] pt-[10px]"}`}
             style={{ clipPath: CHAMFER_INNER, background: fill, color: ink }}
           >
             <span
@@ -51,8 +51,8 @@ export function LotTag({ number, tone = "ocre", rotate = tone === "papel" ? -2 :
               style={{ borderColor: contour }}
               aria-hidden="true"
             />
-            <span className="block text-[11px] tracking-[0.14em]">LOTE</span>
-            <span className="t-numero-lote block" style={compact ? { fontSize: 36 } : undefined}>
+            <span className={`block tracking-[0.14em] ${compact ? "text-[10px]" : "text-[11px]"}`}>LOTE</span>
+            <span className="t-numero-lote block" style={compact ? { fontSize: 28 } : undefined}>
               {typeof number === "number" ? String(number).padStart(3, "0") : number}
             </span>
           </span>

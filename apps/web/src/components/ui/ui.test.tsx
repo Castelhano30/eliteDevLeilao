@@ -229,9 +229,12 @@ describe("LotTag", () => {
     expect(html).toContain("polygon(17px 0");
   });
 
-  it("o tamanho compacto reduz só o número", () => {
-    expect(renderToStaticMarkup(<LotTag number={18} size="compacto" />)).toContain("font-size:36px");
-    expect(renderToStaticMarkup(<LotTag number={18} />)).not.toContain("font-size:36px");
+  it("o tamanho compacto reduz o número, o LOTE e o respiro", () => {
+    const compacto = renderToStaticMarkup(<LotTag number={18} size="compacto" />);
+    expect(compacto).toContain("font-size:28px");
+    expect(compacto).toContain("text-[10px]");
+    expect(compacto).toContain("pb-1 pl-8 pr-[14px] pt-[6px]");
+    expect(renderToStaticMarkup(<LotTag number={18} />)).not.toContain("font-size:28px");
   });
 });
 

@@ -440,3 +440,11 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - Arquivos: `globals.css` (3 tokens novos e a cor dos segmentos apagados), `tailwind.config.mjs` (`aoVivo`, `sobreAoVivo`), `ui/stamp.tsx`, `lots/cronometro.tsx`, `lots/lot-card.tsx` e `lots/lot-card.test.tsx` (selo vermelho, dígitos brancos e agendado sem "ABRE "; a abertura passa a ser conferida na caixa ABERTURA).
 - Verificação: typecheck e lint exit 0; web 583 (um teste novo). Chrome real na Vitrine, claro e noite, 320, 360, 768 e 1280px: selo `rgb(217, 45, 32)` com texto branco a 9px da borda, dígitos `rgb(255, 255, 255)`, nenhum "ABRE " no agendado, sem rolagem horizontal. Prints em `.tmp/repag/ajuste-cartao/`.
 - Pergunta aberta: levar o vermelho do "Ao vivo" e os dígitos brancos também para a Sala?
+
+## 27/10/2026 — Cartão de lote e Vitrine: segunda rodada de ajustes do Felipe (fora das 16 etapas)
+
+- Selo "Ao vivo" no topo da faixa, logo abaixo da foto (12px), à direita: a faixa passou de `items-end` para `items-start` e o selo trocou `mb-[6px]` por `mt-3`.
+- Etiqueta do lote menor e no topo, do lado oposto ao selo: o tamanho `compacto` do `LotTag` (só o cartão usa) desceu o número de 36 para 28px, o "LOTE" de 11 para 10px e o respiro interno (`pb-1 pl-8 pr-[14px] pt-[6px]`). O corpo ficou com 104x59px; o furo e o laço não mudaram de lugar.
+- Títulos de seção da Vitrine ("Ao vivo", "Agendados", "Encerrados") de `clamp(30px, 4vw, 48px)` para `clamp(24px, 3vw, 36px)`, com classe própria na Vitrine; o `.t-display-secao` continua igual nas outras telas.
+- Arquivos: `ui/lot-tag.tsx`, `ui/ui.test.tsx` (o teste do compacto confere 28px, `text-[10px]` e o respiro novo), `lots/lot-card.tsx` e `vitrine.tsx`.
+- Verificação: typecheck e lint exit 0; shared 154, API 508, web 583. Chrome real, claro e noite, 320, 360, 768 e 1280px: selo a 12px da foto e 9px da borda direita, topo da etiqueta a 17px da foto, títulos com 24px até 768 e 36px a 1280, sem rolagem horizontal. Prints em `.tmp/repag/ajuste-cartao2/`.
