@@ -448,3 +448,10 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - Títulos de seção da Vitrine ("Ao vivo", "Agendados", "Encerrados") de `clamp(30px, 4vw, 48px)` para `clamp(24px, 3vw, 36px)`, com classe própria na Vitrine; o `.t-display-secao` continua igual nas outras telas.
 - Arquivos: `ui/lot-tag.tsx`, `ui/ui.test.tsx` (o teste do compacto confere 28px, `text-[10px]` e o respiro novo), `lots/lot-card.tsx` e `vitrine.tsx`.
 - Verificação: typecheck e lint exit 0; shared 154, API 508, web 583. Chrome real, claro e noite, 320, 360, 768 e 1280px: selo a 12px da foto e 9px da borda direita, topo da etiqueta a 17px da foto, títulos com 24px até 768 e 36px a 1280, sem rolagem horizontal. Prints em `.tmp/repag/ajuste-cartao2/`.
+
+## 27/10/2026 — Repaginação: push e deploy (aprovado pelo Felipe)
+
+- Com a aprovação do Felipe, a branch `repaginacao-visual` foi enviada ao remoto e o `main` avançou por fast-forward de `d994e61` para `7701b4c` (37 commits: etapas 1 a 9 da repaginação, o seletor de Marca da FIPE e os dois ajustes do cartão). Nenhuma migração; a API leva só a mudança do seletor de Marca. As etapas 10 a 16 continuam por fazer.
+- Antes do push: testes shared 154, API 508, web 583; build do web exit 0 com todas as rotas; API compilada com `tsc` (o `prisma generate` da raiz falhou com EPERM porque a API local estava com a DLL do Prisma aberta; o schema não mudou).
+- CI do GitHub verde nos dois runs de `7701b4c` (40612634718 e 40612629328). Railway: `@lanceauto/web` e `@lanceauto/api` com `SUCCESS` em `7701b4c`.
+- Smoke no link público, só leitura (`.tmp/smoke-repag-prod.cjs`), claro e noite, 360 e 1280px: Vitrine 200 com 9 cartões, selo "Ao vivo" `rgb(217, 45, 32)`, dígitos do cronômetro brancos, nenhum "ABRE " no agendado, títulos de seção com 24px e 36px, seletor de Marca com 109 opções, sem rolagem horizontal e sem erro de console. Nada foi escrito em produção. Prints em `.tmp/repag/smoke-prod/`.
