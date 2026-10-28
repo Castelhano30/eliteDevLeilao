@@ -38,8 +38,7 @@ export function LotTag({ number, tone = "ocre", rotate = tone === "papel" ? -2 :
           className="absolute z-[2]"
           style={{ left: 0, top: -18 }}
         >
-          <path d="M18 18C6 14 3 -2 11 -9C17 -14 25 -11 24 -5" />
-          <path d="M24 -5C23 1 15 5 20 13" />
+          <path d="M16 19C9 13 6 4 10 -3C13 -9 22 -9 23 -3C24 3 19 10 16 19" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         <span className="inline-block" style={{ clipPath: CHAMFER, padding: 2, background: contour }}>
           <span

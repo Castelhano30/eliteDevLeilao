@@ -98,7 +98,7 @@ export function BidPanel({ id, state, viewer, authLoading, blockReason, lateral 
             originalEndsAt={lot.originalEndsAt}
             serverTime={state.serverTime}
           />
-          {lateral ? <div className="ml-auto flex flex-col items-end gap-3">{lateral}</div> : null}
+          {lateral ? <div className="ml-auto flex flex-col items-end">{lateral}</div> : null}
         </div>
         {extended ? (
           <p className="t-body-nota mt-3">

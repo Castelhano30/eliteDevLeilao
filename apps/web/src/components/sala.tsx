@@ -128,14 +128,14 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
   const lateral = (
     <>
       {status === "LIVE" ? <Stamp variant="ao-vivo" /> : null}
-      <LotTag number={lot.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} />
+      <LotTag number={lot.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} size="compacto" rotate={ended || status === "CANCELLED" ? -1 : -2} />
     </>
   );
   const relogio = <Cronometro size="sala" status={status} startsAt={lot.startsAt} endsAt={lot.endsAt} originalEndsAt={lot.originalEndsAt} serverTime={state.serverTime} />;
   const linhaRelogio = (
     <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-4">
       {relogio}
-      <div className="ml-auto flex flex-col items-end gap-3">{lateral}</div>
+      <div className="ml-auto flex flex-col items-end">{lateral}</div>
     </div>
   );
 

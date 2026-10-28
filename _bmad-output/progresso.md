@@ -593,3 +593,8 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - `BidPanel` ganhou a prop opcional `lateral`; os painéis de lote cancelado e agendado usam a mesma linha (`linhaRelogio` em `sala.tsx`). Em tela estreita (360px) o bloco desce para baixo do cronômetro, ainda à direita.
 - A etiqueta (cerca de 100px de altura) é mais alta que o cronômetro (78px), então o "Lance atual" desce uns 60px a 1280px. Fica assim por ora.
 - Web 706, typecheck e lint exit 0; Chrome real (build local contra a API de produção, só leitura), claro e noite, 360, 768, 1280 e 1909px, sem rolagem horizontal nem erro. Só na branch local: sem push nem deploy.
+
+## 28/10/2026 — Etiqueta do lote na Sala: menor e com laço limpo (ajuste do Felipe)
+- A etiqueta ao lado do cronômetro estava grande (52px de número, inclinada -4°) e o laço do barbante parecia um rabisco. Na Sala ela agora usa `size="compacto"` (número de 28px) com inclinação de -2° (-1° nos encerrados e cancelados), e o bloco do selo e da etiqueta perdeu o espaçamento entre os dois (altura de 121px para 109px a 1280px).
+- `ui/lot-tag.tsx`: o laço passou de dois traços soltos para um único contorno em gota, saindo do furo, com pontas arredondadas. Vale em todos os usos da etiqueta (Vitrine, Meus arremates, recibo, Auditoria, Criar lote).
+- Web 706, typecheck e lint exit 0. Chrome real, claro e noite, zoom de 2,5x conferido. Só na branch local: sem push nem deploy.
