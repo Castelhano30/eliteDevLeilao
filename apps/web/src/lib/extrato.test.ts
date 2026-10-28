@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diaDeBrasilia, EXTRATO_POR_PAGINA, filtrarPorPeriodo, paginar, periodoInvertido } from "./extrato";
+import { dataBr, descreverPeriodo, diaDeBrasilia, EXTRATO_POR_PAGINA, filtrarPorPeriodo, paginar, periodoInvertido } from "./extrato";
 
 const mov = (createdAt: string) => ({ createdAt });
 
@@ -60,5 +60,16 @@ describe("paginar", () => {
   it("página fora do que existe é limitada (a lista encolheu)", () => {
     expect(paginar(itens, 9).atual).toBe(2);
     expect(paginar(itens, -1).atual).toBe(0);
+  });
+});
+
+describe("descreverPeriodo", () => {
+  it("escreve o período do jeito que o brasileiro lê", () => {
+    expect(dataBr("2026-10-28")).toBe("28/10/2026");
+    expect(descreverPeriodo("2026-10-24", "2026-10-28")).toBe("24/10/2026 a 28/10/2026");
+    expect(descreverPeriodo("2026-10-24", "2026-10-24")).toBe("24/10/2026");
+    expect(descreverPeriodo("2026-10-24", "")).toBe("A partir de 24/10/2026");
+    expect(descreverPeriodo("", "2026-10-28")).toBe("Até 28/10/2026");
+    expect(descreverPeriodo("", "")).toBe("");
   });
 });

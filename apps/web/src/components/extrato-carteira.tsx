@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { formatBRL, type LedgerEntryDto } from "@lanceauto/shared";
-import { Button, buttonClasses } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { FeedbackState } from "@/components/ui/feedback-state";
-import { Field } from "@/components/ui/field";
-import { filtrarPorPeriodo, paginar, periodoInvertido } from "@/lib/extrato";
+import { filtrarPorPeriodo, paginar } from "@/lib/extrato";
 import { describeMovement, formatWhen, lotNumberLabel } from "@/lib/format";
+import { FiltrarExtrato } from "./filtrar-extrato";
 
 const COLUMNS: DataTableColumn<LedgerEntryDto>[] = [
   { key: "quando", header: "Quando", render: (row) => formatWhen(row.createdAt) },
@@ -49,7 +49,7 @@ const COLUMNS: DataTableColumn<LedgerEntryDto>[] = [
 const movimentos = (n: number) => `${n} ${n === 1 ? "movimentação" : "movimentações"}`;
 
 /**
- * Extrato da carteira: filtro por período (dia inicial e final, em horário de Brasília) e dez movimentos por página.
+ * Extrato da carteira: filtro por período (botão Filtrar; dias em horário de Brasília) e dez movimentos por página.
  * Recebe o extrato inteiro, do mais novo para o mais antigo; quem filtra e fatia é a tela.
  */
 export function ExtratoCarteira({ entries }: { entries: readonly LedgerEntryDto[] }) {
@@ -65,7 +65,6 @@ export function ExtratoCarteira({ entries }: { entries: readonly LedgerEntryDto[
     setPage(0);
   }
 
-  const invertido = periodoInvertido(de, ate);
   const filtrado = filtrarPorPeriodo(entries, de, ate);
   const { items, atual, paginas } = paginar(filtrado, page);
   const filtrando = de !== "" || ate !== "";
@@ -78,40 +77,21 @@ export function ExtratoCarteira({ entries }: { entries: readonly LedgerEntryDto[
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-end gap-x-4 gap-y-3">
-        <Field
-          label="De"
-          type="date"
-          value={de}
-          max={ate || undefined}
-          onChange={(event) => {
-            setDe(event.target.value);
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <FiltrarExtrato
+          de={de}
+          ate={ate}
+          onApply={(novoDe, novoAte) => {
+            setDe(novoDe);
+            setAte(novoAte);
             setPage(0);
           }}
-          className="w-[min(100%,180px)] flex-[0_1_180px]"
+          onClear={clear}
         />
-        <Field
-          label="Até"
-          type="date"
-          value={ate}
-          min={de || undefined}
-          onChange={(event) => {
-            setAte(event.target.value);
-            setPage(0);
-          }}
-          className="w-[min(100%,180px)] flex-[0_1_180px]"
-        />
-        {filtrando ? (
-          <Button variant="secundario" onClick={clear} className="min-h-12">
-            Limpar filtro
-          </Button>
-        ) : null}
-        <p className="t-mono-dado ml-auto self-center" aria-live="polite">
+        <p className="t-mono-dado" aria-live="polite">
           {movimentos(filtrado.length)}
         </p>
       </div>
-
-      {invertido ? <p className="t-body-nota mb-3">A data inicial vem depois da final. Ajuste o período para ver o extrato.</p> : null}
 
       {filtrado.length === 0 ? (
         <FeedbackState variant="vazio">

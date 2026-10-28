@@ -36,9 +36,11 @@ describe("ExtratoCarteira", () => {
     expect(render(many(1))).toContain("1 movimentação<");
   });
 
-  it("os campos De e Até são datas e não há 'Limpar filtro' sem filtro", () => {
+  it("o filtro é um botão Filtrar que abre o pop-up com as datas; sem filtro não há 'Limpar filtros' nem período", () => {
     const html = render(many(3));
+    expect(html).toContain(">Filtrar</button>");
+    expect(html).toContain("Filtrar extrato");
     expect(html.match(/type="date"/g)).toHaveLength(2);
-    expect(html).not.toContain("Limpar filtro");
+    expect(html).not.toContain("Limpar filtros");
   });
 });

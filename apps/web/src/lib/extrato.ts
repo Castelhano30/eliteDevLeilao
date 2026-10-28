@@ -37,3 +37,17 @@ export function paginar<T>(items: readonly T[], pagina: number, porPagina: numbe
   const atual = Math.min(Math.max(0, pagina), paginas - 1);
   return { items: items.slice(atual * porPagina, (atual + 1) * porPagina), atual, paginas };
 }
+
+/** "2026-10-28" para "28/10/2026". */
+export function dataBr(dia: string): string {
+  const [ano, mes, d] = dia.split("-");
+  return `${d}/${mes}/${ano}`;
+}
+
+/** Texto do período aplicado: "24/10/2026 a 28/10/2026", "A partir de 24/10/2026" ou "Até 28/10/2026". Vazio sem filtro. */
+export function descreverPeriodo(de: string, ate: string): string {
+  if (de !== "" && ate !== "") return de === ate ? dataBr(de) : `${dataBr(de)} a ${dataBr(ate)}`;
+  if (de !== "") return `A partir de ${dataBr(de)}`;
+  if (ate !== "") return `Até ${dataBr(ate)}`;
+  return "";
+}
