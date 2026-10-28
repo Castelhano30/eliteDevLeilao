@@ -179,18 +179,18 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
       <div className="flex flex-wrap justify-center gap-x-12 gap-y-6">
         <section aria-label="Ficha do carro" className="min-w-0" style={{ flex: "1 1 400px", maxWidth: 560 }}>
           <CarPhoto imageUrl={car.imageUrl} title={lot.title} size="sala" showCaption credit={car.imageCredit} creditUrl={car.imageCreditUrl} dimmed={ended} />
+          <h1 className="mt-6 font-bold uppercase [overflow-wrap:anywhere]" style={{ fontSize: "clamp(34px, 4vw, 56px)", lineHeight: 1 }}>
+            {lot.title}
+          </h1>
+          <div className="mt-5 flex flex-wrap items-center gap-4">
+            <LotTag number={lot.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} />
+            {status === "LIVE" ? <Stamp variant="ao-vivo" /> : null}
+          </div>
           <FichaCarro car={car} />
         </section>
 
         <section aria-label="Painel do lote" className="min-w-0" style={{ flex: "1 1 440px", maxWidth: 560 }}>
-          <h1 className="font-bold uppercase [overflow-wrap:anywhere]" style={{ fontSize: "clamp(40px, 5vw, 72px)", lineHeight: 0.98 }}>
-            {lot.title}
-          </h1>
-          <div className="mt-6 flex flex-wrap items-center gap-4">
-            <LotTag number={lot.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} />
-            {status === "LIVE" ? <Stamp variant="ao-vivo" /> : null}
-          </div>
-          <div className="mt-6">{panel}</div>
+          {panel}
           <p className="mt-8">
             <Link href={auditPath(id)} className={`${buttonClasses("secundario")} !min-h-alvo`}>
               {AUDIT_TEXT.auditThisLot}

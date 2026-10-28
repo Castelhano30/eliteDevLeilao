@@ -581,3 +581,9 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - Testes: `ficha-carro.test.tsx` (4) novo; `car-photo.test.tsx` ajustado (Sala sem legenda de estado, crédito mantido, legenda na prévia). Web 706, typecheck e lint exit 0.
 - Chrome real (build local contra a API de produção, só leitura), claro e noite, 360, 768, 1280 e 1909px: sem rolagem horizontal, sem erro de página, sem `figcaption`, nome antes da etiqueta. Prints em `.tmp/repag/sala-ficha/`.
 - Só commitado na branch local `repaginacao-visual`: sem push nem deploy.
+
+## 28/10/2026 — Sala: título e etiqueta sob a foto, painel de lance ao lado dela (ajuste do Felipe)
+- Mudança de ideia sobre a ordem anterior: o nome do carro, a etiqueta do lote e o selo "Ao vivo" ficam **embaixo da foto**, na coluna da esquerda, seguidos da ficha técnica. O painel (cronômetro, lance atual, formulário e histórico) sobe e fica ao lado da foto, no mesmo topo (y igual a 1280 e 1909px).
+- O `h1` encolheu de `clamp(40px, 5vw, 72px)` para `clamp(34px, 4vw, 56px)`, porque agora mora numa coluna de 560px: a 1280px o título cabe em duas linhas.
+- Em tela estreita a ordem é foto, título, etiqueta, ficha e só depois o painel.
+- Web 706, typecheck e lint exit 0. Chrome real (build local contra a API de produção, só leitura), claro e noite, 360, 768, 1280 e 1909px: sem rolagem horizontal, sem erro de página. Prints em `.tmp/repag/sala-ficha/`. Só commitado na branch local: sem push nem deploy.
