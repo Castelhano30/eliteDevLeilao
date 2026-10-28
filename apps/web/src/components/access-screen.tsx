@@ -67,15 +67,29 @@ export function AccessScreen() {
     <PageShell>
       <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
         <section aria-labelledby="titulo-acesso">
-          <h1 id="titulo-acesso" className="t-display-titulo mb-6">
+          {/* A arte já traz o texto: do desktop em diante ela substitui o texto escrito, que segue para telas estreitas, onde a arte ficaria ilegível. */}
+          <h1 id="titulo-acesso" className="t-display-titulo mb-6 lg:sr-only">
             Quem dá mais, leva.
           </h1>
-          <p className="t-body-lead mb-6">
-            Cadastre-se ou entre para dar lances ou montar lotes. Dinheiro de mentira, emoção de verdade.
-          </p>
-          <p className="t-body-nota">
-            Seu nome nunca aparece em público. Em cada lote você vira um Licitante diferente, tipo Licitante C3E8.
-          </p>
+          <div className="lg:hidden">
+            <p className="t-body-lead mb-6">
+              Cadastre-se ou entre para dar lances ou montar lotes. Dinheiro de mentira, emoção de verdade.
+            </p>
+            <p className="t-body-nota">
+              Seu nome nunca aparece em público. Em cada lote você vira um Licitante diferente, tipo Licitante C3E8.
+            </p>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element -- arte estática já otimizada em public/acesso */}
+          <img
+            src="/acesso/quem-da-mais-leva.webp"
+            alt="Quem dá mais, leva! A disputa começou. Você está pronto para vencer? Entre no jogo, dê seus lances, crie seus próprios lotes e sinta a adrenalina de cada disputa. Lances emocionantes. Disputas acirradas. A vitória pode ser sua! E o melhor: sua identidade é protegida. Em cada lote, você participa com um código anônimo e exclusivo, como Licitante C3E8. Cadastre-se e entre na disputa!"
+            width={1672}
+            height={941}
+            decoding="async"
+            fetchPriority="high"
+            draggable={false}
+            className="hidden h-auto w-full select-none rounded-2xl border border-borda shadow-cartao lg:block"
+          />
         </section>
         <div>
           <AccessTabs
@@ -83,11 +97,6 @@ export function AccessScreen() {
             value={tab}
             onChange={setTab}
             tabs={[
-              {
-                id: "criar",
-                label: "Criar conta",
-                panel: <RegisterForm role={role} onRoleChange={setRole} onDone={finish} register={register} />,
-              },
               {
                 id: "entrar",
                 label: "Entrar",
@@ -101,6 +110,11 @@ export function AccessScreen() {
                     login={login}
                   />
                 ),
+              },
+              {
+                id: "criar",
+                label: "Criar conta",
+                panel: <RegisterForm role={role} onRoleChange={setRole} onDone={finish} register={register} />,
               },
             ]}
           />
