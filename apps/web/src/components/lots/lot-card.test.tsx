@@ -39,9 +39,22 @@ const figureOf = (html: string) => html.slice(html.indexOf("<figure"), html.inde
 describe("LotCard: anatomia e casco", () => {
   const html = render(card("LIVE"));
 
-  it("de cima para baixo: foto, faixa da etiqueta e corpo com o título", () => {
+  it("de cima para baixo: foto, a etiqueta e o selo por cima dela, e o corpo com o título", () => {
     expect(html.indexOf("<figure")).toBeLessThan(html.indexOf(">LOTE<"));
-    expect(html.indexOf(">LOTE<")).toBeLessThan(html.indexOf("<h3"));
+    expect(html.indexOf(">LOTE<")).toBeLessThan(html.indexOf("Ao vivo"));
+    expect(html.indexOf("Ao vivo")).toBeLessThan(html.indexOf("<h3"));
+  });
+
+  it("etiqueta no canto superior esquerdo e selo no superior direito, sobre a foto", () => {
+    const overlayTag = /<span class="absolute left-2 top-1 z-10">/.exec(html);
+    const overlaySeal = /<span class="absolute right-3 top-3 z-10[^"]*">/.exec(html);
+    expect(overlayTag).not.toBeNull();
+    expect(overlaySeal).not.toBeNull();
+    // Os dois estão dentro do contêiner da foto: antes do `<h3` e depois do `</figure>`.
+    for (const m of [overlayTag, overlaySeal]) {
+      expect(m!.index).toBeGreaterThan(html.indexOf("</figure>"));
+      expect(m!.index).toBeLessThan(html.indexOf("<h3"));
+    }
   });
 
   it("casco de 16px, fio borda, nível 1, recortado, em coluna e com a altura da célula", () => {
@@ -66,10 +79,10 @@ describe("LotCard: anatomia e casco", () => {
   });
 
   it("padding de 16px, 20px a partir de 640px", () => {
-    expect(html).toContain("px-4 pb-4 sm:px-5 sm:pb-5");
+    expect(html).toContain("px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5");
   });
 
-  it("a foto tem 200px e herda os cantos; nada cobre a foto", () => {
+  it("a foto tem 200px e herda os cantos; etiqueta e selo ficam fora da `figure`, por cima dela", () => {
     expect(html).toContain("height:200px");
     expect(html).toContain("rounded-t-[inherit]");
     const figure = figureOf(html);

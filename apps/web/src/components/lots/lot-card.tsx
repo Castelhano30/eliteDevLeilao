@@ -51,7 +51,7 @@ function BidBlock({ label, value, children }: { label: string; value: string; ch
   );
 }
 
-/** Cartão do lote (§10.1, DESIGN 4.6). O cartão inteiro é o link; o nome acessível é o título. Foto, faixa da etiqueta e corpo, de cima para baixo. */
+/** Cartão do lote (§10.1, DESIGN 4.6). O cartão inteiro é o link; o nome acessível é o título. Foto (com etiqueta e selo por cima) e corpo, de cima para baixo. */
 export function LotCard({ card, serverTime, preview = false, emptyNote, resultado }: LotCardProps) {
   const titleId = useId();
   const now = useServerNow(serverTime);
@@ -146,17 +146,16 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
 
   const body = (
     <>
-      {/* Foto no topo: herda os cantos do cartão. Nenhum selo, etiqueta ou texto a cobre. */}
+      {/* Foto no topo: herda os cantos do cartão. A etiqueta do lote (canto superior esquerdo) e o selo de status (canto superior direito)
+          ficam por cima dela, depois da `figure` no DOM; cada um tem fundo sólido próprio, então a leitura não depende da foto. */}
       <div className="relative rounded-t-[inherit]">
         <CarPhoto imageUrl={card.imageUrl} title={card.title} size="cartao" dimmed={ended || status === "CANCELLED"} noReferrer={preview} />
+        <span className="absolute left-2 top-1 z-10">
+          <LotTag number={preview ? "NOVO" : card.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} rotate={ROTATE[status]} size="compacto" />
+        </span>
+        {seal ? <span className="absolute right-3 top-3 z-10 max-w-[calc(100%-7rem)] drop-shadow-md">{seal}</span> : null}
       </div>
-      {/* Faixa da etiqueta: etiqueta compacta à esquerda (o cordão sobe para o espaço vazio da faixa) e o selo à direita, os dois no topo,
-          logo abaixo da foto. O selo fica mais perto da borda que o corpo (8px de respiro em vez de 16/20px). */}
-      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 pl-4 pr-2 sm:pl-5">
-        <LotTag number={preview ? "NOVO" : card.number} tone={ended || status === "CANCELLED" ? "papel" : "ocre"} rotate={ROTATE[status]} size="compacto" />
-        {seal ? <span className="mt-3 max-w-full">{seal}</span> : null}
-      </div>
-      <div className="flex flex-1 flex-col px-4 pb-4 sm:px-5 sm:pb-5">
+      <div className="flex flex-1 flex-col px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5">
         <h3 id={titleId} className="t-titulo-cartao [overflow-wrap:anywhere]">
           {card.title}
         </h3>
