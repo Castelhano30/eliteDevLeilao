@@ -196,6 +196,11 @@ body {
 a {
   color: var(--c-tinta);
 }
+/* O carimbo de resultado entra com `la-bate` (escala 2,6): no celular esse transform alargava o documento e deixava a largura presa
+   depois da animação (426px numa tela de 360). `clip` recorta sem virar contêiner de rolagem. */
+main {
+  overflow-x: clip;
+}
 /* Link em texto corrido (filho direto de parágrafo, item de lista ou legenda, sem classe): azul e sempre sublinhado, porque o azul
    sozinho não o distingue do texto. Links com classe (botão, navegação, cartão) e títulos-link escolhem a própria cor. */
 :where(p, li, figcaption) > a:not([class]) {

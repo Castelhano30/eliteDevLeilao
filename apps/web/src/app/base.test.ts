@@ -17,6 +17,10 @@ describe("base global", () => {
     expect(focus).not.toMatch(/box-shadow/);
   });
 
+  it("o conteúdo recorta o que sai pelos lados: o carimbo animado não alarga a página no celular", () => {
+    expect(rule("main")).toMatch(/overflow-x:\s*clip/);
+  });
+
   it("o hover de link não vira vermelho de erro", () => {
     expect(css).not.toMatch(/a:hover\s*\{[^}]*ferrugem/);
   });
