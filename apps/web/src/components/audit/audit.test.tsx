@@ -76,11 +76,11 @@ describe("AuditTable (S08 §9)", () => {
     const html = renderToStaticMarkup(<AuditTable view={view()} verifying={false} />);
     expect(html).toContain('role="region"');
     expect(html).toContain('aria-label="Histórico de lances do lote 018"');
-    expect(html).toContain("min-width:780px");
+    expect(html).toContain("--tabela-min:780px");
     const headers = [...html.matchAll(/<th[^>]*>([^<]+)<\/th>/g)].map((m) => m[1]);
     expect(headers).toEqual(["Nº", "Licitante", "Valor", "Horário", "Hash", "Situação"]);
-    expect(html.match(/<tbody>/g)).toHaveLength(1);
-    expect(html.split("<tbody>")[1]!.match(/<tr/g)).toHaveLength(5);
+    expect(html.match(/<tbody /g)).toHaveLength(1);
+    expect(html.split("<tbody role=\"rowgroup\">")[1]!.match(/<tr/g)).toHaveLength(5);
   });
 
   it("número com 2 dígitos, horário de Brasília com segundos e <time> com o ISO", () => {
@@ -121,8 +121,8 @@ describe("AuditTable (S08 §9)", () => {
     const brokenStatus = [...html.matchAll(/<td[^>]*>((?:(?!<\/td>).)*ELO QUEBRADO(?:(?!<\/td>).)*)<\/td>/g)].map((m) => m[1]);
     expect(brokenStatus).toHaveLength(2);
     for (const cell of brokenStatus) expect(cell).not.toContain("opacity");
-    expect(html).toContain("inset 4px 0 0 var(--c-ferrugem)");
-    expect(html).toContain("inset 4px 0 0 var(--c-verde)");
+    expect(html).toContain("--acento-cor:var(--c-ferrugem)");
+    expect(html).toContain("--acento-cor:var(--c-verde)");
     expect(html).not.toMatch(/original|esperado|corresponde/i);
   });
 

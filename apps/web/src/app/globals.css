@@ -427,3 +427,49 @@ dialog::backdrop {
   :root:not([data-theme="claro"]) .theme-sun { background: transparent; color: inherit; }
   :root:not([data-theme="claro"]) .theme-moon { background: var(--c-ocre); color: var(--c-sobre-ocre); }
 }
+
+/* ---------- Tabela de dados (DataTable) ----------
+   Largo: tabela com rolagem própria. Estreito (bloco com menos de 52rem, maior que a tabela mais larga, 780px): cada linha vira um
+   cartão e cada célula traz o rótulo da coluna. A faixa de realce das linhas (Auditoria) é a primeira célula na tabela e a
+   borda esquerda do cartão no celular. */
+.tabela-dados { container-type: inline-size; }
+.tabela-regiao tr[data-acento] > td:first-child { box-shadow: inset 4px 0 0 var(--acento-cor); }
+@container (max-width: 51.99rem) {
+  .tabela-regiao { overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+  .tabela-regiao > table,
+  .tabela-regiao > table > tbody,
+  .tabela-regiao > table > caption { display: block; min-width: 0; }
+  .tabela-regiao > table > thead { display: none; }
+  .tabela-regiao tr {
+    display: block;
+    margin-top: 12px;
+    overflow: hidden;
+    border: 1px solid var(--c-borda);
+    border-radius: 12px;
+    background-color: var(--c-papel);
+    box-shadow: var(--sh-cartao);
+  }
+  .tabela-regiao tr:first-child { margin-top: 0; }
+  .tabela-regiao tr[data-acento] { box-shadow: inset 4px 0 0 var(--acento-cor), var(--sh-cartao); }
+  .tabela-regiao tr[data-acento] > td:first-child { box-shadow: none; }
+  .tabela-regiao td {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px 16px;
+    padding: 10px 16px;
+    text-align: right;
+  }
+  .tabela-regiao td + td { border-top: 1px solid var(--c-borda); }
+  .tabela-regiao td::before {
+    content: attr(data-label);
+    flex: none;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--c-tinta2);
+  }
+}
