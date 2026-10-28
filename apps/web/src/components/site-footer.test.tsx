@@ -83,7 +83,7 @@ describe("SiteFooter: conteúdo e links", () => {
   });
 
   it("só tem <a> para rota que existe, e-mail e telefone", () => {
-    expect(hrefs(html)).toEqual(["/", "/", "/#como-funciona", "/entrar?aba=entrar", "/entrar", "mailto:suporte@lanceauto.com", "tel:9999999999"]);
+    expect(hrefs(html)).toEqual(["/", "/", "/entrar?aba=entrar", "/entrar", "mailto:suporte@lanceauto.com", "tel:9999999999"]);
     expect(html).not.toMatch(/href="(?!\/|mailto:|tel:)/);
   });
 
@@ -128,7 +128,7 @@ describe("SiteFooter: Sua conta por papel", () => {
     state.auth = { user: null, status };
     const html = render();
     expect(html).toContain("min-h-[88px]");
-    expect(hrefs(html)).toEqual(["/", "/", "/#como-funciona", "mailto:suporte@lanceauto.com", "tel:9999999999"]);
+    expect(hrefs(html)).toEqual(["/", "/", "mailto:suporte@lanceauto.com", "tel:9999999999"]);
     expect(html).toContain(">Sua conta</p>");
   });
 });
@@ -146,7 +146,7 @@ describe("SiteFooter: página atual", () => {
     expect(html.match(/!text-ocreTexto/g)).toHaveLength(2);
   });
 
-  it("na Vitrine, só 'Vitrine' marca; 'Como funciona' (com #) e os links de entrada nunca marcam", () => {
+  it("na Vitrine, só 'Vitrine' marca; os links de entrada nunca marcam", () => {
     const html = render();
     expect(html.match(/aria-current="page"/g)).toHaveLength(1);
     state.pathname = "/entrar";

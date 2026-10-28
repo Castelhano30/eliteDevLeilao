@@ -10,7 +10,6 @@ import { FeedbackState } from "@/components/ui/feedback-state";
 import { FilterTabs } from "@/components/ui/filter-tabs";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
-import { Canhoto } from "@/components/lots/canhoto";
 import { LotCard } from "@/components/lots/lot-card";
 import { LOT_GRID_COLUMNS } from "@/components/lots/lot-card-shell";
 import { LotCardSkeletons } from "@/components/lots/lot-card-skeleton";
@@ -49,12 +48,6 @@ const SECTIONS: { group: ShowcaseGroup; title: string; subtitle: string }[] = [
   { group: "ENDED", title: "Encerrados", subtitle: "Todo histórico é auditável. Sem login." },
 ];
 
-const STEPS = [
-  { title: "Crie a conta e deposite", text: "Escolha ser licitante, deposite saldo de mentira (até R$ 10 milhões por vez) e fique com o dinheiro à mão." },
-  { title: "Dê o seu lance", text: "Cada lote tem lance inicial e incremento mínimo. Lance nos 2 minutos finais estica o relógio em +2 min." },
-  { title: "Leve e confira", text: "Maior lance quando o martelo bate leva o carro e ganha um comprovante com link. Qualquer pessoa audita o histórico, sem login." },
-];
-
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /** Refaz o GET uma vez, 1 s depois que o primeiro cronômetro da lista chega a zero (§9.1). */
@@ -67,7 +60,7 @@ function useRefetchAtNextDeadline(lots: LotCardDto[], now: number, refetch: () =
   useOnReach(next, now, refetch);
 }
 
-/** Vitrine (§9.1): carrossel de destaques, "Como funciona", barra "Pátio aberto", filtros e seções. SSR + hidratação. */
+/** Vitrine (§9.1): carrossel de destaques, barra "Pátio aberto", filtros e seções. SSR + hidratação. */
 export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
   const [filters, setFilters] = useState<VitrineFilters>(DEFAULT_FILTERS);
   const [search, setSearch] = useState("");
@@ -141,22 +134,6 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
           Lotes montados a partir da Tabela FIPE, lances ao vivo com saldo de mentira e um comprovante que qualquer pessoa confere. Até quem não tem conta.
         </p>
         <p>Referência: Tabela FIPE. Nenhum carro de verdade troca de dono aqui.</p>
-      </section>
-
-      <section id="como-funciona" className="scroll-mt-6 py-6" aria-labelledby="como-funciona-titulo">
-        <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 id="como-funciona-titulo" className="text-[18px] font-extrabold uppercase leading-none">
-            Como funciona
-          </h2>
-          <p className="t-body-legenda text-tinta2">3 passos, nenhum formulário de 12 páginas</p>
-        </div>
-        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))" }}>
-          {STEPS.map((step, index) => (
-            <Canhoto key={step.title} number={index + 1} title={step.title}>
-              {step.text}
-            </Canhoto>
-          ))}
-        </div>
       </section>
 
       <p className="t-mono-rotulo flex flex-wrap items-center gap-x-3 gap-y-1 mb-6 border-b border-borda pb-3">

@@ -40,7 +40,6 @@ export function SiteHeader() {
       {user?.role === "AUCTIONEER" ? <><NavLink href="/painel" exact>Meus lotes</NavLink><NavLink href="/painel/criar-lote">Criar lote</NavLink></> : null}
       <NavLink href="/">Vitrine</NavLink>
       {user?.role === "BIDDER" ? <><NavLink href="/arremates">Meus arremates</NavLink><NavLink href="/carteira">Carteira</NavLink></> : null}
-      {!user ? <Link href="/#como-funciona" className={LINK}>Como funciona</Link> : null}
     </nav>
   );
 
