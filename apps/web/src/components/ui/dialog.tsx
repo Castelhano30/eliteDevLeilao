@@ -19,8 +19,9 @@ export interface DialogProps {
 }
 
 /**
- * Diálogo modal sobre `<dialog>` nativo: `showModal()` deixa o resto da página inerte,
- * prende o Tab, fecha com Esc e devolve o foco ao elemento de origem. O foco inicial vai ao título.
+ * Diálogo modal sobre `<dialog>` nativo (DESIGN 4.10): `showModal()` deixa o resto da página inerte,
+ * prende o Tab, fecha com Esc e devolve o foco ao elemento de origem. O foco inicial vai ao título. Ações à direita, empilhadas no celular,
+ * com a principal por último.
  */
 export function Dialog({ open, onClose, title, children, confirm, cancelLabel = "Voltar", dismissible = true, describedBy }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -49,14 +50,14 @@ export function Dialog({ open, onClose, title, children, confirm, cancelLabel = 
         event.preventDefault();
         if (dismissible) onClose();
       }}
-      className="m-auto w-[min(560px,calc(100%-32px))] rounded-nenhum border-[3px] border-linha bg-papel p-6 text-tinta shadow-painel"
+      className="m-auto w-[min(560px,calc(100%-32px))] rounded-2xl border border-borda bg-papel p-6 text-tinta shadow-modal"
     >
-      <h2 id={titleId} ref={titleRef} tabIndex={-1} className="t-cartaz-cartao mb-4">
+      <h2 id={titleId} ref={titleRef} tabIndex={-1} className="mb-4 text-[20px] font-extrabold leading-tight">
         {title}
       </h2>
       <div className="t-body">{children}</div>
-      <div className="mt-6 flex flex-wrap gap-4">
-        <Button variant="secundario" onClick={onClose} loading={!dismissible} className="!min-h-[52px]">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <Button variant="secundario" onClick={onClose} loading={!dismissible} className="w-full sm:w-auto">
           {cancelLabel}
         </Button>
         <Button
@@ -64,7 +65,7 @@ export function Dialog({ open, onClose, title, children, confirm, cancelLabel = 
           destrutivo={confirm.destrutivo}
           loading={confirm.loading}
           loadingText={confirm.loadingText}
-          className="!min-h-[52px]"
+          className="w-full sm:w-auto"
           onClick={confirm.onConfirm}
         >
           {confirm.label}

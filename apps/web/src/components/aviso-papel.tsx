@@ -4,7 +4,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ROLE_LABEL } from "@lanceauto/shared";
 import { Button } from "@/components/ui/button";
-import { FeedbackState } from "@/components/ui/feedback-state";
+import { Notice } from "@/components/ui/notice";
 import { useAuth } from "./auth-provider";
 
 /**
@@ -35,12 +35,9 @@ export function AvisoPapel() {
   const right = user.role === "BIDDER" ? "AUCTIONEER" : "BIDDER";
   return (
     <div className="mx-auto pt-6" style={{ width: "min(100% - 2 * var(--gutter-lateral), 1320px)" }}>
-      <FeedbackState variant="vazio">
+      <Notice kind="info" footer={<Button onClick={() => setShown(false)}>Dispensar</Button>}>
         Essa tela é de {ROLE_LABEL[right]}. Você entrou como {ROLE_LABEL[user.role]}.
-      </FeedbackState>
-      <div className="mt-3">
-        <Button onClick={() => setShown(false)}>Dispensar</Button>
-      </div>
+      </Notice>
     </div>
   );
 }

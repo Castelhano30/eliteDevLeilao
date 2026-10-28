@@ -320,8 +320,6 @@ dialog::backdrop {
 .cabecalho {
   --c-linha: #8fa3cf;
   --c-sombra: #c9d5ee;
-  /* Provisório: o menu do perfil ainda usa a sombra dura do cabeçalho aprovado até a etapa 9. */
-  --sh-cartao: 3px 3px 0 var(--c-sombra);
   --h-azul: var(--c-destaque);
   --h-divisor: var(--c-borda);
   --h-ativo-texto: var(--c-ocre-texto);

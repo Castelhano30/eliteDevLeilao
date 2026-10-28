@@ -63,13 +63,16 @@ export function ProfileMenu() {
         <HeaderIcon name="chevron" />
       </button>
       {open ? (
-        <div id={id} className="absolute right-0 top-full z-50 mt-2 w-[240px] max-w-[calc(100vw-32px)] border border-linha bg-papel p-4 shadow-cartao">
-          <p className="t-body break-words font-semibold">{user.name || "Perfil"}</p>
-          <p className="t-mono-rotulo mt-1 text-tinta2">{user.role === "BIDDER" ? "Licitante" : "Leiloeiro"}</p>
+        <div id={id} className="absolute right-0 top-full z-50 mt-2 w-[240px] max-w-[calc(100vw-32px)] rounded-xl border border-borda bg-papel p-2 shadow-painel">
+          <div className="px-2 py-2">
+            <p className="t-body break-words font-semibold">{user.name || "Perfil"}</p>
+            <p className="t-mono-rotulo mt-1 text-tinta2">{user.role === "BIDDER" ? "Licitante" : "Leiloeiro"}</p>
+          </div>
+          <div aria-hidden="true" className="my-1 h-px bg-borda" />
           <button
             ref={action}
             type="button"
-            className="t-mono mt-3 flex min-h-alvo w-full items-center border-t border-tracejado px-2 text-left hover:bg-suave"
+            className="t-mono flex min-h-alvo w-full items-center rounded-lg px-2 text-left hover:bg-suave"
             onClick={() => { setOpen(false); logout(); }}
           >Sair</button>
         </div>

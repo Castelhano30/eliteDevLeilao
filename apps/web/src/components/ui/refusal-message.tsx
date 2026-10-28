@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Notice } from "./notice";
 
 export interface RefusalMessageProps {
   children: ReactNode;
@@ -8,37 +9,19 @@ export interface RefusalMessageProps {
   className?: string;
 }
 
-/** Mensagem de recusa: ícone + texto, borda tracejada ferrugem. Uma por vez, colada ao botão que a causou. */
+/** Recusa (DESIGN 4.9): o aviso de erro, com o círculo cortado, colado ao botão que a causou. Uma por vez. */
 export function RefusalMessage({ children, action, className = "" }: RefusalMessageProps) {
   return (
-    <div
-      role="alert"
-      className={`t-body-nota flex items-start gap-2 rounded-nenhum border-2 border-dashed border-ferrugem px-[10px] py-2 !text-ferrugem ${className}`.trim()}
-    >
-      <svg
-        aria-hidden="true"
-        width="18"
-        height="18"
-        viewBox="0 0 18 18"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        className="mt-px shrink-0"
-      >
-        <circle cx="9" cy="9" r="7" />
-        <path d="M4 14L14 4" />
-      </svg>
-      <p>
-        {children}
-        {action ? (
-          <>
-            {" "}
-            <Link href={action.href} className="font-semibold !text-ferrugem">
-              {action.label}
-            </Link>
-          </>
-        ) : null}
-      </p>
-    </div>
+    <Notice kind="erro" className={className}>
+      {children}
+      {action ? (
+        <>
+          {" "}
+          <Link href={action.href} className="font-semibold !text-ocreTexto underline underline-offset-[3px]">
+            {action.label}
+          </Link>
+        </>
+      ) : null}
+    </Notice>
   );
 }
