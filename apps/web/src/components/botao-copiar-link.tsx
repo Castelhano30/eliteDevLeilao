@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { COPIED_LABEL_MS, copyLinkAriaLabel } from "@lanceauto/shared";
-import { buttonClasses } from "@/components/ui/button";
+import { buttonClasses, type ButtonSize } from "@/components/ui/button";
 import { copyLink, copyLinkLabel, receiptUrl, type CopyState } from "@/lib/copy-link";
 
 export interface BotaoCopiarLinkProps {
@@ -11,6 +11,8 @@ export interface BotaoCopiarLinkProps {
   /** Nome acessível inteiro, com o título do lote (Meus arremates); sem ele vale "Copiar link do comprovante do lote NNN". */
   ariaLabel?: string;
   className?: string;
+  /** Tamanho do botão; o padrão serve ao comprovante, o compacto às listas. */
+  tamanho?: ButtonSize;
 }
 
 /**
@@ -18,7 +20,7 @@ export interface BotaoCopiarLinkProps {
  * transferência: a mensagem de copiar à mão e um campo somente leitura com o link já selecionado. A região
  * aria-live anuncia o resultado; o nome acessível só carrega o lote enquanto o botão diz "Copiar link".
  */
-export function BotaoCopiarLink({ token, lotNumber, ariaLabel, className = "" }: BotaoCopiarLinkProps) {
+export function BotaoCopiarLink({ token, lotNumber, ariaLabel, className = "", tamanho = "padrao" }: BotaoCopiarLinkProps) {
   const [state, setState] = useState<CopyState>("idle");
   const [url, setUrl] = useState("");
   const field = useRef<HTMLInputElement>(null);
@@ -47,7 +49,7 @@ export function BotaoCopiarLink({ token, lotNumber, ariaLabel, className = "" }:
         type="button"
         onClick={() => void copy()}
         aria-label={state === "idle" ? (ariaLabel ?? copyLinkAriaLabel(lotNumber)) : undefined}
-        className={buttonClasses("secundario")}
+        className={buttonClasses("secundario", false, tamanho)}
       >
         {copyLinkLabel(state)}
       </button>

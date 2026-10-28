@@ -43,22 +43,22 @@ describe("Meus arremates: o canhoto", () => {
   );
 
   it("rounded-xl com fio e nível 1, recortado, sem a borda de 3px nem a sombra dura", () => {
-    expect(html).toContain("@container relative overflow-hidden rounded-xl border border-borda bg-papel p-6 shadow-cartao");
+    expect(html).toContain("@container relative overflow-hidden rounded-xl border border-borda bg-papel p-4 shadow-cartao");
     expect(html).not.toMatch(/rounded-nenhum|border-\[3px\]/);
   });
 
   it("o picote é o único tracejado: vertical no cartão largo e horizontal no estreito, cada um com dois recortes na cor da página", () => {
     expect(html.match(/border-dashed/g)).toHaveLength(2);
-    expect(html).toContain("left-[227px] hidden border-l-2 border-dashed border-tracejado @[44rem]:block");
-    expect(html).toContain("relative -mx-6 border-t-2 border-dashed border-tracejado @[44rem]:hidden");
+    expect(html).toContain("left-[160px] hidden border-l-2 border-dashed border-tracejado @[44rem]:block");
+    expect(html).toContain("relative -mx-4 border-t-2 border-dashed border-tracejado @[44rem]:hidden");
     expect(html.match(/rounded-full border border-borda bg-fundo/g)).toHaveLength(4);
   });
 
   it("os outros separadores são fio sólido de 1px e os valores usam tabular-nums", () => {
-    expect(html).toContain("border-t border-borda pt-4");
-    // As ações ficam depois do picote no cartão largo: a linha tracejada não atravessa os botões.
-    expect(html).toContain("border-t border-borda pt-4 @[44rem]:ml-[216px]");
-    expect(html).toContain("break-all text-[22px] font-semibold tabular-nums");
+    expect(html).toContain("border-t border-borda pt-3 @[44rem]:border-t-0 @[44rem]:pt-0");
+    // As ações ficam na coluna da direita, depois do picote: a linha tracejada não atravessa os botões.
+    expect(html).toContain("@[44rem]:flex-col @[44rem]:items-stretch");
+    expect(html).toContain("break-all text-[18px] font-semibold tabular-nums");
   });
 
   it("o picote é decorativo (aria-hidden) e o título segue sendo o nome do cartão", () => {

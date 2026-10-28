@@ -28,21 +28,23 @@ export interface FaixaBaseProps {
   tone: FaixaTone;
   title: string;
   sub?: string | null;
+  /** Versão baixa para listas (Meus arremates): menos respiro e título de 16px. */
+  compacto?: boolean;
 }
 
 /**
  * Faixa de situação da Sala (DESIGN 4.11): `rounded-xl`, padding 14px 16px, ícone, título de 18 a 22px/800 e o contador ou a frase de apoio.
  * Os textos são os de sempre; só o desenho muda. Vive dentro de uma região `aria-live` do painel.
  */
-export function FaixaBase({ tone, title, sub }: FaixaBaseProps) {
+export function FaixaBase({ tone, title, sub, compacto = false }: FaixaBaseProps) {
   return (
-    <div className={`flex items-start gap-3 rounded-xl border px-4 py-[14px] ${TONE[tone]}`}>
+    <div className={`flex items-start gap-3 rounded-xl border ${compacto ? "px-3 py-2" : "px-4 py-[14px]"} ${TONE[tone]}`}>
       <Glyph tone={tone} />
       <div className="min-w-0">
-        <p className="font-extrabold uppercase leading-tight [overflow-wrap:anywhere]" style={{ fontSize: "clamp(18px, 3.2vw, 22px)" }}>
+        <p className="font-extrabold uppercase leading-tight [overflow-wrap:anywhere]" style={{ fontSize: compacto ? 16 : "clamp(18px, 3.2vw, 22px)" }}>
           {title}
         </p>
-        {sub ? <p className="mt-1 text-[13px]">{sub}</p> : null}
+        {sub ? <p className={`${compacto ? "mt-0.5" : "mt-1"} text-[13px]`}>{sub}</p> : null}
       </div>
     </div>
   );
