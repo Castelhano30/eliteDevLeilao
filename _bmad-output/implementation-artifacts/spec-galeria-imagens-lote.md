@@ -2,7 +2,7 @@
 title: 'Galeria de imagens do lote: URL ou fotos do aparelho'
 type: 'feature'
 created: '2026-10-28'
-status: 'ready-for-dev'
+status: 'done'
 baseline_commit: '21132de8af7311d5686bcd91536b5f45c50dfaf0'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -102,18 +102,18 @@ context: []
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `packages/shared/src/lots.ts` -- constantes de upload e de redução, textos novos (`LOT_TEXT`), `gallery` em `LotStateCar` -- contrato único para web e API, com teste de varredura de voz.
-- [ ] `apps/api/prisma/schema.prisma` e nova migração -- `ItemImage`, `Item.imageCount`, cópia da imagem antiga com checagem de contagem e remoção das colunas antigas -- lotes antigos preservados.
-- [ ] `apps/api/src/infra/image-sniff.ts` -- função pura que devolve o tipo pelos bytes (JPEG, PNG, WebP) ou `null` -- recusa por conteúdo, nunca por cabeçalho.
-- [ ] `apps/api/src/middleware/lot-upload.ts` + `routes/lots.ts` -- lê o multipart (`payload` + `images`) após auth, papel e limitador, aplica limites e mapeia falhas ao envelope; JSON passa direto -- um só `POST /lots`.
-- [ ] `apps/api/src/services/lot.service.ts` e `lot-mappers.ts` -- gravar as imagens na transação do lote, exclusividade URL/fotos, crédito `null` com fotos, `gallery`, capa por `imageCount`, leitura por posição -- sem órfão.
-- [ ] `apps/api/src/routes/lots.ts`, `receipt.service.ts`, `seed/showcase.ts` -- `GET /items/:id/images/:position`, `/items/:id/image` como posição 0, comprovante e seed no novo modelo -- sem regressão.
-- [ ] `apps/web/src/lib/image-resize.ts` -- redução em canvas, uma foto por vez, com a conta das dimensões em função pura -- foto de celular sem recusa.
-- [ ] `apps/web/src/lib/api-client.ts`, `lib/lots.ts` -- envio `FormData` e `blob:` em `assetUrl`.
-- [ ] `apps/web/src/components/criar-lote-form.tsx` (e componente de fotos) -- seletor de modo, `<input type="file" accept="image/jpeg,image/png,image/webp" multiple>` sem `capture`, miniaturas com Tornar capa e Remover, diálogo de troca, `images` em `FIELD_ORDER`, limpeza dos `blob:` ao remover e ao sair.
-- [ ] `apps/web/src/components/lots/car-gallery.tsx` e `sala.tsx` -- galeria com destaque 16:9 `contain`, miniaturas em grade de até 5 colunas (≥ 44 px a 320 px), setas, teclado, região viva, `alt` "Foto N de M do {título}"; só com `gallery.length > 1`.
+- [x] `packages/shared/src/lots.ts` -- constantes de upload e de redução, textos novos (`LOT_TEXT`), `gallery` em `LotStateCar` -- contrato único para web e API, com teste de varredura de voz.
+- [x] `apps/api/prisma/schema.prisma` e nova migração -- `ItemImage`, `Item.imageCount`, cópia da imagem antiga com checagem de contagem e remoção das colunas antigas -- lotes antigos preservados.
+- [x] `apps/api/src/infra/image-sniff.ts` -- função pura que devolve o tipo pelos bytes (JPEG, PNG, WebP) ou `null` -- recusa por conteúdo, nunca por cabeçalho.
+- [x] `apps/api/src/middleware/lot-upload.ts` + `routes/lots.ts` -- lê o multipart (`payload` + `images`) após auth, papel e limitador, aplica limites e mapeia falhas ao envelope; JSON passa direto -- um só `POST /lots`.
+- [x] `apps/api/src/services/lot.service.ts` e `lot-mappers.ts` -- gravar as imagens na transação do lote, exclusividade URL/fotos, crédito `null` com fotos, `gallery`, capa por `imageCount`, leitura por posição -- sem órfão.
+- [x] `apps/api/src/routes/lots.ts`, `receipt.service.ts`, `seed/showcase.ts` -- `GET /items/:id/images/:position`, `/items/:id/image` como posição 0, comprovante e seed no novo modelo -- sem regressão.
+- [x] `apps/web/src/lib/image-resize.ts` -- redução em canvas, uma foto por vez, com a conta das dimensões em função pura -- foto de celular sem recusa.
+- [x] `apps/web/src/lib/api-client.ts`, `lib/lots.ts` -- envio `FormData` e `blob:` em `assetUrl`.
+- [x] `apps/web/src/components/criar-lote-form.tsx` (e componente de fotos) -- seletor de modo, `<input type="file" accept="image/jpeg,image/png,image/webp" multiple>` sem `capture`, miniaturas com Tornar capa e Remover, diálogo de troca, `images` em `FIELD_ORDER`, limpeza dos `blob:` ao remover e ao sair.
+- [x] `apps/web/src/components/lots/car-gallery.tsx` e `sala.tsx` -- galeria com destaque 16:9 `contain`, miniaturas em grade de até 5 colunas (≥ 44 px a 320 px), setas, teclado, região viva, `alt` "Foto N de M do {título}"; só com `gallery.length > 1`.
 - [ ] Testes -- shared (constantes e textos), API (matriz acima, migração com dado antigo, `select` sem blob, atomicidade, rate limit, dono), web (redução, estado do formulário, galeria e teclado), fixtures.
-- [ ] `_bmad-output/progresso.md` -- diário de cada passo.
+- [x] `_bmad-output/progresso.md` -- diário de cada passo.
 
 **Acceptance Criteria:**
 - Given um banco com lotes criados antes da migração, when ela roda, then cada lote com imagem passa a ter `imageCount = 1` e uma linha `ItemImage` na posição 0 com os mesmos bytes e o mesmo tipo; lotes sem imagem ficam com `imageCount = 0`; se as contagens divergirem a migração falha sem apagar nada.
@@ -129,6 +129,42 @@ context: []
 ## Spec Change Log
 
 ## Review Triage Log
+
+Rodada 1 (3 camadas: Blind Hunter, Edge Case Hunter, Verification Gap). Rota: patch = corrigido pelo implementador; defer = `deferred-work.md`; rejeitado = sem ação.
+
+| Achado | Veredito | Rota | Evidência |
+|---|---|---|---|
+| Rota `/images/:position` aceita `00`, `01`, `001` (URLs duplicadas com cache imutável) | low | patch | Regex `^\d{1,3}$` + `Number()`; correção direta para `^[0-4]$`. |
+| `gallery[0]` é `/images/0` e `imageUrl` é `/image` (Code Map: `gallery[0] === imageUrl`) | low | patch | Desvio do Code Map; a posição 0 da galeria passa a ser o caminho da capa. |
+| `key={message}` repete com recusas de mesmo texto | low | patch | Duas fotos recusadas pelo mesmo motivo geram chave duplicada. |
+| `clear()`/desmontar durante `add()` deixa fotos fantasma e `blob:` sem soltar | medium | patch | `add()` não confere se o modo mudou ou a tela saiu antes de criar os `blob:`. |
+| Envio durante a redução (`busy`) manda menos fotos ou mostra "Escolha ao menos uma foto" | medium | patch | `onSubmit` olha só `photos.length`. |
+| Corpo do diálogo de descarte fixo no JSX (INV-17) | low | patch | Título e botões vêm de `LOT_TEXT`; o corpo não. |
+| Sala sem teste da troca `CarGallery` × `CarPhoto` | medium | patch | `Sala` não é renderizada em teste algum; condição trocada por `false` não quebra nada. |
+| Fluxo "Enviar fotos" do formulário sem teste (corpo, multipart × JSON, `imagesRequired`) | medium | patch | Só os helpers têm teste; `buildBody` sem `imageUrl` no modo upload não é conferido. |
+| `CarGallery`: navegação só testada no HTML inicial | medium | patch | Sem DOM no Vitest do web: extrair a transição de estado como função pura. |
+| Comprovante com foto sem teste (`imageCount > 0`) | medium | patch | Único teste de comprovante usa lote sem imagem. |
+| Migração derruba `imageData`/`imageMime` com a instância antiga ainda no ar (deploy) | medium | defer | A migração única e atômica é decisão congelada; o risco é operacional (janela curta no deploy). Avisar o Felipe antes do deploy. |
+| Reenvio após timeout pode duplicar o lote (sem chave de idempotência) | low | defer | Vale igual para o `POST /lots` JSON de hoje; não nasce desta mudança. |
+| Miniaturas baixam a foto inteira (sem variante pequena) | low | defer | O spec não prevê variantes; até 5 fotos de ≤ 4 MB, `lazy` nas fora da vista. |
+| Teto por contagem de bytes e `DRAIN_CAP` do multipart sem teste (corpo chunked) | low | defer | O teto por `Content-Length` e os limites do busboy têm teste; o contador é defesa adicional. |
+| Timeout de 60 s do `FormData` sem teste | low | defer | Linha única; risco baixo. |
+| Ramo `options.images` do seed e `uploadErrors` do service sem teste direto | low | defer | O fixture não tem foto e o middleware já barra no HTTP; testar quando o fixture ganhar foto. |
+| `useLotPhotos` sem teste de hook | low | defer | Sem jsdom/RTL e sem dependência nova permitida; a lógica da época fica coberta pela função pura onde couber. |
+| Foto/URL sem checagem de decodificação nem dimensões no servidor; EXIF só removido no navegador | — | rejeitado (false) | Intenção congelada: a API valida tipo (bytes), tamanho e quantidade; o leiloeiro é autenticado. |
+| `fileCount` conta partes que não são `images` | low | rejeitado | Cliente honesto nunca manda; o limite `files` do busboy também conta e a correção não resolve sozinha. |
+| `partsLimit`/`fieldsLimit` com mensagem diferente de "máximo 5 fotos" | low | rejeitado | Cosmético em abuso; fora do uso normal. |
+| `fail()` deixa chunks em memória até o GC | low | rejeitado | Liberados com a requisição; sem dano demonstrado. |
+| CHECK de `position`/`imageCount`/`mime` no banco | low | rejeitado | Só o service escreve; acrescentaria complexidade fora do spec. |
+| Mensagens dizem "4 MB"/"20 MB" e o limite é MiB | — | rejeitado (false) | Texto canônico do spec/matriz. |
+| Foto enviada ignora `imageCredit` do cliente sem erro | — | rejeitado (false) | Spec: "Foto enviada grava crédito `null`". |
+| URL → Enviar descarta URL e crédito sem confirmar | — | rejeitado (false) | Matriz: "Descarta o outro lado sem avisar" (só com fotos há diálogo). |
+| `alt` da foto e região viva anunciam duas vezes | — | rejeitado (false) | O spec pede os dois (`alt` e região viva). |
+| Sem `roving tabindex` nas miniaturas | low | rejeitado | Spec pede miniaturas clicáveis e Enter/Espaço; seta troca a foto. |
+| `CarGallery` com `gallery.length` 0 | — | rejeitado (false) | Só a `Sala` a usa e só com mais de uma foto. |
+| `crypto.randomUUID` indefinido em http fora de localhost | low | rejeitado | Produção é https; só afeta teste por IP na rede local. |
+| `UploadedImage` importado de `middleware` pelo service | low | rejeitado | Sem dano nomeado; mover tipo é refatoração fora do escopo. |
+| Teste da migração derruba bancos `lanceauto_mig_%` | low | rejeitado | Banco de teste dedicado, `fileParallelism: false`. |
 
 ## Design Notes
 

@@ -170,3 +170,17 @@
   summary: O selo "+2 MIN" do Cronômetro, no tamanho cartão, cobre parte do rótulo "ÚLTIMOS 2 MIN".
   evidence: `SeloProrrogacao` (`right -14`, `top -14`) sai da caixa do relógio; no cartão a caixa tem ~125 px e o rótulo ocupa quase toda a largura, então o selo (~82 px) cobre uns 58 px dele. Visto em `.tmp/repag/etapa3/cartao-prorrogado-noite.png`. Já era assim antes da repaginação.
   resolved: Repaginação Rev. 05, etapa 7: o `SeloProrrogacao` entrou no fluxo do cronômetro, na linha dos dígitos e à direita deles (sem `position: absolute`); se a linha não couber, desce para baixo dos dígitos e nunca toca o rótulo (`cronometro.test.tsx`, medido no Chrome em 320 px).
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-galeria-imagens-lote.md`
+  summary: A migração `20261028120000_item_images` apaga `imageData`/`imageMime` enquanto a instância antiga da API ainda pode estar no ar durante o deploy.
+  evidence: Lista, estado e imagem do lote da instância antiga leem `imageMime`; entre a migração e a troca de instância dão erro. Decisão congelada do spec (migração única e atômica); só o risco operacional foi levantado na revisão. Antes do deploy, conferir se a migração roda antes da troca de instâncias (preDeploy) ou aceitar a janela curta.
+  alvo: Felipe (decidir no deploy)
+- source_spec: `_bmad-output/implementation-artifacts/spec-galeria-imagens-lote.md`
+  summary: `POST /lots` (JSON e multipart) não tem chave de idempotência: reenviar depois de um timeout em que o servidor já gravou cria lote duplicado.
+  evidence: O cliente aborta aos 20 s (JSON) ou 60 s (fotos) e oferece "Tentar de novo"; o lote pode já existir. Já era assim antes da galeria.
+- source_spec: `_bmad-output/implementation-artifacts/spec-galeria-imagens-lote.md`
+  summary: As miniaturas da galeria baixam a foto inteira (até 4 MB cada); não há variante pequena.
+  evidence: `CarGallery` usa `/items/:id/images/N` no destaque e nas miniaturas. Em rede lenta o primeiro desenho carrega até 5 fotos. Variante reduzida exigiria nova decisão de produto.
+- source_spec: `_bmad-output/implementation-artifacts/spec-galeria-imagens-lote.md`
+  summary: Faltam testes do contador de bytes do multipart sem `Content-Length` (`BODY_CAP_BYTES` e `DRAIN_CAP_BYTES`), do prazo de 60 s do `apiPostForm`, do ramo `options.images`/`uploadErrors` do service e do hook `useLotPhotos`.
+  evidence: Verification Gap: removendo o contador de `data` o teste do 413 por `Content-Length` continua passando. O Vitest do web não tem jsdom/RTL; o fixture do seed não tem foto.
