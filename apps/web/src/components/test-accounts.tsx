@@ -2,6 +2,7 @@
 
 import type { Role } from "@lanceauto/shared";
 import { ROLE_LABEL } from "@lanceauto/shared";
+import { Notice } from "@/components/ui/notice";
 
 const TEST_PASSWORD = "lance1234";
 
@@ -22,6 +23,7 @@ export interface TestAccountsProps {
 export function TestAccounts({ email, onPick }: TestAccountsProps) {
   return (
     <section aria-labelledby="titulo-contas-teste" className="mt-10">
+      <Notice kind="info" role="none">
       <h2 id="titulo-contas-teste" className="t-mono-rotulo mb-2">
         Contas de teste
       </h2>
@@ -35,17 +37,24 @@ export function TestAccounts({ email, onPick }: TestAccountsProps) {
                 type="button"
                 aria-pressed={selected}
                 onClick={() => onPick({ email: account.email, password: TEST_PASSWORD })}
-                className={`block w-full min-h-alvo rounded-nenhum border-[3px] border-linha px-4 py-3 text-left focus-visible:outline-[3px] focus-visible:outline-offset-[3px] focus-visible:outline-tinta ${
-                  selected ? "bg-ocre text-sobreOcre shadow-botao" : "bg-papel text-tinta"
+                className={`relative block w-full min-h-alvo rounded-xl border bg-papel px-4 py-3 text-left text-tinta hover:border-tinta2 ${
+                  selected ? "border-ocre" : "border-borda"
                 }`}
               >
-                <span className="t-cartaz-subtitulo block">{`${ROLE_LABEL[account.role]} · ${account.name}`}</span>
-                <span className={`t-mono-dado block ${selected ? "!text-sobreOcre" : ""}`}>{account.email}</span>
+                {selected ? (
+                  <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="absolute right-3 top-3 text-ocreTexto">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="m8 12.5 3 3 5-6" />
+                  </svg>
+                ) : null}
+                <span className="block pr-8 text-[16px] font-extrabold leading-tight">{`${ROLE_LABEL[account.role]} · ${account.name}`}</span>
+                <span className="t-mono-dado block text-tinta2">{account.email}</span>
               </button>
             </li>
           );
         })}
       </ul>
+      </Notice>
     </section>
   );
 }

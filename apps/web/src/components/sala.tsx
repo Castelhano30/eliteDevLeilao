@@ -186,12 +186,12 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
               ["Ano", String(car.year)],
               ["Combustível", car.fuel || "—"],
             ].map(([label, value]) => (
-              <div key={label} className="border-t-2 border-dashed border-tracejado pt-2">
+              <div key={label} className="border-t border-borda pt-2">
                 <dt className="t-mono-rotulo">{label}</dt>
                 <dd className="t-body mt-1">{value}</dd>
               </div>
             ))}
-            <div className="border-t-2 border-dashed border-tracejado pt-2">
+            <div className="border-t border-borda pt-2">
               <dt className="t-mono-rotulo">Preço de referência</dt>
               <dd className="mt-1 text-[18px] font-bold leading-[1.3]">{formatBRL(car.referencePriceCents)}</dd>
             </div>

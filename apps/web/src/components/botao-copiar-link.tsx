@@ -58,7 +58,7 @@ export function BotaoCopiarLink({ token, lotNumber, ariaLabel, className = "" }:
           value={url}
           aria-label="Link do comprovante"
           onFocus={(event) => event.currentTarget.select()}
-          className="mt-3 h-12 w-full rounded-nenhum border-2 border-linha bg-fundo px-3 text-[14px] text-tinta"
+          className="mt-3 h-12 w-full rounded-xl border border-linha bg-papel px-3 text-[14px] text-tinta focus-visible:border-foco"
         />
       ) : null}
       {/* A mensagem do botão não é lida sozinha quando troca; esta região a anuncia uma vez. */}

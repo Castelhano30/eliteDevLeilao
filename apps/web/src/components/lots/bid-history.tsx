@@ -22,7 +22,7 @@ export function BidHistory({ bids, myPseudonym }: BidHistoryProps) {
   return (
     <section aria-labelledby="historico-lances">
       <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 id="historico-lances" className="t-cartaz-subtitulo">
+        <h2 id="historico-lances" className="text-[20px] font-extrabold leading-tight">
           Histórico de lances
         </h2>
         <span className="t-mono-dado">{bidCountLabel(bids.length)}</span>

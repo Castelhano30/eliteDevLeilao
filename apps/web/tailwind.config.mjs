@@ -57,7 +57,6 @@ const config = {
         rotuloNotaPainel: "var(--f-rotulo-nota-painel)",
       },
       borderRadius: {
-        nenhum: "0",
         placa: "3px",
         "logo-interno": "6px",
         "logo-tela": "7px",

@@ -233,8 +233,8 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
                 Nenhum lote publicado por enquanto.
               </FeedbackState>
             ) : data.lots.length === 0 ? (
-              <div className="t-body border-2 border-dashed border-tracejado bg-papel p-6 text-tinta2" role="status">
-                <p className="t-cartaz-subtitulo text-tinta">Pátio vazio</p>
+              <div className="t-body rounded-xl border border-borda bg-suave p-6 text-tinta2" role="status">
+                <p className="text-[20px] font-extrabold leading-tight text-tinta">Pátio vazio</p>
                 <p className="mt-2">Nada com esse filtro. Afrouxe a busca ou volte quando o leiloeiro acordar.</p>
                 <div className="mt-4">
                   <Button onClick={clear}>Limpar filtros</Button>
