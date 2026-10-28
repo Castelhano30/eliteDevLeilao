@@ -246,8 +246,8 @@ export function Vitrine({ initialServerTime }: { initialServerTime?: string }) {
       </div>
 
       <footer className="t-body-nota mt-8 border-t border-borda pt-6">
-        <p>Lotes cancelados não aparecem aqui. Nem em sonho.</p>
-        <p className="t-mono-rotulo mt-2">Preços de referência: Tabela FIPE · saldo 100% simulado</p>
+        <p>Lotes cancelados não aparecem aqui.</p>
+        <p className="t-mono-rotulo mt-2">Preços de referência: Tabela FIPE</p>
       </footer>
     </div>
   );
