@@ -473,3 +473,10 @@ dialog::backdrop {
     color: var(--c-tinta2);
   }
 }
+
+/* ---------- Contador do lance em tela estreita ----------
+   Seis dígitos (R$ 142.500) pedem ~303px; o painel de 360px de tela dá 296px e o de 320px, 256px, e o ",00" caía para a linha de baixo.
+   O contador não muda: quem o envolve reduz a escala só quando o painel é mais estreito que ele. */
+.placa-escala { container-type: inline-size; }
+@container (max-width: 304px) { .placa-escala > * { zoom: 0.95; } }
+@container (max-width: 280px) { .placa-escala > * { zoom: 0.82; } }

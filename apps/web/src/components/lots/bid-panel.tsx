@@ -85,7 +85,7 @@ export function BidPanel({ id, state, viewer, authLoading, blockReason }: BidPan
   }
 
   return (
-    <div className="space-y-6 rounded-2xl border border-borda bg-papel p-6 shadow-cartao">
+    <div className="space-y-6 rounded-2xl border border-borda bg-papel p-4 shadow-cartao sm:p-6">
       <div>
         <Cronometro
           size="sala"
@@ -107,7 +107,12 @@ export function BidPanel({ id, state, viewer, authLoading, blockReason }: BidPan
         </p>
       </div>
       <div className="space-y-2">
-        <PlacaLance cents={lot.currentBidCents ?? lot.startingBidCents} label={finished && hasBid ? "LANCE FINAL" : hasBid ? "LANCE ATUAL" : "LANCE INICIAL"} />
+        {/* A escala é de quem envolve o contador (`.placa-escala` em globals.css): as placas em si não mudam. */}
+        <div className="placa-escala">
+          <div>
+            <PlacaLance cents={lot.currentBidCents ?? lot.startingBidCents} label={finished && hasBid ? "LANCE FINAL" : hasBid ? "LANCE ATUAL" : "LANCE INICIAL"} />
+          </div>
+        </div>
         <p className="t-mono-dado">{bidCountLabel(lot.bidCount)}</p>
       </div>
       <div aria-live="polite">{band}</div>

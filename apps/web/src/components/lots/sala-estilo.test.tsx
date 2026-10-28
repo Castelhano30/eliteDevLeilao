@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { BidDTO, LotState } from "@lanceauto/shared";
@@ -7,6 +9,8 @@ import { ChipLicitante } from "./chip-licitante";
 import { FaixaStatus } from "./faixa-status";
 import { PlacaLance } from "./placa-lance";
 import { PlacarPosicao } from "./placar-posicao";
+
+const css = readFileSync(path.resolve(__dirname, "../../app/globals.css"), "utf8");
 
 const NOW = "2026-10-23T12:00:00.000Z";
 const at = (offsetMs: number) => new Date(Date.parse(NOW) + offsetMs).toISOString();
@@ -123,15 +127,20 @@ describe("Histórico de lances", () => {
 });
 
 describe("Painel de lance", () => {
-  it("papel, fio borda, rounded-2xl, nível 1 e padding de 24px", () => {
+  it("papel, fio borda, rounded-2xl, nível 1 e padding de 24px (16px no celular, para o contador caber)", () => {
     const html = panel(state());
-    expect(html).toMatch(/^<div class="space-y-6 rounded-2xl border border-borda bg-papel p-6 shadow-cartao">/);
+    expect(html).toMatch(/^<div class="space-y-6 rounded-2xl border border-borda bg-papel p-4 shadow-cartao sm:p-6">/);
     expect(html).not.toMatch(/rounded-nenhum|border-\[3px\]|shadow-painel/);
   });
 
   it("as placas do lance saem idênticas às do componente isolado: o contador não muda", () => {
     const html = panel(state());
     expect(html).toContain(renderToStaticMarkup(<PlacaLance cents={1_950_000} label="LANCE ATUAL" />));
+    // Em tela estreita a escala vem de fora (`.placa-escala`), nunca do próprio contador.
+    expect(html).toContain('<div class="placa-escala"><div><div><p class="t-mono-rotulo mb-2">');
+    expect(renderToStaticMarkup(<PlacaLance cents={1_950_000} label="LANCE ATUAL" />)).not.toMatch(/zoom|scale|placa-escala/);
+    expect(css).toContain("@container (max-width: 280px) { .placa-escala > * { zoom: 0.82; } }");
+    expect(css).toContain("@container (max-width: 304px) { .placa-escala > * { zoom: 0.95; } }");
     const final = panel(state({ status: "SOLD", result: { outcome: "SOLD", finalBidCents: 1_950_000, winnerPseudonym: "Licitante 38DF", hammerAt: at(-HOUR), settledAt: at(-HOUR) } }));
     expect(final).toContain(renderToStaticMarkup(<PlacaLance cents={1_950_000} label="LANCE FINAL" />));
     expect(html).toContain("bg-painel");
