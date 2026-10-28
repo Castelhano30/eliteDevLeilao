@@ -30,16 +30,16 @@ export function BidHistory({ bids, myPseudonym }: BidHistoryProps) {
       {bids.length === 0 ? (
         <p className="t-body-nota">{BID_TEXT.noBidsYet}</p>
       ) : (
-        <ol className="space-y-2">
+        <ol>
           {bids.map((bid) => (
             <li
               key={bid.seq}
-              className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t-2 border-dashed border-tracejado pt-2"
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-borda py-3"
               style={bid.seq > baseline ? { animation: "la-entra 0.4s both, la-marca 1.7s both" } : undefined}
             >
               <span className="t-mono-dado w-12 shrink-0">Nº {bid.seq}</span>
               <ChipLicitante name={bid.pseudonym} mine={myPseudonym !== null && bid.pseudonym === myPseudonym} />
-              <span className="ml-auto text-[16px] font-bold leading-[1.3]">{formatBRL(bid.amountCents)}</span>
+              <span className="ml-auto text-[16px] font-bold leading-[1.3] tabular-nums">{formatBRL(bid.amountCents)}</span>
               <time dateTime={bid.at} className="t-mono-dado font-normal text-tinta2">
                 {clockTime(bid.at)}
               </time>

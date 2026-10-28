@@ -65,13 +65,13 @@ export function BidPanel({ id, state, viewer, authLoading, blockReason }: BidPan
 
   let action = null;
   if (hammered || finished) {
-    action = <Button variant="desabilitado" className="w-full !min-h-[64px] !text-[30px]">Lote fechado</Button>;
+    action = <Button variant="desabilitado" size="sala">Lote fechado</Button>;
   } else if (authLoading) {
     action = <p className="t-body-nota min-h-[120px]">Carregando…</p>;
   } else if (situation?.kind === "visitor") {
     action = (
       <div className="space-y-3">
-        <Link href={`/entrar?next=/lotes/${id}`} className={`${buttonClasses("primario")} w-full !min-h-[64px] !text-[30px]`}>
+        <Link href={`/entrar?next=/lotes/${id}`} className={buttonClasses("primario", false, "sala")}>
           Entre para dar lances
         </Link>
         <p className="t-body-nota">
@@ -85,7 +85,7 @@ export function BidPanel({ id, state, viewer, authLoading, blockReason }: BidPan
   }
 
   return (
-    <div className="space-y-6 rounded-nenhum border-[3px] border-linha bg-papel p-6 shadow-painel">
+    <div className="space-y-6 rounded-2xl border border-borda bg-papel p-6 shadow-cartao">
       <div>
         <Cronometro
           size="sala"

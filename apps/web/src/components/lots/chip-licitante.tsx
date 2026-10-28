@@ -5,12 +5,17 @@ export interface ChipLicitanteProps {
   mine?: boolean;
 }
 
-/** Pseudônimo do licitante no histórico (§10). */
+/** Pseudônimo do licitante no histórico (§10): pílula de fio; o meu vai em `selecionado` com `ocreTexto` e peso 700, mais a palavra VOCÊ. */
 export function ChipLicitante({ name, mine = false }: ChipLicitanteProps) {
   return (
-    <span className="t-mono inline-flex items-stretch rounded-nenhum border-2 border-tinta text-[14px] text-tinta">
-      <span className="px-2 py-[3px]">{name}</span>
-      {mine ? <span className="bg-ocre px-2 py-[3px] font-semibold text-sobreOcre">VOCÊ</span> : null}
+    <span
+      // Sem `.t-mono`: a classe `.t-*` fica fora de layer e venceria o `font-bold` do meu chip.
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-[3px] text-[14px] leading-[1.3] ${
+        mine ? "border-ocreTexto bg-selecionado font-bold text-ocreTexto" : "border-linha font-medium text-tinta"
+      }`}
+    >
+      <span>{name}</span>
+      {mine ? <span className="font-bold uppercase tracking-[0.04em]">VOCÊ</span> : null}
     </span>
   );
 }

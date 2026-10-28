@@ -181,10 +181,11 @@ describe("Stamp (tamanho)", () => {
 });
 
 describe("PlacarPosicao", () => {
-  it("tom neutro: tinta sobre fundo, só o título quando não há subtítulo", () => {
+  it("tom neutro: suave com fio, sem ícone, só o título quando não há subtítulo", () => {
     const html = renderToStaticMarkup(<PlacarPosicao tone="neutro" title="APURANDO" />);
     expect(html).toContain("APURANDO");
-    expect(html).toContain("bg-tinta");
+    expect(html).toContain("border-borda bg-suave text-tinta");
+    expect(html).not.toContain("<svg");
     expect(html).not.toContain('<p class="mt-1');
   });
 
