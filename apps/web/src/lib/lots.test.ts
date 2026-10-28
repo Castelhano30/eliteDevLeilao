@@ -87,6 +87,9 @@ describe("lotCardHref, assetUrl, safeHref e rótulos", () => {
     expect(assetUrl("https://x.test/a.png")).toBe("https://x.test/a.png");
     expect(assetUrl(null)).toBeNull();
   });
+  it("blob: (foto escolhida no aparelho) passa direto, sem prefixo da API", () => {
+    expect(assetUrl("blob:http://localhost:3000/4f1c-aa")).toBe("blob:http://localhost:3000/4f1c-aa");
+  });
   it("só http(s) vira link", () => {
     expect(safeHref("https://pt.wikipedia.org/wiki/X")).toBe("https://pt.wikipedia.org/wiki/X");
     expect(safeHref("javascript:alert(1)")).toBeNull();

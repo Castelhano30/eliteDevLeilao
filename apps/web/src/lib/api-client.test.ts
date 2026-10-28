@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiGet } from "./api-client";
+import { apiGet, apiPost, apiPostForm } from "./api-client";
 import { isServerClockSynced, resetServerClock, serverOffset } from "./server-clock";
 
 describe("apiClient e o relógio do servidor", () => {
@@ -50,5 +50,30 @@ describe("apiClient e o relógio do servidor", () => {
     vi.stubGlobal("fetch", respond("2026-10-23T12:00:02.000Z", 2_000));
     await apiGet("/lots");
     expect(serverOffset()).toBe(0);
+  });
+
+  it("apiPostForm envia o FormData cru, sem Content-Type (o navegador põe o boundary), e apiPost segue em JSON", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: 1 }), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const form = new FormData();
+    form.append("payload", "{}");
+    form.append("images", new Blob(["x"], { type: "image/jpeg" }), "foto-1.jpg");
+    const sent = await apiPostForm("/lots", form);
+    expect(sent.ok).toBe(true);
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(init.body).toBe(form);
+    expect(init.headers).not.toHaveProperty("Content-Type");
+    expect(init.headers).toHaveProperty("Accept", "application/json");
+
+    await apiPost("/lots", { a: 1 });
+    const [, json] = fetchMock.mock.calls[1] as unknown as [string, RequestInit];
+    expect(json.body).toBe(JSON.stringify({ a: 1 }));
+    expect(json.headers).toHaveProperty("Content-Type", "application/json");
+  });
+
+  it("apiPostForm nunca lança: rede caída volta como falha sem status", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new TypeError("falhou"))));
+    const result = await apiPostForm("/lots", new FormData());
+    expect(result).toMatchObject({ ok: false, status: null });
   });
 });
