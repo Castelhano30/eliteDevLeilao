@@ -83,7 +83,9 @@ describe("Comprovante: o recibo", () => {
     expect(html.match(/border-dashed border-tracejado/g)).toHaveLength(2);
     expect(html).toContain("select-all text-[14px] leading-[1.5] tabular-nums [overflow-wrap:anywhere]");
     expect(html).toContain(RECEIPT.finalHash);
-    expect(html).toContain("m-0 min-w-0 flex-1 tabular-nums [overflow-wrap:anywhere]");
+    // Base de 200px (e não `flex-1`): em tela estreita o valor desce para baixo do rótulo em vez de se espremer e partir palavras.
+    expect(html).toContain("m-0 min-w-0 flex-[1_1_200px] tabular-nums [overflow-wrap:anywhere]");
+    expect(html).toContain("flex min-w-0 flex-wrap items-center gap-x-5 gap-y-3");
   });
 
   it("o conteúdo continua o mesmo", () => {

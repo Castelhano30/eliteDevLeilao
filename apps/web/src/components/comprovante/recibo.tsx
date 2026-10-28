@@ -8,12 +8,12 @@ import { CodigoDeBarras } from "./codigo-de-barras";
 
 const BAND = "bg-papel px-4 py-[14px]";
 
-/** Linha rótulo/valor do recibo: em tela estreita o valor desce para baixo do rótulo (reflow, sem rolagem lateral). */
+/** Linha rótulo/valor do recibo: em tela estreita o valor desce para baixo do rótulo (reflow, sem rolagem lateral): a base de 200px do valor é que força a quebra de linha. */
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-wrap gap-x-4">
       <dt className="t-mono-rotulo min-w-[170px] shrink-0 pt-[6px]">{label}</dt>
-      <dd className="t-mono-recibo m-0 min-w-0 flex-1 tabular-nums [overflow-wrap:anywhere]">{children}</dd>
+      <dd className="t-mono-recibo m-0 min-w-0 flex-[1_1_200px] tabular-nums [overflow-wrap:anywhere]">{children}</dd>
     </div>
   );
 }
@@ -31,7 +31,7 @@ export function Recibo({ receipt }: { receipt: ReceiptDTO }) {
       className="mx-auto w-full max-w-[760px] overflow-hidden rounded-xl border border-borda bg-papel shadow-painel"
     >
       <div className={`${BAND} flex flex-wrap items-center justify-between gap-4`}>
-        <div className="flex min-w-0 items-center gap-5">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-3">
           <LotTag number={receipt.lotNumber} tone="papel" />
           <p className="min-w-0 text-[32px] font-bold uppercase leading-none [overflow-wrap:anywhere]">{car.title}</p>
         </div>
