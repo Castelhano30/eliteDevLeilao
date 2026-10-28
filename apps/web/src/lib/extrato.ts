@@ -1,0 +1,39 @@
+import { brasiliaParts } from "@lanceauto/shared";
+
+/** Movimentos por página do extrato: o resto fica nas páginas seguintes. */
+export const EXTRATO_POR_PAGINA = 10;
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** Dia em Brasília ("2026-10-28") de uma data ISO UTC: é o que o filtro compara, o mesmo dia que o extrato mostra. */
+export function diaDeBrasilia(iso: string): string {
+  const { year, month, day } = brasiliaParts(iso);
+  return `${year}-${pad(month)}-${pad(day)}`;
+}
+
+/** Data inicial depois da final: o filtro não tem o que mostrar e a tela avisa. */
+export function periodoInvertido(de: string, ate: string): boolean {
+  return de !== "" && ate !== "" && de > ate;
+}
+
+/** Mantém os movimentos do dia `de` ao dia `ate`, os dois inclusive. Campo vazio deixa aquele lado aberto. */
+export function filtrarPorPeriodo<T extends { createdAt: string }>(entries: readonly T[], de: string, ate: string): T[] {
+  if (de === "" && ate === "") return [...entries];
+  return entries.filter((entry) => {
+    const dia = diaDeBrasilia(entry.createdAt);
+    return (de === "" || dia >= de) && (ate === "" || dia <= ate);
+  });
+}
+
+export interface PaginaDoExtrato<T> {
+  items: T[];
+  /** Página mostrada, a partir de 0 (já limitada ao que existe). */
+  atual: number;
+  paginas: number;
+}
+
+export function paginar<T>(items: readonly T[], pagina: number, porPagina: number = EXTRATO_POR_PAGINA): PaginaDoExtrato<T> {
+  const paginas = Math.max(1, Math.ceil(items.length / porPagina));
+  const atual = Math.min(Math.max(0, pagina), paginas - 1);
+  return { items: items.slice(atual * porPagina, (atual + 1) * porPagina), atual, paginas };
+}

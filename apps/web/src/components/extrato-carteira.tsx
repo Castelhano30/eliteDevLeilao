@@ -1,0 +1,147 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { formatBRL, type LedgerEntryDto } from "@lanceauto/shared";
+import { Button, buttonClasses } from "@/components/ui/button";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { FeedbackState } from "@/components/ui/feedback-state";
+import { Field } from "@/components/ui/field";
+import { filtrarPorPeriodo, paginar, periodoInvertido } from "@/lib/extrato";
+import { describeMovement, formatWhen, lotNumberLabel } from "@/lib/format";
+
+const COLUMNS: DataTableColumn<LedgerEntryDto>[] = [
+  { key: "quando", header: "Quando", render: (row) => formatWhen(row.createdAt) },
+  {
+    key: "movimento",
+    header: "Movimento",
+    render: (row) => {
+      const { label, note } = describeMovement(row);
+      return (
+        <>
+          <span className="block text-[15px] font-bold leading-[1.3]">{label}</span>
+          {note ? <span className="t-mono-rotulo-pequeno block">{note}</span> : null}
+        </>
+      );
+    },
+  },
+  {
+    key: "lote",
+    header: "Lote",
+    render: (row) =>
+      row.lotId ? (
+        <Link href={`/lotes/${row.lotId}`} className="inline-flex min-h-alvo min-w-alvo items-center">
+          {row.lotNumber === null ? "Lote" : `Lote ${lotNumberLabel(row.lotNumber)}`}
+        </Link>
+      ) : (
+        "—"
+      ),
+  },
+  { key: "valor", header: "Valor", align: "right", render: (row) => describeMovement(row).value },
+  {
+    key: "disponivel",
+    header: "Disponível após",
+    align: "right",
+    render: (row) => formatBRL(row.totalAfterCents - row.committedAfterCents),
+  },
+];
+
+const movimentos = (n: number) => `${n} ${n === 1 ? "movimentação" : "movimentações"}`;
+
+/**
+ * Extrato da carteira: filtro por período (dia inicial e final, em horário de Brasília) e dez movimentos por página.
+ * Recebe o extrato inteiro, do mais novo para o mais antigo; quem filtra e fatia é a tela.
+ */
+export function ExtratoCarteira({ entries }: { entries: readonly LedgerEntryDto[] }) {
+  const [de, setDe] = useState("");
+  const [ate, setAte] = useState("");
+  const [page, setPage] = useState(0);
+
+  // Movimento novo no topo (um depósito, por exemplo): volta à primeira página, onde ele aparece.
+  const newest = entries[0]?.id ?? null;
+  const [seenNewest, setSeenNewest] = useState(newest);
+  if (newest !== seenNewest) {
+    setSeenNewest(newest);
+    setPage(0);
+  }
+
+  const invertido = periodoInvertido(de, ate);
+  const filtrado = filtrarPorPeriodo(entries, de, ate);
+  const { items, atual, paginas } = paginar(filtrado, page);
+  const filtrando = de !== "" || ate !== "";
+
+  const clear = () => {
+    setDe("");
+    setAte("");
+    setPage(0);
+  };
+
+  return (
+    <>
+      <div className="mb-4 flex flex-wrap items-end gap-x-4 gap-y-3">
+        <Field
+          label="De"
+          type="date"
+          value={de}
+          max={ate || undefined}
+          onChange={(event) => {
+            setDe(event.target.value);
+            setPage(0);
+          }}
+          className="w-[min(100%,180px)] flex-[0_1_180px]"
+        />
+        <Field
+          label="Até"
+          type="date"
+          value={ate}
+          min={de || undefined}
+          onChange={(event) => {
+            setAte(event.target.value);
+            setPage(0);
+          }}
+          className="w-[min(100%,180px)] flex-[0_1_180px]"
+        />
+        {filtrando ? (
+          <Button variant="secundario" onClick={clear} className="min-h-12">
+            Limpar filtro
+          </Button>
+        ) : null}
+        <p className="t-mono-dado ml-auto self-center" aria-live="polite">
+          {movimentos(filtrado.length)}
+        </p>
+      </div>
+
+      {invertido ? <p className="t-body-nota mb-3">A data inicial vem depois da final. Ajuste o período para ver o extrato.</p> : null}
+
+      {filtrado.length === 0 ? (
+        <FeedbackState variant="vazio">
+          Nenhuma movimentação neste período.
+          {filtrando ? (
+            <span className="mt-4 block">
+              <button type="button" className={buttonClasses("secundario")} onClick={clear}>
+                Limpar filtro
+              </button>
+            </span>
+          ) : null}
+        </FeedbackState>
+      ) : (
+        <>
+          <DataTable caption="Extrato da carteira" captionHidden columns={COLUMNS} rows={items} rowKey={(row) => row.id} minWidth={560} />
+          {paginas > 1 ? (
+            <nav aria-label="Páginas do extrato" className="mt-4 flex items-center justify-between gap-3">
+              <button type="button" className={buttonClasses("secundario", false, "compacto")} disabled={atual === 0} onClick={() => setPage(atual - 1)}>
+                Anterior
+              </button>
+              <span className="t-mono-dado">
+                Página {atual + 1} de {paginas}
+              </span>
+              <button type="button" className={buttonClasses("secundario", false, "compacto")} disabled={atual === paginas - 1} onClick={() => setPage(atual + 1)}>
+                Próxima
+              </button>
+            </nav>
+          ) : null}
+        </>
+      )}
+    </>
+  );
+}

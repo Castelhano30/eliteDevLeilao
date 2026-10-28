@@ -2,7 +2,7 @@
 
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AUTH_TEXT,
   DEPOSIT_AMOUNT_MESSAGE,
@@ -14,15 +14,15 @@ import {
   type WalletPageDto,
 } from "@lanceauto/shared";
 import { Button, buttonClasses } from "@/components/ui/button";
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { PageShell } from "@/components/ui/page-shell";
 import { RefusalMessage } from "@/components/ui/refusal-message";
 import { apiGet, apiPost } from "@/lib/api-client";
-import { describeMovement, formatWhen, lotNumberLabel } from "@/lib/format";
+import { lotNumberLabel } from "@/lib/format";
 import { anchorId } from "@/lib/my-bids-events";
 import { maskReais } from "@/lib/money-mask";
 import { DepositConfirmDialog } from "./deposit-confirm-dialog";
+import { ExtratoCarteira } from "./extrato-carteira";
 import { WALLET_LEDGER_KEY, WALLET_SUMMARY_KEY } from "./auth-provider";
 import { useWalletSummary } from "./balance-chip";
 import { MoneyField } from "./money-field";
@@ -126,43 +126,15 @@ export function WalletScreen() {
     );
   }
 
+  // O extrato é filtrado e paginado na tela (ExtratoCarteira): a API entrega de 50 em 50, então as páginas seguintes vêm até acabar.
+  // Falha numa delas (`isError`) para a busca; "Tentar novamente" refaz.
+  const { hasNextPage, isFetchingNextPage, isError: ledgerFailed, fetchNextPage } = ledger;
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage && !ledgerFailed) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, ledgerFailed, fetchNextPage]);
   const entries: LedgerEntryDto[] = ledger.data?.pages.flatMap((page) => page.entries) ?? [];
   const leadingLots = ledger.data?.pages[0]?.leadingLots ?? [];
   const wallet = summary.data;
-
-  const columns: DataTableColumn<LedgerEntryDto>[] = [
-    { key: "quando", header: "Quando", render: (row) => formatWhen(row.createdAt) },
-    {
-      key: "movimento",
-      header: "Movimento",
-      render: (row) => {
-        const { label, note } = describeMovement(row);
-        return (
-          <>
-            <span className="block text-[15px] font-bold leading-[1.3]">{label}</span>
-            {note ? <span className="t-mono-rotulo-pequeno block">{note}</span> : null}
-          </>
-        );
-      },
-    },
-    {
-      key: "lote",
-      header: "Lote",
-      render: (row) =>
-        row.lotId ? (
-          <Link href={`/lotes/${row.lotId}`} className="inline-flex min-h-alvo min-w-alvo items-center">{row.lotNumber === null ? "Lote" : `Lote ${lotNumberLabel(row.lotNumber)}`}</Link>
-        ) : (
-          "—"
-        ),
-    },
-    { key: "valor", header: "Valor", align: "right", render: (row) => describeMovement(row).value },
-    {
-      key: "disponivel",
-      header: "Disponível após",
-      align: "right",
-      render: (row) => formatBRL(row.totalAfterCents - row.committedAfterCents),
-    },
-  ];
 
   return (
     <PageShell>
@@ -266,23 +238,7 @@ export function WalletScreen() {
         ) : entries.length === 0 ? (
           <FeedbackState variant="vazio">Nenhuma movimentação ainda.</FeedbackState>
         ) : (
-          <>
-            <DataTable
-              caption="Extrato da carteira"
-              captionHidden
-              columns={columns}
-              rows={entries}
-              rowKey={(row) => row.id}
-              minWidth={560}
-            />
-            {ledger.hasNextPage ? (
-              <div className="mt-4">
-                <Button loading={ledger.isFetchingNextPage} loadingText="Carregando…" onClick={() => void ledger.fetchNextPage()}>
-                  Ver mais
-                </Button>
-              </div>
-            ) : null}
-          </>
+          <ExtratoCarteira entries={entries} />
         )}
       </section>
     </PageShell>
