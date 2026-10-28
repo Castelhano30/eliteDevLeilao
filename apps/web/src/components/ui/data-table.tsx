@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 export interface DataTableColumn<Row> {
   key: string;
   header: string;
-  /** Valores numéricos e de dinheiro ficam à direita. */
+  /** Valores numéricos e de dinheiro ficam à direita, em `tabular-nums`. */
   align?: "left" | "right";
   render: (row: Row) => ReactNode;
 }
@@ -18,40 +18,33 @@ export interface DataTableProps<Row> {
   rowKey: (row: Row) => string;
   /** `min-width` da tabela, em px (560 a 780). */
   minWidth?: number;
-  /** Realce por linha: borda esquerda de 6 px e fundo (a Auditoria usa para o veredito de cada linha). */
+  /** Realce por linha: faixa de 4px à esquerda e fundo (a Auditoria usa para o veredito de cada linha). */
   rowAccent?: (row: Row) => RowAccent | undefined;
 }
 
 export interface RowAccent {
-  /** Cor da borda esquerda, como valor CSS (`var(--c-verde)`). */
+  /** Cor da faixa esquerda, como valor CSS (`var(--c-verde)`). */
   borderColor: string;
   background?: string;
 }
 
-function edge(index: number, total: number): string {
-  if (index === 0) return "pl-5 pr-2";
-  if (index === total - 1) return "pl-2 pr-5";
-  return "px-2";
-}
-
-/** Tabela com legenda e `th scope="col"`; a rolagem horizontal fica só dentro do contêiner. */
+/**
+ * Tabela (DESIGN 4.8): a região rolável é o próprio cartão (`papel`, fio `borda`, `rounded-xl`, nível 1), focável e com nome.
+ * Cabeçalho `suave` com 12px/700 em caixa-alta, linhas de fio de 1px com 14px 16px de respiro e `th scope="col"`.
+ * `relative` prende o `sr-only` da legenda dentro da região: sem ele a legenda escapava do recorte e alargava a página.
+ */
 export function DataTable<Row>({ caption, captionHidden = false, columns, rows, rowKey, minWidth = 560, rowAccent }: DataTableProps<Row>) {
   return (
-    <div role="region" tabIndex={0} aria-label={caption} className="overflow-x-auto pb-2 pr-2">
-      <table
-        className="w-full border-collapse rounded-nenhum border-[3px] border-linha bg-papel shadow-cartao"
-        style={{ minWidth }}
-      >
-        <caption className={captionHidden ? "sr-only" : "t-cartaz-subtitulo mb-3 text-left"}>{caption}</caption>
+    <div role="region" tabIndex={0} aria-label={caption} className="relative overflow-x-auto rounded-xl border border-borda bg-papel shadow-cartao">
+      <table className="w-full border-collapse" style={{ minWidth }}>
+        <caption className={captionHidden ? "sr-only" : "px-4 py-3 text-left text-[16px] font-extrabold"}>{caption}</caption>
         <thead>
-          <tr className="border-b-[3px] border-linha">
-            {columns.map((column, index) => (
+          <tr className="bg-suave">
+            {columns.map((column) => (
               <th
                 key={column.key}
                 scope="col"
-                className={`py-3 text-[11px] font-medium uppercase tracking-[0.06em] text-tinta2 ${
-                  column.align === "right" ? "text-right" : "text-left"
-                } ${edge(index, columns.length)}`}
+                className={`px-4 py-3 text-[12px] font-bold uppercase tracking-[0.06em] text-tinta2 ${column.align === "right" ? "text-right" : "text-left"}`}
               >
                 {column.header}
               </th>
@@ -62,17 +55,13 @@ export function DataTable<Row>({ caption, captionHidden = false, columns, rows, 
           {rows.map((row) => {
             const accent = rowAccent?.(row);
             return (
-              <tr
-                key={rowKey(row)}
-                className="border-t-2 border-dashed border-tracejado first:border-t-0"
-                style={accent ? { background: accent.background } : undefined}
-              >
+              <tr key={rowKey(row)} className="border-t border-borda" style={accent ? { background: accent.background } : undefined}>
                 {columns.map((column, index) => (
                   <td
                     key={column.key}
-                    className={`py-[14px] ${column.align === "right" ? "text-right" : "text-left"} ${edge(index, columns.length)}`}
-                    // A borda esquerda de 6 px é uma sombra interna: a borda de <tr> não é confiável com border-collapse.
-                    style={accent && index === 0 ? { boxShadow: `inset 6px 0 0 ${accent.borderColor}` } : undefined}
+                    className={`px-4 py-[14px] ${column.align === "right" ? "text-right tabular-nums" : "text-left"}`}
+                    // A faixa esquerda de 4px é uma sombra interna: a borda de <tr> não é confiável com border-collapse.
+                    style={accent && index === 0 ? { boxShadow: `inset 4px 0 0 ${accent.borderColor}` } : undefined}
                   >
                     {column.render(row)}
                   </td>

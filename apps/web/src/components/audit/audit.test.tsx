@@ -121,8 +121,8 @@ describe("AuditTable (S08 §9)", () => {
     const brokenStatus = [...html.matchAll(/<td[^>]*>((?:(?!<\/td>).)*ELO QUEBRADO(?:(?!<\/td>).)*)<\/td>/g)].map((m) => m[1]);
     expect(brokenStatus).toHaveLength(2);
     for (const cell of brokenStatus) expect(cell).not.toContain("opacity");
-    expect(html).toContain("inset 6px 0 0 var(--c-ferrugem)");
-    expect(html).toContain("inset 6px 0 0 var(--c-verde)");
+    expect(html).toContain("inset 4px 0 0 var(--c-ferrugem)");
+    expect(html).toContain("inset 4px 0 0 var(--c-verde)");
     expect(html).not.toMatch(/original|esperado|corresponde/i);
   });
 

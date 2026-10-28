@@ -12,6 +12,7 @@ import { ConnectionBanner } from "@/components/connection-banner";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { FeedbackState } from "@/components/ui/feedback-state";
+import { Notice } from "@/components/ui/notice";
 import { PageShell } from "@/components/ui/page-shell";
 import { apiGet } from "@/lib/api-client";
 import { receivedLabel } from "@/lib/ended-card";
@@ -67,7 +68,7 @@ const carLabel = (lot: LotCardDto) => `${lot.brand} ${lot.model} ${lot.year}`;
 function LotLink({ lot }: { lot: LotCardDto }) {
   return (
     <span className="flex items-center gap-3">
-      <span className="t-mono-dado shrink-0 border-2 border-linha bg-ocre px-2 py-1 text-sobreOcre">{formatLotNumber(lot.number)}</span>
+      <span className="t-mono-dado shrink-0 rounded-md bg-ocre px-2 py-1 text-sobreOcre">{formatLotNumber(lot.number)}</span>
       <Link href={`/lotes/${lot.id}`} className="text-[16px] font-bold leading-[1.45]">
         {lot.title}
       </Link>
@@ -119,7 +120,7 @@ function AuditLink({ lot }: { lot: LotCardDto }) {
 
 function Counter({ label, value, alert = false }: { label: string; value: number; alert?: boolean }) {
   return (
-    <div className="flex min-w-[150px] flex-1 flex-col justify-between border-2 border-linha bg-painel px-4 py-3">
+    <div className="flex min-w-[150px] flex-1 flex-col justify-between rounded-xl border border-linha bg-painel px-4 py-3">
       <p className="t-mono-rotulo-pequeno" style={{ color: "var(--f-rotulo-relogio)" }}>
         {label}
       </p>
@@ -207,14 +208,16 @@ export function PainelScreen() {
       </div>
 
       {notice ? (
-        <FeedbackState variant="vazio" className="mt-8">
+        <Notice kind="info" className="mt-8">
           {notice}
-        </FeedbackState>
+        </Notice>
       ) : null}
       {/* Região viva sempre presente: o aviso do cancelamento é anunciado quando o texto entra (S06 §9.1). */}
       <div role="status" aria-live="polite" className="empty:hidden">
         {cancel.announce ? (
-          <p className="t-body mt-8 border-[3px] border-dashed border-tracejado bg-papel p-6 text-tinta">{cancel.announce}</p>
+          <Notice kind="info" role="none" className="mt-8">
+            {cancel.announce}
+          </Notice>
         ) : null}
       </div>
       {cancel.notice ? (
@@ -241,7 +244,7 @@ export function PainelScreen() {
             </FeedbackState>
           ) : null}
           <section aria-label="Resumo" className="mt-8 flex flex-wrap gap-6">
-            <div className="min-w-0 basis-[260px] flex-[2] border-2 border-linha bg-papel p-5 shadow-cartao">
+            <div className="min-w-0 basis-[260px] flex-[2] rounded-2xl border border-borda bg-papel p-5 shadow-cartao">
               <p className="t-mono-rotulo">{receivedLabel(sold)}</p>
               <p className="mt-2 text-[28px] break-all font-extrabold">{formatBRL(data.totalReceivedCents)}</p>
               <p className="t-body-nota mt-2">Saldo simulado. O pátio agradece mesmo assim.</p>

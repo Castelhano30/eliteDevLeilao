@@ -131,7 +131,7 @@ export function WalletScreen() {
         const { label, note } = describeMovement(row);
         return (
           <>
-            <span className="t-cartaz-subtitulo block">{label}</span>
+            <span className="block text-[15px] font-bold leading-[1.3]">{label}</span>
             {note ? <span className="t-mono-rotulo-pequeno block">{note}</span> : null}
           </>
         );
