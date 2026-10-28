@@ -103,7 +103,7 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
       {/* Faixa própria: a etiqueta fica fora da foto e o carimbo/chip de data ao lado dela, sem cobrir nada. */}
       <div className="flex flex-wrap items-start justify-between gap-x-3 px-4 pt-1">
         <LotTag number={preview ? "NOVO" : card.number} tone={ended ? "papel" : "ocre"} rotate={ROTATE[status]} size="compacto" />
-        {live && status === "LIVE" ? <Stamp variant="ao-vivo" size="pequeno" className="mr-1 mt-4 bg-papel" /> : null}
+        {live && status === "LIVE" ? <Stamp variant="ao-vivo" size="pequeno" className="mr-1 mt-4" /> : null}
         {status === "SCHEDULED" ? (
           <span className="t-mono mt-4 border-2 border-linha bg-papel px-2 py-1 text-[12px]">
             {validStart ? opensLabel(card.startsAt) : "ABRE —"}
@@ -114,7 +114,7 @@ export function LotCard({ card, serverTime, preview = false, emptyNote, resultad
         <CarPhoto imageUrl={card.imageUrl} title={card.title} size="cartao" dimmed={ended} noReferrer={preview} />
         {ended ? (
           <span className="absolute inset-0 flex items-center justify-center">
-            <Stamp variant={status === "SOLD" ? "arrematado" : "sem-lances"} size="pequeno" className="max-w-[calc(100%-24px)] justify-center bg-papel" />
+            <Stamp variant={status === "SOLD" ? "arrematado" : "sem-lances"} size="pequeno" className="max-w-[calc(100%-24px)]" />
           </span>
         ) : null}
       </div>

@@ -4,7 +4,7 @@ const CHAMFER_INNER = "polygon(17px 0, 100% 0, 100% 100%, 17px 100%, 0 calc(100%
 export interface LotTagProps {
   /** Número do lote (aparece com três dígitos, `018`) ou um texto curto, como "NOVO" antes de o lote existir. */
   number: number | string;
-  /** Ocre para ao vivo ou agendado, papel para encerrado. */
+  /** Ocre para aberto, encerrando e agendado (contorno azul); papel para encerrado e cancelado (contorno neutro `linha`). */
   tone?: "ocre" | "papel";
   /** Inclinação de -4° a +3° (-2° nos encerrados). */
   rotate?: number;
@@ -20,6 +20,8 @@ export interface LotTagProps {
 export function LotTag({ number, tone = "ocre", rotate = tone === "papel" ? -2 : -4, size = "padrao" }: LotTagProps) {
   const fill = tone === "ocre" ? "var(--c-ocre)" : "var(--c-papel)";
   const ink = tone === "ocre" ? "var(--c-sobre-ocre)" : "var(--c-tinta)";
+  // Contorno de 2px: azul profundo no claro e `ocreTexto` no noite (o azul principal não aparece como borda sobre o escuro).
+  const contour = tone === "ocre" ? "var(--c-etiqueta-contorno)" : "var(--c-linha)";
   const compact = size === "compacto";
   return (
     <span className="inline-block align-top" style={{ padding: "18px 4px 6px 2px" }}>
@@ -32,20 +34,21 @@ export function LotTag({ number, tone = "ocre", rotate = tone === "papel" ? -2 :
           viewBox="0 -18 40 40"
           fill="none"
           stroke="var(--c-tinta)"
-          strokeWidth="2.5"
+          strokeWidth="2"
           className="absolute z-[2]"
           style={{ left: 0, top: -18 }}
         >
           <path d="M18 18C6 14 3 -2 11 -9C17 -14 25 -11 24 -5" />
           <path d="M24 -5C23 1 15 5 20 13" />
         </svg>
-        <span className="inline-block bg-linha" style={{ clipPath: CHAMFER, padding: 3 }}>
+        <span className="inline-block" style={{ clipPath: CHAMFER, padding: 2, background: contour }}>
           <span
             className={`relative block pl-9 pr-[18px] ${compact ? "pb-[6px] pt-2" : "pb-2 pt-[10px]"}`}
             style={{ clipPath: CHAMFER_INNER, background: fill, color: ink }}
           >
             <span
-              className="absolute left-[10px] top-3 h-[10px] w-[10px] rounded-circulo border-[3px] border-linha bg-fundo"
+              className="absolute left-[10px] top-3 h-[10px] w-[10px] rounded-circulo border-2 bg-fundo"
+              style={{ borderColor: contour }}
               aria-hidden="true"
             />
             <span className="block text-[11px] tracking-[0.14em]">LOTE</span>

@@ -87,35 +87,96 @@ describe("IdentityChip", () => {
 });
 
 describe("Stamp", () => {
+  const all = ["ao-vivo", "agendado", "encerrando", "arrematado", "sem-lances", "integro", "adulterado", "cancelado", "perdido"] as const;
+
   it("carrega o status em texto, sem depender da cor", () => {
     expect(renderToStaticMarkup(<Stamp variant="integro" />)).toContain("Íntegro");
-    expect(renderToStaticMarkup(<Stamp variant="sem-lances" />)).toContain("dashed");
+    expect(renderToStaticMarkup(<Stamp variant="arrematado" />)).toContain("Arrematado");
+    expect(renderToStaticMarkup(<Stamp variant="encerrando" />)).toContain("Ao vivo");
+    expect(renderToStaticMarkup(<Stamp variant="agendado" label="ABRE QUI 18:00" />)).toContain("ABRE QUI 18:00");
   });
 
-  it("só o Ao vivo tem o ponto pulsante", () => {
+  it.each(all)("%s: pílula sem inclinação nem contorno duplo, com ícone escondido dos leitores", (variant) => {
+    const html = renderToStaticMarkup(<Stamp variant={variant} />);
+    expect(html).toContain("rounded-full");
+    expect(html).toContain("t-selo");
+    expect(html).toContain("whitespace-nowrap");
+    expect(html).toContain("max-w-full");
+    expect(html).toMatch(/aria-hidden="true"/);
+    // Sem inclinação no estilo do selo (o martelo tem um rotate interno no SVG, que não conta).
+    expect(html).not.toMatch(/style="[^"]*transform|outline|border-\[4px\]|rounded-nenhum|t-carimbo/);
+  });
+
+  it("só o Ao vivo tem o ponto pulsante; o encerrando usa o relógio com alerta, sem pulso", () => {
     expect(renderToStaticMarkup(<Stamp variant="ao-vivo" />)).toContain("la-pulsa");
     expect(renderToStaticMarkup(<Stamp variant="cancelado" />)).not.toContain("la-pulsa");
+    const encerrando = renderToStaticMarkup(<Stamp variant="encerrando" />);
+    expect(encerrando).not.toContain("la-pulsa");
+    expect(encerrando).toContain("<svg");
   });
 
-  it("animate usa la-bate e assenta em -6°", () => {
+  it.each([
+    ["ao-vivo", "bg-ocre", "text-sobreOcre"],
+    ["agendado", "bg-selecionado", "text-ocreTexto"],
+    ["encerrando", "bg-alertaSuave", "text-alerta"],
+    ["integro", "bg-verdeSuave", "text-verde"],
+    ["adulterado", "bg-falha", "text-ferrugem"],
+    ["cancelado", "bg-falha", "text-ferrugem"],
+    ["arrematado", "bg-tinta", "text-fundo"],
+  ] as const)("%s: fundo %s e texto %s", (variant, bg, text) => {
+    const html = renderToStaticMarkup(<Stamp variant={variant} />);
+    expect(html).toContain(bg);
+    expect(html).toContain(text);
+  });
+
+  it("Sem lances e Perdido: neutros, com fio tracejado, ícone de traço e texto tinta2", () => {
+    for (const variant of ["sem-lances", "perdido"] as const) {
+      const html = renderToStaticMarkup(<Stamp variant={variant} />);
+      expect(html).toContain("border-dashed");
+      expect(html).toContain("border-linha");
+      expect(html).toContain("text-tinta2");
+    }
+    expect(renderToStaticMarkup(<Stamp variant="perdido" />)).toContain("Perdido");
+  });
+
+  it("os selos tintados levam fio de 1px na cor do estado a 35% ou 40%", () => {
+    expect(renderToStaticMarkup(<Stamp variant="integro" />)).toContain("border-verde/35");
+    expect(renderToStaticMarkup(<Stamp variant="cancelado" />)).toContain("border-ferrugem/35");
+    expect(renderToStaticMarkup(<Stamp variant="encerrando" />)).toContain("border-alerta/40");
+    expect(renderToStaticMarkup(<Stamp variant="agendado" />)).toContain("border-ocre/30");
+  });
+
+  it("animate usa la-bate e assenta sem inclinação", () => {
     const html = renderToStaticMarkup(<Stamp variant="arrematado" animate />);
     expect(html).toContain("la-bate");
-    expect(html).toContain("rotate(-6deg)");
+    expect(html).toContain("--rot:0deg");
+  });
+});
+
+describe("Stamp (tamanho)", () => {
+  it("padrão e pequeno têm 28px (Sala e cartão de lote); tabela tem 24px", () => {
+    expect(renderToStaticMarkup(<Stamp variant="arrematado" />)).toContain("h-7");
+    expect(renderToStaticMarkup(<Stamp variant="arrematado" size="pequeno" />)).toContain("h-7");
+    const tabela = renderToStaticMarkup(<Stamp variant="arrematado" size="tabela" />);
+    expect(tabela).toContain("h-6");
+    expect(tabela).not.toContain("h-7");
   });
 
-  it("Perdido: tinta2, tracejado, sem contorno e inclinado em -2° (S07 §9)", () => {
-    const html = renderToStaticMarkup(<Stamp variant="perdido" />);
-    expect(html).toContain("Perdido");
-    expect(html).toContain("4px dashed var(--c-tinta2)");
-    expect(html).toContain("rotate(-2deg)");
-    expect(html).not.toContain("outline");
+  it("carimbo: cartão de 12px, borda de 2px, fundo tintado, 28 a 40px/800 e -3° (sem inclinação em reduced-motion pela classe)", () => {
+    const html = renderToStaticMarkup(<Stamp variant="integro" size="carimbo" animate />);
+    for (const token of ["rounded-xl", "border-2", "bg-verdeSuave", "border-verde", "la-carimbo", "font-extrabold", "uppercase", "text-[length:clamp(28px,8vw,40px)]"]) {
+      expect(html).toContain(token);
+    }
+    expect(html).toContain("--rot:-3deg");
+    expect(html).toContain("la-bate");
+    expect(html).not.toContain("rounded-full");
   });
 
-  it("Cancelado segue sólido, com contorno, em -4°", () => {
-    const html = renderToStaticMarkup(<Stamp variant="cancelado" />);
-    expect(html).toContain("4px solid var(--c-tinta2)");
-    expect(html).toContain("rotate(-4deg)");
-    expect(html).toContain("outline");
+  it("carimbo de arrematado: fio e texto tinta sobre azul suave, com martelo", () => {
+    const html = renderToStaticMarkup(<Stamp variant="arrematado" size="carimbo" />);
+    expect(html).toContain("border-tinta");
+    expect(html).toContain("bg-suave");
+    expect(html).toContain("text-tinta");
   });
 });
 
@@ -150,6 +211,24 @@ describe("LotTag", () => {
     expect(html).toContain("padding:18px 4px 6px 2px");
   });
 
+  it("contorno de 2px: azul profundo (token) nas abertas e neutro linha nas encerradas, com furo e cordão no mesmo traço", () => {
+    const aberta = renderToStaticMarkup(<LotTag number={18} />);
+    expect(aberta).toContain("padding:2px");
+    expect(aberta).toContain("background:var(--c-etiqueta-contorno)");
+    expect(aberta).toContain("border-color:var(--c-etiqueta-contorno)");
+    expect(aberta).toContain('stroke-width="2"');
+    const encerrada = renderToStaticMarkup(<LotTag number={18} tone="papel" />);
+    expect(encerrada).toContain("background:var(--c-linha)");
+    expect(encerrada).toContain("border-color:var(--c-linha)");
+    expect(encerrada).not.toContain("etiqueta-contorno");
+  });
+
+  it("o recorte chanfrado fica e o miolo acompanha o contorno de 2px", () => {
+    const html = renderToStaticMarkup(<LotTag number={18} />);
+    expect(html).toContain("polygon(18px 0");
+    expect(html).toContain("polygon(17px 0");
+  });
+
   it("o tamanho compacto reduz só o número", () => {
     expect(renderToStaticMarkup(<LotTag number={18} size="compacto" />)).toContain("font-size:36px");
     expect(renderToStaticMarkup(<LotTag number={18} />)).not.toContain("font-size:36px");
@@ -165,16 +244,5 @@ describe("Logo", () => {
     // `!`: a regra global `a { color }` fica fora de layer e venceria a utility sem ele.
     expect(html).toContain("!text-logoTinta");
     expect(html).not.toMatch(/\b(bg-papel|border-tinta|text-tinta|bg-tinta)\b/);
-  });
-});
-
-describe("Stamp (tamanho)", () => {
-  it("o tamanho pequeno usa 20 px e não quebra linha", () => {
-    const small = renderToStaticMarkup(<Stamp variant="arrematado" size="pequeno" />);
-    expect(small).toContain("font-size:20px");
-    expect(small).toContain("whitespace-nowrap");
-    const normal = renderToStaticMarkup(<Stamp variant="arrematado" />);
-    expect(normal).not.toContain("font-size:20px");
-    expect(normal).not.toContain("whitespace-nowrap");
   });
 });

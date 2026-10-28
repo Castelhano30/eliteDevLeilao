@@ -24,6 +24,7 @@
   --c-botao-borda: var(--c-ocre);
   --c-botao-borda-hover: var(--c-ocre);
   --c-ocre-texto-hover: var(--c-ocre-hover);
+  --c-etiqueta-contorno: var(--f-azul-profundo);
   --c-selecionado: #e8efff;
   --c-foco: #174bc2;
   --c-destaque: #0033a0;
@@ -68,6 +69,7 @@
 --c-botao-borda: var(--c-linha);
 --c-botao-borda-hover: var(--c-ocre-texto);
 --c-ocre-texto-hover: var(--c-ocre-texto);
+--c-etiqueta-contorno: var(--c-ocre-texto);
 --c-selecionado: #001e63;
 --c-foco: #8aaaff;
 --c-destaque: #3d6dff;
@@ -112,6 +114,7 @@
   --c-botao-borda: var(--c-linha);
   --c-botao-borda-hover: var(--c-ocre-texto);
   --c-ocre-texto-hover: var(--c-ocre-texto);
+  --c-etiqueta-contorno: var(--c-ocre-texto);
   --c-selecionado: #001e63;
   --c-foco: #8aaaff;
   --c-destaque: #3d6dff;
@@ -222,6 +225,7 @@ label:has(input:focus-visible) {
 .t-cartaz-subtitulo { font-size: 26px; font-weight: 700; line-height: 1; text-transform: uppercase; }
 .t-botao-primario { font-size: 16px; font-weight: 600; line-height: 1; letter-spacing: 0; }
 .t-botao { font-size: 15px; font-weight: 600; line-height: 1; letter-spacing: 0; }
+.t-selo { font-size: 12px; font-weight: 700; line-height: 1; letter-spacing: 0.06em; text-transform: uppercase; }
 .t-rotulo-campo { font-size: 13px; font-weight: 600; line-height: 1.2; letter-spacing: 0; color: var(--c-tinta2); }
 .t-filtro { font-size: 14px; font-weight: 600; line-height: 1; letter-spacing: 0; }
 .t-titulo-cartao { font-size: 20px; font-weight: 700; line-height: 1.2; }
@@ -259,11 +263,17 @@ label:has(input:focus-visible) {
 @keyframes la-entra { from { transform: translateY(-16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes la-marca { from { background-color: color-mix(in srgb, var(--c-ocre-texto) 40%, transparent); } to { background-color: transparent; } }
 
+/* Carimbo de resultado: -3° em repouso (a animação `la-bate` assenta nela). Sem inclinação com movimento reduzido. */
+.la-carimbo { transform: rotate(var(--rot, -3deg)); }
+
 /* Nenhum estado depende de animação para ser percebido. */
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;
     transition: none !important;
+  }
+  .la-carimbo {
+    transform: none;
   }
 }
 

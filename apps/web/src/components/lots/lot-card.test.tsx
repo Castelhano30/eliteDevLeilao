@@ -48,10 +48,10 @@ describe("LotCard: etiqueta e carimbos não cobrem a foto", () => {
     expect(html.indexOf("Ao vivo")).toBeLessThan(html.indexOf("<figure"));
   });
 
-  it.each(["SOLD", "UNSOLD"] as const)("%s: o carimbo é pequeno e sem largura fixa, para caber na foto", (status) => {
+  it.each(["SOLD", "UNSOLD"] as const)("%s: o selo é uma pílula de 28px, sem largura fixa e sem quebra, para caber na foto", (status) => {
     const html = renderToStaticMarkup(<LotCard card={card(status)} />);
     expect(html).not.toContain("w-[184px]");
-    expect(html).toContain("font-size:20px");
+    expect(html).toContain("h-7");
     expect(html).toContain("whitespace-nowrap");
     expect(html).toContain("max-w-[calc(100%-24px)]");
   });

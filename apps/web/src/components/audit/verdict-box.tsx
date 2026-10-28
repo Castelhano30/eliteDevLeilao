@@ -35,7 +35,7 @@ export function VerdictBox({ view, verifying, stale, onVerify }: VerdictBoxProps
       ) : (
         <div className="flex flex-wrap items-center gap-x-8 gap-y-5">
           <div className="shrink-0 px-2 py-3">
-            <Stamp variant={ok ? "integro" : "adulterado"} animate rotate={ok ? -7 : 4} />
+            <Stamp variant={ok ? "integro" : "adulterado"} size="carimbo" animate />
           </div>
           <p className="t-body-lead min-w-0" style={{ flex: "1 1 320px" }}>
             {verdictSentence(view)}

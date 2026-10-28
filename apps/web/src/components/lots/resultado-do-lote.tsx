@@ -21,13 +21,7 @@ export function ResultadoDoLote({ view, lotNumber, animate }: ResultadoDoLotePro
   return (
     <div className="space-y-4">
       <div className="flex min-h-[96px] items-center justify-center py-3">
-        <Stamp
-          variant={view.stamp}
-          animate={arrematado && animate}
-          rotate={arrematado ? -6 : undefined}
-          // Fluido: a 320 px o "Arrematado" de 52 px media 413 px e estourava a página.
-          className={arrematado ? "!text-[length:clamp(24px,8vw,52px)]" : "!text-[length:clamp(24px,8vw,40px)]"}
-        />
+        <Stamp variant={view.stamp} size="carimbo" animate={arrematado && animate} />
       </div>
       {view.sentence ? <p className="t-body-lead">{view.sentence}</p> : null}
       {view.kind === "arrematou" ? (

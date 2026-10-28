@@ -131,7 +131,7 @@ export function Sala({ id, initial, notFound = false }: { id: string; initial?: 
       <div className="space-y-5">
         <Cronometro size="sala" status={status} startsAt={lot.startsAt} endsAt={lot.endsAt} originalEndsAt={lot.originalEndsAt} serverTime={state.serverTime} />
         <div>
-          <Stamp variant="cancelado" animate={sawActive} rotate={-4} />
+          <Stamp variant="cancelado" size="carimbo" animate={sawActive} />
         </div>
         <FaixaStatus title="Lote cancelado" />
         <p className="t-body-lead">{LOT_TEXT.cancelledBody}</p>
