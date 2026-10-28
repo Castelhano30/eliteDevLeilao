@@ -572,3 +572,12 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - CI do GitHub verde nos dois runs de `c310da9` (40628985649 e 40628988243); Railway `@lanceauto/api` e `@lanceauto/web` com `success`.
 - Smoke no link público, só leitura (`.tmp/smoke-rodape-prod.cjs`), claro e noite, 360 e 1280px: Vitrine, Entrar e Auditoria com rodapé (Vitrine completo com `mailto:` e `tel:`; Auditoria mínimo, sem `nav`, com as 4 políticas), Sala sem rodapé, só "[Sobre o LanceAuto]" entre colchetes, sem rolagem horizontal e sem erro de console. Prints em `.tmp/repag/smoke-prod-rodape/`. Nada foi escrito em produção.
 - Pendências do Felipe: trocar telefone e domínio de e-mail placeholders, definir "Sobre" e as redes sociais; a decisão do ",00" no lance (etapa 9) segue aberta.
+
+## 28/10/2026 — Sala: foto menor, título antes do lote e nova ficha técnica (pedido do Felipe, fora das 16 etapas)
+- **Foto:** a coluna da ficha agora tem no máximo 560px (a foto 16:9 passou de ~736x414 para 560x315 a 1280px). As duas colunas ficam centralizadas (`justify-center`, `gap-x-12`).
+- **Legenda:** saiu a descrição "Pintado à mão pelo pátio…" e a "Imagem ilustrativa" na Sala; seguem na prévia do Criar lote. O **crédito da foto** continua na Sala: é atribuição de licença, não descrição.
+- **Título:** `lots/…/sala.tsx` põe o `h1` (nome do carro) primeiro e, abaixo, a etiqueta do lote com o selo "Ao vivo". Em telas estreitas a coluna do painel continua depois da ficha, como antes.
+- **Ficha técnica:** novo `lots/ficha-carro.tsx`, cartão arredondado no padrão do painel de lance (`rounded-2xl`, fio `borda`, fundo `papel`). Marca, Modelo, Ano e Combustível em duas colunas (uma no celular), cada um com ícone num chip de 40px, rótulo de 12px e valor de 18px semibold (antes 16px regular). Preço de referência em 28px bold, separado por um fio, com a fonte da FIPE embaixo.
+- Testes: `ficha-carro.test.tsx` (4) novo; `car-photo.test.tsx` ajustado (Sala sem legenda de estado, crédito mantido, legenda na prévia). Web 706, typecheck e lint exit 0.
+- Chrome real (build local contra a API de produção, só leitura), claro e noite, 360, 768, 1280 e 1909px: sem rolagem horizontal, sem erro de página, sem `figcaption`, nome antes da etiqueta. Prints em `.tmp/repag/sala-ficha/`.
+- Só commitado na branch local `repaginacao-visual`: sem push nem deploy.
