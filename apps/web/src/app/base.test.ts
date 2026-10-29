@@ -31,6 +31,7 @@ describe("base global", () => {
     expect(rule(".site-conta-celular")).toMatch(/flex:\s*1 1 100%/);
     const celular = css.slice(css.indexOf("@media (max-width: 767px)"));
     expect(celular.slice(0, celular.indexOf("}\n}") + 3)).toContain(".site-theme { display: none; }");
+    expect(celular.slice(0, celular.indexOf("}\n}") + 3)).toContain(".site-logo > a { zoom: 0.78; }");
   });
 
   it("o hover de link não vira vermelho de erro", () => {
