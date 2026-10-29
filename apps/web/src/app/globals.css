@@ -416,7 +416,7 @@ dialog::backdrop {
    O tema mora no menu, então some da barra já no HTML do servidor. O logo encolhe a 52% (201px viram 105px) e o link ganha 13px de respiro
    em cima e embaixo (também escalados pelo zoom) para o alvo de toque continuar com 44px. */
 .cabecalho { position: relative; }
-.site-menu { flex: 0 0 auto; }
+.site-menu { flex: 0 0 auto; margin-left: auto; }
 .site-conta-celular { flex: 1 1 0; display: flex; justify-content: flex-end; min-width: 0; }
 @media (max-width: 767px) {
   .site-header { column-gap: 8px; padding-block: 10px; }

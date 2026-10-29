@@ -28,6 +28,8 @@ describe("base global", () => {
   it("cabeçalho no celular: uma linha só (logo, saldo ou Entrar, menu), logo a 52% com respiro para o alvo de 44px e o tema fora da barra", () => {
     expect(css).toContain(".cabecalho { position: relative; }");
     expect(rule(".site-menu")).toMatch(/flex:\s*0 0 auto/);
+    // O leiloeiro não tem saldo nem Entrar na barra: sem a margem automática o botão ficaria colado no logo.
+    expect(rule(".site-menu")).toMatch(/margin-left:\s*auto/);
     expect(rule(".site-conta-celular")).toMatch(/flex:\s*1 1 0;/);
     expect(rule(".site-conta-celular")).toMatch(/justify-content:\s*flex-end/);
     const celular = css.slice(css.indexOf("@media (max-width: 767px)"));
