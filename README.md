@@ -19,6 +19,7 @@ Entre os itens 6 e 8 ficam as seções de detalhe: lances, tempo real, fechament
 
 - **Web:** https://lanceautoweb-production.up.railway.app
 - **API:** https://lanceautoapi-production.up.railway.app (teste em `/health`)
+- **Documentação da API (Swagger):** https://lanceautoapi-production.up.railway.app/docs (o JSON OpenAPI está em `/docs/openapi.json`)
 
 Contas de teste (senha de todas: `lance1234`, pública de propósito: é dado de teste):
 
@@ -118,7 +119,7 @@ docker compose up --build
 ```
 
 - Web: http://localhost:3000 (mude com `WEB_PORT` e ajuste `WEB_ORIGIN` no `.env` para a mesma porta, senão o CORS recusa a API)
-- API: http://localhost:4000, teste em `/health` (muda com `PORT`)
+- API: http://localhost:4000, teste em `/health` (muda com `PORT`); documentação Swagger em `/docs`
 - Postgres: `localhost:5433`
 - Para parar: `docker compose down`. Para apagar também o banco: `docker compose down -v`.
 

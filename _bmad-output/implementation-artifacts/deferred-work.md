@@ -184,3 +184,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-galeria-imagens-lote.md`
   summary: Faltam testes do contador de bytes do multipart sem `Content-Length` (`BODY_CAP_BYTES` e `DRAIN_CAP_BYTES`), do prazo de 60 s do `apiPostForm`, do ramo `options.images`/`uploadErrors` do service e do hook `useLotPhotos`.
   evidence: Verification Gap: removendo o contador de `data` o teste do 413 por `Content-Length` continua passando. O Vitest do web não tem jsdom/RTL; o fixture do seed não tem foto.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-swagger-openapi.md`
+  summary: CI não sobe a API compilada (`dist`) para pedir `/docs/openapi.json`.
+  evidence: o alias do zod no Vitest esconde um possível carregamento de duas cópias do zod em produção; verificado à mão em `dist` e `tsx` (200), mas só um passo de CI trava a deriva (maybe-false, severidade média se real).
