@@ -2,7 +2,7 @@
 title: 'Reset do banco para o avaliador'
 type: 'chore'
 created: '2026-10-29'
-status: 'in-review'
+status: 'done'
 baseline_commit: '26fcb0d3cace251d660c8ca6ad96e133cacef79c'
 route: 'dispatch'
 review_loop_iteration: 0
