@@ -741,3 +741,6 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 - Acessibilidade: `aria-expanded`/`aria-controls`, fecha com Esc (foco volta ao botão), toque fora, Tab para fora, clique num link e mudança de rota (o estado guarda a rota em que abriu). Painel com `max-h` em `dvh` e rolagem própria.
 - Medido no Chrome real (320, 360, 390, 414, 768, 1280 px; visitante, licitante e leiloeiro; claro e noite): altura do cabeçalho em 320 px de 203 para 149 px (visitante e licitante) e 95 px (leiloeiro); sem rolagem horizontal; alvos ≥ 44 px no toque; de 768 px para cima nada mudou. Saíram as regras de 374 px e 359 px que apertavam o saldo e os links na barra.
 - Verificação: lint, typecheck e testes (shared 157, API 530, web 803) verdes; o teste do contador do lance segue verde, `placa-lance.tsx` intocado.
+
+## 28/10/2026 — Logo menor no cabeçalho mobile
+- Pedido do Felipe: o logo do cabeçalho do celular estava grande. Abaixo de 768 px o link do logo usa `zoom: 0.78` (201×58 px viram 155×46 px); mais que isso ele passaria dos 44 px de alvo de toque. O cabeçalho em 320 px caiu de 149 para 137 px (visitante e licitante). Só o cabeçalho: o rodapé e o desktop seguem com o logo de sempre. Lint, typecheck e testes do web verdes.
