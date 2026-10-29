@@ -6,6 +6,6 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["src", "test", "prisma/seed.ts", "vitest.config.mts"]
+  "include": ["src", "test", "prisma/seed.ts"]
 }
 
