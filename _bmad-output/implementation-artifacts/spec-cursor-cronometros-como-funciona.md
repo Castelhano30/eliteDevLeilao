@@ -2,7 +2,7 @@
 title: 'Cursor de mãozinha, diagnóstico dos cronômetros e página Como Funciona'
 type: 'feature'
 created: '2026-10-29'
-status: 'in-progress'
+status: 'in-review'
 route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: '7265595f0da50fbec9ec166a7864a24219529966'
