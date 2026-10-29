@@ -92,6 +92,24 @@ describe("Histórico de lances", () => {
     expect(html.indexOf("R$ 19.500,00")).toBeLessThan(html.indexOf("R$ 14.000,00"));
   });
 
+  it("no celular cada lance tem duas linhas fixas (valor e hora em cima; número e licitante embaixo) e, com 27rem de contêiner, volta a uma linha só", () => {
+    expect(html).toContain('<ol class="@container">');
+    expect(html).toContain("grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 border-t border-borda py-3 @[27rem]:flex @[27rem]:flex-wrap");
+    // O valor e a hora ocupam a linha 1; o número e o chip, a linha 2, juntos num invólucro que some (`contents`) no layout largo.
+    expect(html).toContain("col-span-2 row-start-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 @[27rem]:contents");
+    expect(html).toContain("col-start-1 row-start-1 text-[18px] font-bold");
+    expect(html).toContain("@[27rem]:ml-auto @[27rem]:text-[16px]");
+    expect(html).toContain("t-mono-dado col-start-2 row-start-1");
+    // A ordem de leitura não muda: número, licitante, valor, hora.
+    const order = ["Nº 2", "Licitante 38DF", "R$ 19.500,00", "<time"].map((text) => html.indexOf(text));
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+  });
+
+  it("o título e a contagem quebram de linha inteiros: a contagem nunca parte no meio", () => {
+    expect(html).toContain("mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1");
+    expect(html).toContain("t-mono-dado whitespace-nowrap");
+  });
+
   it("marca só a minha linha com VOCÊ e mantém o título, a contagem e as horas", () => {
     expect(html.match(/>VOCÊ</g)).toHaveLength(1);
     expect(html).toContain(">Histórico de lances<");

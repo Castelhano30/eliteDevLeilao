@@ -30,26 +30,31 @@ export function BidHistory({ bids, myPseudonym }: BidHistoryProps) {
   const visible = bids.slice(current * BIDS_PER_PAGE, (current + 1) * BIDS_PER_PAGE);
   return (
     <section aria-labelledby="historico-lances">
-      <div className="mb-3 flex items-baseline justify-between gap-3">
+      {/* Em 320px o título e o contador não cabem juntos: o contador desce inteiro em vez de quebrar no meio ("05 / LANCES"). */}
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 id="historico-lances" className="text-[20px] font-extrabold leading-tight">
           Histórico de lances
         </h2>
-        <span className="t-mono-dado">{bidCountLabel(bids.length)}</span>
+        <span className="t-mono-dado whitespace-nowrap">{bidCountLabel(bids.length)}</span>
       </div>
       {bids.length === 0 ? (
         <p className="t-body-nota">{BID_TEXT.noBidsYet}</p>
       ) : (
-        <ol>
+        // O contêiner (e não a janela) decide o layout: o painel é estreito no celular e também numa coluna lateral.
+        <ol className="@container">
           {visible.map((bid) => (
             <li
               key={bid.seq}
-              className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-borda py-3"
+              // Estreito: duas linhas fixas (valor e hora em cima; número e licitante embaixo). Largo (>= 27rem): tudo numa linha só.
+              className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 border-t border-borda py-3 @[27rem]:flex @[27rem]:flex-wrap"
               style={bid.seq > baseline ? { animation: "la-entra 0.4s both, la-marca 1.7s both" } : undefined}
             >
-              <span className="t-mono-dado w-12 shrink-0">Nº {bid.seq}</span>
-              <ChipLicitante name={bid.pseudonym} mine={myPseudonym !== null && bid.pseudonym === myPseudonym} />
-              <span className="ml-auto text-[16px] font-bold leading-[1.3] tabular-nums">{formatBRL(bid.amountCents)}</span>
-              <time dateTime={bid.at} className="t-mono-dado font-normal text-tinta2">
+              <span className="col-span-2 row-start-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 @[27rem]:contents">
+                <span className="t-mono-dado w-12 shrink-0">Nº {bid.seq}</span>
+                <ChipLicitante name={bid.pseudonym} mine={myPseudonym !== null && bid.pseudonym === myPseudonym} />
+              </span>
+              <span className="col-start-1 row-start-1 text-[18px] font-bold leading-[1.3] tabular-nums @[27rem]:ml-auto @[27rem]:text-[16px]">{formatBRL(bid.amountCents)}</span>
+              <time dateTime={bid.at} className="t-mono-dado col-start-2 row-start-1 font-normal text-tinta2">
                 {clockTime(bid.at)}
               </time>
             </li>
