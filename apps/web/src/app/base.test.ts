@@ -25,11 +25,12 @@ describe("base global", () => {
     expect(css).toMatch(/\.t-display-titulo \{ font-size: clamp\(32px, 6vw, 80px\)/);
   });
 
-  it("cabeçalho em celular pequeno: vão de 12px (logo e tema na mesma linha em 320px) e saldo em 14px até 374px", () => {
-    const narrow = css.slice(css.indexOf("@media (max-width: 359px)"));
-    expect(narrow.slice(0, narrow.indexOf("}\n}") + 3)).toContain(".site-header { column-gap: 12px; }");
-    expect(css).toContain("@media (max-width: 374px)");
-    expect(css).toMatch(/\.balance-value \{ min-width: 0; font-size: 14px; \}/);
+  it("cabeçalho no celular: o painel do menu ancora no cabeçalho, a faixa da conta ocupa a linha toda e o tema sai da barra", () => {
+    expect(css).toContain(".cabecalho { position: relative; }");
+    expect(rule(".site-menu")).toMatch(/flex:\s*0 0 auto/);
+    expect(rule(".site-conta-celular")).toMatch(/flex:\s*1 1 100%/);
+    const celular = css.slice(css.indexOf("@media (max-width: 767px)"));
+    expect(celular.slice(0, celular.indexOf("}\n}") + 3)).toContain(".site-theme { display: none; }");
   });
 
   it("o hover de link não vira vermelho de erro", () => {

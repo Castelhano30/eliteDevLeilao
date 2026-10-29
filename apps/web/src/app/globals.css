@@ -407,19 +407,16 @@ dialog::backdrop {
 .site-header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding-block: 14px; }
 .site-logo { flex: 1 1 auto; min-width: 0; }
 .site-theme { flex: 0 0 auto; }
-.site-account { flex: 1 1 100%; }
 .site-nav { flex: 1 1 100%; }
 .balance-control { max-width: 100%; }
 .balance-value { min-width: 14ch; max-width: 100%; overflow-wrap: anywhere; }
-/* Até 374px (celulares de 360px e menores) o saldo vem em 14px para o menu da conta ficar na mesma linha. */
-@media (max-width: 374px) {
-  .site-account { column-gap: 8px; }
-  .balance-value { min-width: 0; font-size: 14px; }
-}
-/* 320px: logo (201px) e tema (74px) cabem lado a lado só com 12px de vão, e os três links da navegação só com 12px entre eles. */
-@media (max-width: 359px) {
-  .site-header { column-gap: 12px; }
-  .site-nav { column-gap: 12px; }
+/* Celular (<768px): logo e hambúrguer numa linha só; o painel do menu desce ancorado no cabeçalho.
+   A faixa da conta (saldo ou Entrar/Criar conta) vem logo abaixo. O tema mora no menu, então some da barra já no HTML do servidor. */
+.cabecalho { position: relative; }
+.site-menu { flex: 0 0 auto; }
+.site-conta-celular { flex: 1 1 100%; }
+@media (max-width: 767px) {
+  .site-theme { display: none; }
 }
 @media (min-width: 768px) {
   .site-account { flex: 0 1 auto; max-width: calc(100% - 300px); }
