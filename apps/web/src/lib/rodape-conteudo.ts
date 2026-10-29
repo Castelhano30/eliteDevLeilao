@@ -13,8 +13,6 @@ export const RODAPE_CONTEUDO = {
     conta: "Sua conta",
     contato: "Contato",
   },
-  /** Itens sem rota: texto puro, sem `href`. */
-  navegueProvisorios: ["[Sobre o LanceAuto]"],
   contato: {
     email: { texto: "suporte@lanceauto.com", href: "mailto:suporte@lanceauto.com" },
     telefone: { texto: "(99) 9999-9999", href: "tel:9999999999" },

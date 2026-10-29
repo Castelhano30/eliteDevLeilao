@@ -56,11 +56,10 @@ describe("SiteFooter: estrutura e landmarks", () => {
 describe("SiteFooter: conteúdo e links", () => {
   const html = render();
 
-  it("o que ainda falta definir vem entre colchetes e sem href", () => {
-    for (const texto of RODAPE_CONTEUDO.navegueProvisorios) {
-      expect(texto).toMatch(/^\[.*\]$/);
-      expect(html).toMatch(new RegExp(`<span class="[^"]*text-tinta2">${texto.replace(/[[\]]/g, "\\$&")}</span>`));
-    }
+  it("a coluna Navegue só tem a Vitrine: não há item provisório nem texto entre colchetes", () => {
+    expect(RODAPE_CONTEUDO).not.toHaveProperty("navegueProvisorios");
+    expect(html).not.toContain("Sobre o LanceAuto");
+    expect(html).not.toMatch(/>\[[^<]*\]</);
   });
 
   it("direitos e frase de apresentação definitivos, sem colchetes", () => {
@@ -79,7 +78,7 @@ describe("SiteFooter: conteúdo e links", () => {
 
   it("termos e políticas são texto, sem <a>: ainda não têm página", () => {
     expect(RODAPE_CONTEUDO.politicas).toEqual(["Termos de uso", "Política de privacidade", "Regras dos leilões", "Política da carteira"]);
-    expect(html).not.toMatch(/(?:Sobre o LanceAuto|Termos de uso|Política[^<]*|Regras dos leilões)<\/a>/);
+    expect(html).not.toMatch(/(?:Termos de uso|Política[^<]*|Regras dos leilões)<\/a>/);
   });
 
   it("só tem <a> para rota que existe, e-mail e telefone", () => {
