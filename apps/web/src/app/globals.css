@@ -415,10 +415,14 @@ dialog::backdrop {
 .cabecalho { position: relative; }
 .site-menu { flex: 0 0 auto; }
 .site-conta-celular { flex: 1 1 100%; }
-/* O logo encolhe a 78% (201px viram 157px); mais que isso o link do logo passaria abaixo dos 44px de alvo de toque. */
+/* O logo encolhe a 64% (201px viram 129px) e o saldo a 85%. O alvo de toque segue em 44px: o logo ganha 6px de respiro em cima e embaixo
+   (também escalados pelo zoom) e o saldo estende a área clicável por pseudo-elemento. */
 @media (max-width: 767px) {
   .site-theme { display: none; }
-  .site-logo > a { zoom: 0.78; }
+  .site-logo > a { zoom: 0.64; padding-block: 6px; }
+  .site-conta-celular .balance-control { zoom: 0.85; }
+  .site-conta-celular .balance-control :is(a, button) { position: relative; }
+  .site-conta-celular .balance-control :is(a, button)::before { content: ""; position: absolute; inset: -5px -3px; }
 }
 @media (min-width: 768px) {
   .site-account { flex: 0 1 auto; max-width: calc(100% - 300px); }

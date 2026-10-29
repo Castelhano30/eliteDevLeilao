@@ -31,7 +31,10 @@ describe("base global", () => {
     expect(rule(".site-conta-celular")).toMatch(/flex:\s*1 1 100%/);
     const celular = css.slice(css.indexOf("@media (max-width: 767px)"));
     expect(celular.slice(0, celular.indexOf("}\n}") + 3)).toContain(".site-theme { display: none; }");
-    expect(celular.slice(0, celular.indexOf("}\n}") + 3)).toContain(".site-logo > a { zoom: 0.78; }");
+    const bloco = celular.slice(0, celular.indexOf("}\n}") + 3);
+    expect(bloco).toContain(".site-logo > a { zoom: 0.64; padding-block: 6px; }");
+    expect(bloco).toContain(".site-conta-celular .balance-control { zoom: 0.85; }");
+    expect(bloco).toContain(".site-conta-celular .balance-control :is(a, button)::before { content: \"\"; position: absolute; inset: -5px -3px; }");
   });
 
   it("o hover de link não vira vermelho de erro", () => {
