@@ -3,7 +3,7 @@ import path from "node:path";
 import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import { SystemClock } from "../src/infra/clock";
-import { RESET_CONFIRM_FLAG, isResetConfirmed, maskDatabaseHost, resetAndSeed } from "../src/seed/reset";
+import { maskDatabaseHost, resetAndSeed, resetArgsProblem } from "../src/seed/reset";
 import { runSeed, runSeedDemo, type FixtureCar } from "../src/seed/showcase";
 
 dotenv.config({ path: path.resolve(__dirname, "../../../.env"), quiet: true });
@@ -17,12 +17,11 @@ dotenv.config({ path: path.resolve(__dirname, "../../../.env"), quiet: true });
  */
 async function main() {
   const reset = process.argv.includes("--reset");
-  if (reset) {
-    console.log(`Alvo: ${maskDatabaseHost(process.env.DATABASE_URL)}`);
-    if (!isResetConfirmed(process.argv)) {
-      console.error(`O reset apaga TODOS os dados do banco acima. Nada foi alterado. Para seguir, rode de novo com ${RESET_CONFIRM_FLAG}.`);
-      process.exit(1);
-    }
+  if (reset) console.log(`Alvo: ${maskDatabaseHost(process.env.DATABASE_URL) ?? "(ilegível)"}`);
+  const problem = resetArgsProblem(process.argv, process.env.DATABASE_URL);
+  if (problem) {
+    console.error(problem);
+    process.exit(1);
   }
 
   const jwtSecret = process.env.JWT_SECRET;

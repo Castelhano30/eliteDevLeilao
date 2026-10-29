@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import request from "supertest";
@@ -7,8 +8,8 @@ import { makeTestApp, testEnv } from "../../test/helpers/app";
 import { createTestPrisma, restartLotNumbering, testDatabaseUrl, truncateAll } from "../../test/helpers/db";
 import { makeAuthService } from "../services/auth.service";
 import { makeWalletService } from "../services/wallet.service";
-import { RESET_CONFIRM_FLAG, isResetConfirmed, maskDatabaseHost, resetAndSeed } from "./reset";
-import { runSeed, type FixtureCar, type SeedDeps } from "./showcase";
+import { RESET_CONFIRM_FLAG, isResetConfirmed, maskDatabaseHost, resetAndSeed, resetArgsProblem } from "./reset";
+import { runSeed, runSeedDemo, type FixtureCar, type SeedDeps } from "./showcase";
 
 const baseDir = path.resolve(__dirname, "../../prisma");
 const cars = JSON.parse(readFileSync(path.join(baseDir, "fipe-fixture.json"), "utf8")) as FixtureCar[];
@@ -33,9 +34,38 @@ describe("maskDatabaseHost", () => {
     expect(maskDatabaseHost("postgresql://u:p@localhost/lanceauto?sslmode=require")).toBe("localhost/lanceauto");
   });
 
-  it("não vaza a URL quando ela é inválida", () => {
-    expect(maskDatabaseHost("isto não é uma url com segredo")).toBe("(URL do banco ilegível)");
-    expect(maskDatabaseHost(undefined)).toBe("(DATABASE_URL ausente)");
+  it("devolve null, sem vazar nada, quando a URL falta ou é inválida", () => {
+    expect(maskDatabaseHost("isto não é uma url com segredo")).toBeNull();
+    expect(maskDatabaseHost(undefined)).toBeNull();
+    expect(maskDatabaseHost("")).toBeNull();
+  });
+
+  it("acha o host mesmo com @ solto na senha", () => {
+    expect(maskDatabaseHost("postgresql://u:p@ss@h.internal:5432/db")).toBe("h.internal:5432/db");
+  });
+});
+
+describe("resetArgsProblem", () => {
+  const url = "postgresql://u:p@localhost:5433/lanceauto";
+
+  it("deixa passar o seed comum e o reset confirmado", () => {
+    expect(resetArgsProblem([], url)).toBeNull();
+    expect(resetArgsProblem(["--demo"], url)).toBeNull();
+    expect(resetArgsProblem(["--reset", "--confirmo"], url)).toBeNull();
+  });
+
+  it("recusa o reset sem confirmação, dizendo que nada foi alterado", () => {
+    expect(resetArgsProblem(["--reset"], url)).toMatch(/Nada foi alterado.*--confirmo/);
+  });
+
+  it("recusa --confirmo solto e --reset junto com --demo", () => {
+    expect(resetArgsProblem(["--confirmo"], url)).toMatch(/só vale junto com --reset/);
+    expect(resetArgsProblem(["--reset", "--demo", "--confirmo"], url)).toMatch(/não combinam/);
+  });
+
+  it("recusa quando o host do banco não pode ser conferido, mesmo confirmado", () => {
+    expect(resetArgsProblem(["--reset", "--confirmo"], undefined)).toMatch(/host de DATABASE_URL/);
+    expect(resetArgsProblem(["--reset", "--confirmo"], "lixo")).toMatch(/host de DATABASE_URL/);
   });
 });
 
@@ -56,9 +86,11 @@ describe.skipIf(!testDatabaseUrl)("reset do banco para o avaliador (integração
     return { app, clock, deps };
   }
 
-  /** Deixa o banco "sujo" como depois dos testes internos: uma conta a mais, com saldo, além do seed. */
+  /** Deixa o banco "sujo" como depois dos testes internos: um lote 006 com lances e uma conta a mais, com saldo, além do seed. */
   async function dirty(deps: SeedDeps) {
     await runSeed(deps);
+    await runSeedDemo(deps);
+    expect(await prisma.lot.count()).toBe(6);
     const { user } = await makeAuthService({ db: prisma, clock: deps.clock, jwtSecret: deps.jwtSecret }).register({
       name: "Visitante",
       email: "visitante@exemplo.test",
@@ -127,8 +159,53 @@ describe.skipIf(!testDatabaseUrl)("reset do banco para o avaliador (integração
   it("mantém o controle de migrações do Prisma", async () => {
     const { deps } = setup();
     const before = await prisma.$queryRaw<{ n: bigint }[]>`SELECT count(*)::bigint AS n FROM "_prisma_migrations"`;
+    expect(before[0]!.n).toBeGreaterThan(0n);
     await resetAndSeed(deps);
     const after = await prisma.$queryRaw<{ n: bigint }[]>`SELECT count(*)::bigint AS n FROM "_prisma_migrations"`;
     expect(after[0]!.n).toBe(before[0]!.n);
+  });
+
+  describe("CLI (prisma/seed.ts como processo)", () => {
+    function runCli(...args: string[]) {
+      return spawnSync(process.execPath, ["--import", "tsx", path.join(baseDir, "seed.ts"), ...args], {
+        cwd: path.resolve(baseDir, ".."),
+        encoding: "utf8",
+        timeout: 120_000,
+        env: { ...process.env, DATABASE_URL: testDatabaseUrl, JWT_SECRET: testEnv.JWT_SECRET, AUDIT_HMAC_KEY: testEnv.AUDIT_HMAC_KEY },
+      });
+    }
+
+    it("sem --confirmo recusa, sai com código 1 e não altera o banco", async () => {
+      const { deps } = setup();
+      await dirty(deps);
+
+      const cli = runCli("--reset");
+
+      expect(cli.status).toBe(1);
+      expect(cli.stderr).toContain("Nada foi alterado");
+      expect(cli.stdout).toContain("Alvo:");
+      expect(cli.stdout + cli.stderr).not.toMatch(/:\/\/|lanceauto:lanceauto/);
+      expect(await prisma.user.count()).toBe(4);
+      expect(await prisma.lot.count()).toBe(6);
+    });
+
+    it("--reset com --demo recusa e não altera o banco", async () => {
+      const { deps } = setup();
+      await dirty(deps);
+      const cli = runCli("--reset", "--demo", "--confirmo");
+      expect(cli.status).toBe(1);
+      expect(await prisma.lot.count()).toBe(6);
+    });
+
+    it("com --confirmo apaga o que havia e deixa só o seed, numerado de 001", async () => {
+      const { deps } = setup();
+      await dirty(deps);
+
+      const cli = runCli("--reset", "--confirmo");
+
+      expect(cli.status, cli.stderr).toBe(0);
+      expect(await prisma.user.count()).toBe(3);
+      expect((await prisma.lot.findMany({ orderBy: { number: "asc" } })).map((l) => l.number)).toEqual([1, 2, 3, 4, 5]);
+    });
   });
 });
