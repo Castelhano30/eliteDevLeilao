@@ -148,6 +148,7 @@ export function SiteFooter({ variant = "completo", hideOnPrint = false }: SiteFo
               <nav aria-label="Rodapé" className="flex min-w-0 flex-[3_1_480px] flex-wrap gap-6">
                 <Coluna titulo={RODAPE_CONTEUDO.colunas.navegue}>
                   <li><FooterLink href="/">Vitrine</FooterLink></li>
+                  <li><FooterLink href="/como-funciona">Como Funciona</FooterLink></li>
                 </Coluna>
                 <ColunaConta />
                 <Coluna titulo={RODAPE_CONTEUDO.colunas.contato}>

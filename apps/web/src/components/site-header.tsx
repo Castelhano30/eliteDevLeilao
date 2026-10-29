@@ -48,6 +48,7 @@ export function SiteHeader() {
     <nav key="nav" aria-label={user?.role === "AUCTIONEER" ? "Leiloeiro" : user ? "Principal" : "Visitante"} className={celular ? "flex flex-col gap-1" : "site-nav flex flex-wrap items-center gap-x-8 gap-y-1"}>
       {user?.role === "AUCTIONEER" ? <><NavLink href="/painel" exact lista={celular}>Meus lotes</NavLink><NavLink href="/painel/criar-lote" lista={celular}>Criar lote</NavLink></> : null}
       <NavLink href="/" lista={celular}>Vitrine</NavLink>
+      <NavLink href="/como-funciona" lista={celular}>Como Funciona</NavLink>
       {user?.role === "BIDDER" ? <><NavLink href="/arremates" lista={celular}>Meus arremates</NavLink><NavLink href="/carteira" lista={celular}>Carteira</NavLink></> : null}
     </nav>
   );

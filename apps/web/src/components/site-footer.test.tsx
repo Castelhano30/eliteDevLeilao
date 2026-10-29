@@ -56,7 +56,7 @@ describe("SiteFooter: estrutura e landmarks", () => {
 describe("SiteFooter: conteúdo e links", () => {
   const html = render();
 
-  it("a coluna Navegue só tem a Vitrine: não há item provisório nem texto entre colchetes", () => {
+  it("a coluna Navegue tem a Vitrine e o Como Funciona: não há item provisório nem texto entre colchetes", () => {
     expect(RODAPE_CONTEUDO).not.toHaveProperty("navegueProvisorios");
     expect(html).not.toContain("Sobre o LanceAuto");
     expect(html).not.toMatch(/>\[[^<]*\]</);
@@ -82,7 +82,7 @@ describe("SiteFooter: conteúdo e links", () => {
   });
 
   it("só tem <a> para rota que existe, e-mail e telefone", () => {
-    expect(hrefs(html)).toEqual(["/", "/", "/entrar?aba=entrar", "/entrar", "mailto:suporte@lanceauto.com", "tel:9999999999"]);
+    expect(hrefs(html)).toEqual(["/", "/", "/como-funciona", "/entrar?aba=entrar", "/entrar", "mailto:suporte@lanceauto.com", "tel:9999999999"]);
     expect(html).not.toMatch(/href="(?!\/|mailto:|tel:)/);
   });
 
@@ -127,7 +127,7 @@ describe("SiteFooter: Sua conta por papel", () => {
     state.auth = { user: null, status };
     const html = render();
     expect(html).toContain("min-h-[88px]");
-    expect(hrefs(html)).toEqual(["/", "/", "mailto:suporte@lanceauto.com", "tel:9999999999"]);
+    expect(hrefs(html)).toEqual(["/", "/", "/como-funciona", "mailto:suporte@lanceauto.com", "tel:9999999999"]);
     expect(html).toContain(">Sua conta</p>");
   });
 });
