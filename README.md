@@ -255,7 +255,8 @@ O passado é fabricado com um relógio simulado e `createLot({ allowPast })`, qu
 
 Para entregar o ambiente limpo (sem os dados dos testes internos), `npm run seed:reset -- --confirmo` **apaga todas as tabelas** (menos o controle de migrações do Prisma) e roda o seed completo em seguida: as mesmas três contas, com os mesmos e-mails, senha e saldos, e os lotes 001 a 005, numerados de novo a partir de 001.
 
-- **Trava:** sem `--confirmo` o comando só mostra o host do banco (sem usuário nem senha), recusa e sai com erro, sem alterar nada. Confira esse host antes de confirmar.
+- **Trava:** sem `--confirmo` o comando só mostra o host do banco (sem usuário nem senha), recusa e sai com erro, sem alterar nada. Confira esse host antes de confirmar. Se o host não puder ser lido, ou se `--reset` vier junto com `--demo`, ele também recusa.
+- **Faça com a API parada ou sem tráfego.** O `TRUNCATE` trava as tabelas e, entre o esvaziamento e o fim do seed (alguns segundos), o site fica vazio; navegadores abertos mostram erro até recarregar, e quem estava logado perde a conta.
 - **Nunca roda sozinho:** não faz parte do start da API nem do deploy. É um passo manual.
 - **Por que não apagar só as contas:** `Bid` é append-only e a exclusão de um usuário tentaria zerar o `bidderId` dos lances, o que o trigger recusa. O `TRUNCATE` não é interceptado de propósito.
 - **Se o seed falhar no meio**, o reset esvazia o banco de novo e mostra o erro, para não restar um seed pela metade que o próximo start pularia.
