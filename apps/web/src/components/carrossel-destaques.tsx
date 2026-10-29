@@ -14,7 +14,7 @@ export interface SlideCarrossel {
 export const SLIDES_VITRINE: SlideCarrossel[] = [
   {
     src: "/carrossel/leilao-destaque.webp",
-    alt: "LanceAuto. Participe de leilões e conquiste seu próximo carro. Veículos de procedência, lances transparentes e todo o processo 100% online, com histórico completo do veículo.",
+    alt: "Participe de leilões e conquiste seu próximo carro. Veículos de procedência, lances transparentes e todo o processo 100% online. Veículos de procedência, lances em tempo real e histórico completo do veículo.",
   },
   {
     src: "/carrossel/como-funciona.webp",
