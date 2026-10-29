@@ -220,6 +220,30 @@ main {
   }
 }
 
+/* Cursor dos controles. O preflight do Tailwind 4 deixa `button` com `cursor: default` (o 3 usava `pointer`), então toda a interface
+   perdeu a mãozinha. Fica em `@layer base` para as utilities (`disabled:cursor-not-allowed`, `aria-busy:cursor-progress`) seguirem vencendo.
+   Ativo: mãozinha. Inerte (`disabled` ou `aria-disabled`): `not-allowed`. Rótulo de campo de texto fica no cursor padrão; só o de caixa
+   de seleção e de opção (que ele aciona ao clicar) ganha a mãozinha. */
+@layer base {
+  :is(
+    button,
+    [role="button"],
+    [role="tab"],
+    [role="switch"],
+    [role="menuitem"],
+    [role="option"],
+    summary,
+    input:is([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="submit"], [type="button"], [type="reset"]),
+    label:has(> input:is([type="checkbox"], [type="radio"]))
+  ):not(:disabled, [aria-disabled="true"], :has(> input:disabled)) {
+    cursor: pointer;
+  }
+  :is(button, [role="button"], [role="tab"], [role="switch"], [role="menuitem"], [role="option"], input, select, textarea):is(:disabled, [aria-disabled="true"]),
+  label:has(> input:disabled) {
+    cursor: not-allowed;
+  }
+}
+
 /* Foco global: nunca remover. Anel azul de 3px, afastado 2px do controle. */
 :focus-visible,
 label:has(input:focus-visible) {

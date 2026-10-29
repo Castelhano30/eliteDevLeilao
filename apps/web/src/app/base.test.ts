@@ -17,6 +17,20 @@ describe("base global", () => {
     expect(focus).not.toMatch(/box-shadow/);
   });
 
+  it("o cursor dos controles fica em @layer base: mãozinha no ativo, not-allowed no inerte, e as utilities seguem vencendo", () => {
+    const start = css.indexOf("@layer base {");
+    expect(start).toBeGreaterThan(-1);
+    const block = css.slice(start, css.indexOf("/* Foco global"));
+    const active = block.slice(0, block.indexOf("cursor: pointer"));
+    for (const target of ["button", '[role="tab"]', '[role="switch"]', "summary", '[type="checkbox"]', '[type="radio"]']) {
+      expect(active).toContain(target);
+    }
+    expect(active).toMatch(/:not\(:disabled, \[aria-disabled="true"\]/);
+    expect(block).toMatch(/:is\(:disabled, \[aria-disabled="true"\]\)[\s\S]*cursor: not-allowed/);
+    // Fora de @layer, a regra venceria `disabled:cursor-not-allowed` e `aria-busy:cursor-progress`.
+    expect(css.slice(0, start)).not.toMatch(/\bcursor:\s*pointer/);
+  });
+
   it("o conteúdo recorta o que sai pelos lados: o carimbo animado não alarga a página no celular", () => {
     expect(rule("main")).toMatch(/overflow-x:\s*clip/);
   });
