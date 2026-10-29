@@ -174,14 +174,3 @@ export function SiteFooter({ variant = "completo", hideOnPrint = false }: SiteFo
     </footer>
   );
 }
-
-/** A Sala de lances (`/lotes/<id>`, sem `/auditoria`) não tem rodapé: relógio, painel e histórico são a única coisa na tela. */
-export function ocultaRodape(pathname: string): boolean {
-  return /^\/lotes\/[^/]+\/?$/.test(pathname);
-}
-
-/** Invólucro do grupo `(site)`: o rodapé completo em todas as telas, menos na Sala. */
-export function SiteFooterGate() {
-  const pathname = usePathname();
-  return ocultaRodape(pathname) ? null : <SiteFooter />;
-}

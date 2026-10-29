@@ -1,9 +1,9 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RODAPE_CONTEUDO } from "@/lib/rodape-conteudo";
-import { SiteFooter, SiteFooterGate, ocultaRodape } from "./site-footer";
+import { SiteFooter } from "./site-footer";
 
 const state = vi.hoisted(() => ({ pathname: "/", auth: { user: null as { role: string } | null, status: "ready" as string } }));
 vi.mock("next/navigation", () => ({ usePathname: () => state.pathname }));
@@ -172,23 +172,52 @@ describe("SiteFooter: versão mínima", () => {
   });
 });
 
-describe("Rodapé na Sala de lances", () => {
-  it.each(["/lotes/4913f6b8-4037-44cb-af7d-ed6d6c01b8ec", "/lotes/abc", "/lotes/abc/"])("%s não tem rodapé", (pathname) => {
-    expect(ocultaRodape(pathname)).toBe(true);
-    state.pathname = pathname;
-    expect(renderToStaticMarkup(<SiteFooterGate />)).toBe("");
+/** Todo arquivo de rota de `app/` (página, 404, erro) com o caminho relativo a `app/`. */
+function rotas(dir = path.resolve(__dirname, "../app"), base = ""): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entrada) => {
+    const relativo = base ? `${base}/${entrada.name}` : entrada.name;
+    if (entrada.isDirectory()) return rotas(path.join(dir, entrada.name), relativo);
+    return /^(page|not-found|error|global-error)\.tsx$/.test(entrada.name) ? [relativo] : [];
+  });
+}
+/** O rodapé de uma rota vem do arquivo dela ou do `layout.tsx` mais próximo acima (o layout raiz não tem rodapé). */
+function temRodape(rota: string): boolean {
+  const app = path.resolve(__dirname, "../app");
+  const partes = rota.split("/");
+  const proprio = readFileSync(path.join(app, rota), "utf8");
+  if (/<SiteFooter\b/.test(proprio)) return true;
+  for (let n = partes.length - 1; n >= 1; n -= 1) {
+    const layout = path.join(app, ...partes.slice(0, n), "layout.tsx");
+    if (existsSync(layout)) return /<SiteFooter\b/.test(readFileSync(layout, "utf8"));
+  }
+  return false;
+}
+
+describe("Rodapé em todas as telas", () => {
+  const todas = rotas();
+
+  it("a varredura enxerga as rotas conhecidas, inclusive a Sala, o 404 e a tela de erro", () => {
+    for (const esperada of ["(site)/lotes/[id]/page.tsx", "(site)/page.tsx", "(auditoria)/lotes/[id]/auditoria/page.tsx", "(publico)/c/[token]/page.tsx", "not-found.tsx", "error.tsx"]) {
+      expect(todas).toContain(esperada);
+    }
   });
 
-  it.each(["/", "/entrar", "/carteira", "/arremates", "/painel", "/painel/criar-lote", "/lotes/abc/auditoria", "/lotes", "/c/token"])("%s tem rodapé", (pathname) => {
-    expect(ocultaRodape(pathname)).toBe(false);
-    state.pathname = pathname;
-    expect(renderToStaticMarkup(<SiteFooterGate />)).toContain("<footer");
+  it.each(rotas())("%s tem rodapé", (rota) => {
+    expect(temRodape(rota)).toBe(true);
+  });
+
+  it("a Sala de lances mostra o rodapé completo: nada esconde o rodapé por rota", () => {
+    expect(source).not.toMatch(/ocultaRodape|SiteFooterGate/);
+    state.pathname = "/lotes/4913f6b8-4037-44cb-af7d-ed6d6c01b8ec";
+    expect(render()).toContain("<footer");
   });
 });
 
 describe("Layouts e CSS", () => {
-  it("o grupo (site) usa o rodapé com o invólucro da Sala; o Comprovante e a Auditoria usam o mínimo (só o Comprovante some na impressão)", () => {
-    expect(layoutSource("(site)")).toContain("<SiteFooterGate />");
+  it("o grupo (site) usa o rodapé completo, inclusive na Sala; o Comprovante e a Auditoria usam o mínimo (só o Comprovante some na impressão)", () => {
+    expect(layoutSource("(site)")).toContain("<SiteFooter />");
+    expect(readFileSync(path.resolve(__dirname, "../app/not-found.tsx"), "utf8")).toContain("<SiteFooter />");
+    expect(readFileSync(path.resolve(__dirname, "../app/error.tsx"), "utf8")).toContain('<SiteFooter variant="minimo" />');
     expect(layoutSource("(publico)")).toContain('<SiteFooter variant="minimo" hideOnPrint />');
     expect(layoutSource("(auditoria)")).toContain('<SiteFooter variant="minimo" />');
   });
