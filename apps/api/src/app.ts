@@ -1,6 +1,5 @@
 import cors from "cors";
 import express, { type Express } from "express";
-import helmet from "helmet";
 import type { Env } from "./env";
 import { errorHandler, notFoundHandler } from "./errors";
 import type { Logger } from "./infra/logger";
@@ -13,6 +12,7 @@ import { ExternalCache } from "./infra/external-cache";
 import { makeFipeCatalog, type CatalogPort } from "./infra/fipe";
 import { makeImageStore, type ImageDownloader, type ImageStoreOptions } from "./infra/image-store";
 import { makeWikipedia, type ImageSuggestionPort } from "./infra/wikipedia";
+import { docsRouter, securityHeaders } from "./docs/router";
 import { requestContext } from "./middleware/request-context";
 import { accountRouter } from "./routes/account";
 import { auditRouter } from "./routes/audit";
@@ -91,9 +91,11 @@ export function composeApp({
   // Atrás do proxy do Railway o IP real vem de X-Forwarded-For; sem isso o rate limit por IP vira global.
   if (env.NODE_ENV === "production") app.set("trust proxy", 1);
 
-  app.use(helmet());
+  // `helmet()` padrão em tudo; só `/docs` (Swagger UI) tem CSP própria.
+  app.use(securityHeaders);
   app.use(cors({ origin: env.WEB_ORIGIN }));
   app.use(requestContext(logger));
+  app.use(docsRouter());
   app.use(express.json());
 
   const auth = makeAuth(env.JWT_SECRET);
