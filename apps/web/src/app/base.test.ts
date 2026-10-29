@@ -25,16 +25,17 @@ describe("base global", () => {
     expect(css).toMatch(/\.t-display-titulo \{ font-size: clamp\(32px, 6vw, 80px\)/);
   });
 
-  it("cabeçalho no celular: o painel do menu ancora no cabeçalho, a faixa da conta ocupa a linha toda e o tema sai da barra", () => {
+  it("cabeçalho no celular: uma linha só (logo, saldo ou Entrar, menu), logo a 52% com respiro para o alvo de 44px e o tema fora da barra", () => {
     expect(css).toContain(".cabecalho { position: relative; }");
     expect(rule(".site-menu")).toMatch(/flex:\s*0 0 auto/);
-    expect(rule(".site-conta-celular")).toMatch(/flex:\s*1 1 100%/);
+    expect(rule(".site-conta-celular")).toMatch(/flex:\s*1 1 0;/);
+    expect(rule(".site-conta-celular")).toMatch(/justify-content:\s*flex-end/);
     const celular = css.slice(css.indexOf("@media (max-width: 767px)"));
-    expect(celular.slice(0, celular.indexOf("}\n}") + 3)).toContain(".site-theme { display: none; }");
     const bloco = celular.slice(0, celular.indexOf("}\n}") + 3);
-    expect(bloco).toContain(".site-logo > a { zoom: 0.64; padding-block: 6px; }");
-    expect(bloco).toContain(".site-conta-celular .balance-control { zoom: 0.85; }");
-    expect(bloco).toContain(".site-conta-celular .balance-control :is(a, button)::before { content: \"\"; position: absolute; inset: -5px -3px; }");
+    expect(bloco).toContain(".site-header { column-gap: 8px; padding-block: 10px; }");
+    expect(bloco).toContain(".site-theme { display: none; }");
+    expect(bloco).toContain(".site-logo { flex: 0 0 auto; }");
+    expect(bloco).toContain(".site-logo > a { zoom: 0.52; padding-block: 13px; }");
   });
 
   it("o hover de link não vira vermelho de erro", () => {

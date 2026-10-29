@@ -410,19 +410,17 @@ dialog::backdrop {
 .site-nav { flex: 1 1 100%; }
 .balance-control { max-width: 100%; }
 .balance-value { min-width: 14ch; max-width: 100%; overflow-wrap: anywhere; }
-/* Celular (<768px): logo e hambúrguer numa linha só; o painel do menu desce ancorado no cabeçalho.
-   A faixa da conta (saldo ou Entrar/Criar conta) vem logo abaixo. O tema mora no menu, então some da barra já no HTML do servidor. */
+/* Celular (<768px): uma linha só, com o logo, o saldo (ou o Entrar) e o hambúrguer; o painel do menu desce ancorado no cabeçalho.
+   O tema mora no menu, então some da barra já no HTML do servidor. O logo encolhe a 52% (201px viram 105px) e o link ganha 13px de respiro
+   em cima e embaixo (também escalados pelo zoom) para o alvo de toque continuar com 44px. */
 .cabecalho { position: relative; }
 .site-menu { flex: 0 0 auto; }
-.site-conta-celular { flex: 1 1 100%; }
-/* O logo encolhe a 64% (201px viram 129px) e o saldo a 85%. O alvo de toque segue em 44px: o logo ganha 6px de respiro em cima e embaixo
-   (também escalados pelo zoom) e o saldo estende a área clicável por pseudo-elemento. */
+.site-conta-celular { flex: 1 1 0; display: flex; justify-content: flex-end; min-width: 0; }
 @media (max-width: 767px) {
+  .site-header { column-gap: 8px; padding-block: 10px; }
   .site-theme { display: none; }
-  .site-logo > a { zoom: 0.64; padding-block: 6px; }
-  .site-conta-celular .balance-control { zoom: 0.85; }
-  .site-conta-celular .balance-control :is(a, button) { position: relative; }
-  .site-conta-celular .balance-control :is(a, button)::before { content: ""; position: absolute; inset: -5px -3px; }
+  .site-logo { flex: 0 0 auto; }
+  .site-logo > a { zoom: 0.52; padding-block: 13px; }
 }
 @media (min-width: 768px) {
   .site-account { flex: 0 1 auto; max-width: calc(100% - 300px); }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore, type ReactNode } from "react";
-import { BalanceChip } from "@/components/balance-chip";
+import { BalanceChip, BalanceEyeButton } from "@/components/balance-chip";
 import { MenuCelular } from "@/components/menu-celular";
 import { ProfileMenu } from "@/components/profile-menu";
 import { buttonClasses } from "@/components/ui/button";
@@ -58,6 +58,9 @@ export function SiteHeader() {
         <div key="logo" className="site-logo"><Logo /></div>
         {faixa === "largo" ? nav : null}
         {celular ? null : <div key="theme" className="site-theme"><ThemeSwitch /></div>}
+        {/* Celular: o saldo (licitante) ou o Entrar (visitante) ficam na própria barra, entre o logo e o menu; o resto da conta mora no menu. */}
+        {ready && celular && user?.role === "BIDDER" ? <div key="account" className="site-conta-celular"><BalanceChip barra /></div> : null}
+        {ready && celular && !user ? <div key="account" className="site-conta-celular"><Link href="/entrar?aba=entrar" className={BOTAO_ENTRAR}>Entrar</Link></div> : null}
         {celular ? (
           <MenuCelular>
             {nav}
@@ -65,6 +68,12 @@ export function SiteHeader() {
               <span className="t-body">Tema escuro</span>
               <ThemeSwitch />
             </div>
+            {user?.role === "BIDDER" ? (
+              <div className="mt-2 flex items-center justify-between gap-4 border-t border-borda pt-3">
+                <span className="t-body">Exibir saldo</span>
+                <BalanceEyeButton />
+              </div>
+            ) : null}
             {user ? (
               <div className="mt-3 flex items-center justify-between gap-4 border-t border-borda pt-3">
                 <div className="min-w-0">
@@ -73,7 +82,11 @@ export function SiteHeader() {
                 </div>
                 <button type="button" data-fecha-menu className={`${BOTAO_ENTRAR} shrink-0`} onClick={() => logout()}>Sair</button>
               </div>
-            ) : null}
+            ) : (
+              <div className="mt-3 border-t border-borda pt-3">
+                <Link href="/entrar" className={`${BOTAO_CRIAR} w-full`}>Criar conta</Link>
+              </div>
+            )}
           </MenuCelular>
         ) : null}
         {ready && !celular ? (
@@ -90,14 +103,6 @@ export function SiteHeader() {
                 <Link href="/entrar" className={BOTAO_CRIAR}>Criar conta</Link>
               </span>
             </>}
-          </div>
-        ) : null}
-        {/* Celular: o saldo (licitante) ou os botões de entrar (visitante) ficam numa faixa abaixo da barra, sempre à vista. */}
-        {ready && celular && user?.role === "BIDDER" ? <div key="account" className="site-conta-celular"><BalanceChip /></div> : null}
-        {ready && celular && !user ? (
-          <div key="account" className="site-conta-celular grid grid-cols-2 gap-3">
-            <Link href="/entrar?aba=entrar" className={BOTAO_ENTRAR}>Entrar</Link>
-            <Link href="/entrar" className={BOTAO_CRIAR}>Criar conta</Link>
           </div>
         ) : null}
         {faixa === "medio" ? nav : null}

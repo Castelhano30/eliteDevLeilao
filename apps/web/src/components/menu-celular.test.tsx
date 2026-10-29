@@ -68,11 +68,13 @@ describe("Cabeçalho com hambúrguer", () => {
     expect(header).toContain("lista={celular}");
   });
 
-  it("no celular o tema e o Sair moram no menu; o saldo e o Entrar/Criar conta ficam numa faixa sempre à vista", () => {
+  it("no celular o saldo (licitante) ou o Entrar (visitante) ficam na barra; o olho, o tema, o Sair e o Criar conta moram no menu", () => {
     expect(header).toContain("{celular ? null : <div key=\"theme\"");
     expect(header).toContain("data-fecha-menu");
-    expect(header).toContain('<div key="account" className="site-conta-celular"><BalanceChip /></div>');
-    expect(header).toContain("site-conta-celular grid grid-cols-2 gap-3");
+    expect(header).toContain('<div key="account" className="site-conta-celular"><BalanceChip barra /></div>');
+    expect(header).toContain('className="site-conta-celular"><Link href="/entrar?aba=entrar" className={BOTAO_ENTRAR}>Entrar</Link></div>');
+    expect(header).toContain("<BalanceEyeButton />");
+    expect(header).toContain("`${BOTAO_CRIAR} w-full`");
     // O menu do perfil (avatar) só existe de 768px para cima.
     expect(header.match(/<ProfileMenu \/>/g)).toHaveLength(1);
   });
