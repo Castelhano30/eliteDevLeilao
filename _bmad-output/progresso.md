@@ -828,3 +828,9 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 
 ## 29/10/2026 — Nova arte do primeiro slide do carrossel
 - Pedido do Felipe: trocar a imagem do carrossel por `_bmad-output/planning-artifacts/image-carrossel/Participe de Leilões e Conquiste Seu Carro.png` (2170×725, sem a placa LanceAuto no canto). Convertida com `sharp` para `apps/web/public/carrossel/leilao-destaque.webp` em 1800×601 (qualidade 82, 139 KB), mesmo nome e mesma proporção, então o componente e o `width/height` ficaram iguais. O `alt` deixou de citar "LanceAuto" porque a placa saiu da arte e passou a incluir os três itens do rodapé da imagem. A arte original antiga (`Leilão de Veículos Premium em Destaque.png`) saiu da pasta de planejamento e a nova entrou no lugar. Testes do carrossel verdes; conferido no Chrome local.
+
+## 29/10/2026 — Deploy da rodada de design (aprovado pelo Felipe)
+- A pedido do Felipe, os 13 commits locais da `main` (`71f721c` a `e1cdc44`, fast-forward de `7265595`) foram enviados: mãozinha nos botões, tique único do relógio (testes), cronômetro sem sombra de dígitos, página Como Funciona (prints claros e escuros, links no cabeçalho e no rodapé) e nova arte do primeiro slide do carrossel. Antes do envio: lint, typecheck e web (827 testes) verdes; API (550) verde na rodada anterior, sem mudança nela.
+- CI verde (run 40946355833). Railway: web `SUCCESS` em `e1cdc44`; API `SKIPPED` (nenhuma mudança nela), como esperado.
+- Smoke em produção, só leitura (`.tmp/cron/smoke-prod.cjs`, claro e escuro): `/como-funciona` 200 com h1, 3 passos e os 3 prints do tema certo carregados, sem erro de página nem resposta 4xx; link "Como Funciona" no cabeçalho da vitrine; nova arte do carrossel carregada; botão com cursor `pointer`; cronômetro andando e sem `data-ghost`. 16 verificações, todas OK. Limitação: só como visitante.
+- A pasta `planning-artifacts/image-login-cadastro/` segue fora do controle de versão (decisão do Felipe).
