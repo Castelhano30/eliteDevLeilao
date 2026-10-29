@@ -23,9 +23,9 @@ beforeEach(() => {
 describe("SiteFooter: estrutura e landmarks", () => {
   const html = render();
 
-  it("é o landmark contentinfo, na classe .rodape, com 64px acima e 48px em cima e 32px embaixo do conteúdo", () => {
-    expect(html).toMatch(/^<footer class="rodape mt-16"/);
-    expect(html).toContain("pb-8 pt-12");
+  it("é o landmark contentinfo, na classe .rodape, com 48px acima e 32px em cima e 24px embaixo do conteúdo", () => {
+    expect(html).toMatch(/^<footer class="rodape mt-12"/);
+    expect(html).toContain("pb-6 pt-8");
     expect(html).toContain("min(100% - 2 * var(--gutter-lateral), 1320px)");
   });
 
@@ -46,7 +46,7 @@ describe("SiteFooter: estrutura e landmarks", () => {
   });
 
   it("flex das áreas: marca 2 1 280px, colunas 1 1 160px, linha 1 com gap de 32px", () => {
-    expect(html).toContain("flex flex-wrap gap-8");
+    expect(html).toContain("flex flex-wrap gap-6");
     expect(html).toContain("flex-[2_1_280px]");
     expect(html.match(/flex-\[1_1_160px\]/g)).toHaveLength(3);
     expect(html).toContain("max-w-[36ch]");
@@ -93,7 +93,7 @@ describe("SiteFooter: conteúdo e links", () => {
   it("três círculos de 44px para as redes, com role img, sem href", () => {
     const redes = html.match(/<span role="img" aria-label="Rede social \[provisória\]"[^>]*>/g) ?? [];
     expect(redes).toHaveLength(3);
-    for (const rede of redes) expect(rede).toContain("h-11 w-11 cursor-default");
+    for (const rede of redes) expect(rede).toContain("h-9 w-9 cursor-default");
     expect(html.match(/rounded-full border border-borda bg-suave text-tinta2/g)).toHaveLength(3);
   });
 
@@ -167,7 +167,7 @@ describe("SiteFooter: versão mínima", () => {
 
   it("some na impressão só quando pedido (Comprovante)", () => {
     expect(html).not.toContain("print:hidden");
-    expect(render({ variant: "minimo", hideOnPrint: true })).toMatch(/^<footer class="rodape mt-16 print:hidden"/);
+    expect(render({ variant: "minimo", hideOnPrint: true })).toMatch(/^<footer class="rodape mt-12 print:hidden"/);
   });
 });
 

@@ -13,7 +13,7 @@ describe("alvos de toque de pelo menos 44×44px", () => {
   });
 
   it("os links do rodapé têm largura mínima de 44px", () => {
-    expect(read("./site-footer.tsx")).toContain("inline-flex min-h-alvo min-w-alvo items-center no-underline");
+    expect(read("./site-footer.tsx")).toContain("inline-flex min-h-9 min-w-alvo items-center pointer-coarse:min-h-alvo no-underline");
   });
 
   it("o link \"Painel\" do Criar lote e o nome do lote no Painel têm 44px", () => {
