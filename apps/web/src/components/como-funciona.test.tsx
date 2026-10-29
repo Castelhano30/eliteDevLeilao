@@ -57,13 +57,26 @@ describe("página Como Funciona", () => {
     expect(html).toContain("sem login e sem mostrar nome ou e-mail");
   });
 
+  it("cada passo ilustra com um print do próprio site: arquivo existente, texto alternativo e legenda", () => {
+    const html = page();
+    expect(html.match(/<figure[ >]/g)).toHaveLength(3);
+    for (const { imagem } of COMO_FUNCIONA.passos) {
+      expect(existsSync(path.resolve(__dirname, "../../public", imagem.src.slice(1))), imagem.src).toBe(true);
+      expect(imagem.alt.length).toBeGreaterThan(40);
+      expect(html).toContain(`src="${imagem.src}"`);
+      expect(html).toContain(`width="${imagem.largura}" height="${imagem.altura}"`);
+      expect(html).toContain(imagem.legenda);
+    }
+  });
+
   it("termina com a chamada que leva à vitrine de lotes", () => {
     const links = hrefs(page());
     expect(links).toContainEqual({ href: "/", text: "Ver os lotes" });
   });
 
   it("soa como casa de leilões de verdade: nenhum termo de simulação, teste ou demonstração", () => {
-    const texto = renderToStaticMarkup(<ComoFunciona />).replace(/<[^>]+>/g, " ").toLowerCase();
+    // Texto visível mais alt e legenda das imagens (o `alt` fica dentro da tag).
+    const texto = `${renderToStaticMarkup(<ComoFunciona />).replace(/<[^>]+>/g, " ")} ${JSON.stringify(COMO_FUNCIONA)}`.toLowerCase();
     for (const proibido of ["dinheiro falso", "fictíci", "simula", "teste", "demonstra", "de mentira", "provisóri", "protótipo", "fake", "mock"]) {
       expect(texto, proibido).not.toContain(proibido);
     }
