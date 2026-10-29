@@ -744,3 +744,7 @@ Registro passo a passo do que foi feito, decidido e do que vem a seguir. Serve t
 
 ## 28/10/2026 — Logo menor no cabeçalho mobile
 - Pedido do Felipe: o logo do cabeçalho do celular estava grande. Abaixo de 768 px o link do logo usa `zoom: 0.78` (201×58 px viram 155×46 px); mais que isso ele passaria dos 44 px de alvo de toque. O cabeçalho em 320 px caiu de 149 para 137 px (visitante e licitante). Só o cabeçalho: o rodapé e o desktop seguem com o logo de sempre. Lint, typecheck e testes do web verdes.
+
+## 28/10/2026 — Logo e saldo ainda menores no cabeçalho mobile
+- Pedido do Felipe: diminuir mais o logo e também a carteira (o chip de saldo) no celular. Abaixo de 768 px o logo vai a `zoom: 0.64` (155 para 128 px de largura; a placa em si tem cerca de 38 px de altura) e o chip de saldo a `zoom: 0.85` (44 para 37 px de altura).
+- O alvo de toque segue em 44 px sem inflar o visual: o link do logo ganha 6 px de respiro em cima e embaixo (também escalados pelo zoom, 46 px no total) e o chip e o olho estendem a área clicável por pseudo-elemento (medido com `elementFromPoint`: 44 px na vertical). O cabeçalho em 320 px ficou em 128 px para o licitante e 135 px para o visitante. Sem rolagem horizontal em 320 e 390 px; lint, typecheck e testes do web verdes.
