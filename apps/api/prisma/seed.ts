@@ -3,6 +3,7 @@ import path from "node:path";
 import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import { SystemClock } from "../src/infra/clock";
+import { RESET_CONFIRM_FLAG, isResetConfirmed, maskDatabaseHost, resetAndSeed } from "../src/seed/reset";
 import { runSeed, runSeedDemo, type FixtureCar } from "../src/seed/showcase";
 
 dotenv.config({ path: path.resolve(__dirname, "../../../.env"), quiet: true });
@@ -10,9 +11,20 @@ dotenv.config({ path: path.resolve(__dirname, "../../../.env"), quiet: true });
 /**
  * `npm run seed`: contas de teste e os lotes 001 a 005, pelos services da aplicação e sem rede. Se já existem
  * usuários, não faz nada e sai com código 0 (seguro a cada deploy). `--demo` (`npm run seed:demo`) cria um lote ao
- * vivo novo. A lógica mora em `src/seed/showcase.ts`, onde os testes a exercitam.
+ * vivo novo. `--reset --confirmo` (`npm run seed:reset -- --confirmo`) APAGA O BANCO INTEIRO e semeia de novo, para
+ * entregar o ambiente limpo ao avaliador; sem a confirmação não toca em nada. A lógica mora em `src/seed/`, onde os
+ * testes a exercitam.
  */
 async function main() {
+  const reset = process.argv.includes("--reset");
+  if (reset) {
+    console.log(`Alvo: ${maskDatabaseHost(process.env.DATABASE_URL)}`);
+    if (!isResetConfirmed(process.argv)) {
+      console.error(`O reset apaga TODOS os dados do banco acima. Nada foi alterado. Para seguir, rode de novo com ${RESET_CONFIRM_FLAG}.`);
+      process.exit(1);
+    }
+  }
+
   const jwtSecret = process.env.JWT_SECRET;
   const auditKey = process.env.AUDIT_HMAC_KEY;
   if (!jwtSecret) throw new Error("JWT_SECRET ausente: o seed usa os mesmos services da API.");
@@ -22,7 +34,9 @@ async function main() {
   try {
     const cars = JSON.parse(readFileSync(path.join(__dirname, "fipe-fixture.json"), "utf8")) as FixtureCar[];
     const deps = { db, clock: new SystemClock(), auditKey, jwtSecret, cars, baseDir: __dirname, log: (message: string) => console.log(message) };
-    if (process.argv.includes("--demo")) {
+    if (reset) {
+      await resetAndSeed(deps);
+    } else if (process.argv.includes("--demo")) {
       const lot = await runSeedDemo(deps);
       console.log(`Abra: ${process.env.WEB_ORIGIN?.replace(/\/+$/, "") ?? ""}/lotes/${lot.id}`);
     } else {

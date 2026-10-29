@@ -14,7 +14,8 @@
     "prisma:generate": "prisma generate --schema prisma/schema.prisma",
     "migrate:deploy": "dotenv run -f ../../.env -- prisma migrate deploy --schema prisma/schema.prisma",
     "seed": "dotenv run -f ../../.env -- tsx prisma/seed.ts",
-    "seed:demo": "dotenv run -f ../../.env -- tsx prisma/seed.ts --demo"
+    "seed:demo": "dotenv run -f ../../.env -- tsx prisma/seed.ts --demo",
+    "seed:reset": "dotenv run -f ../../.env -- tsx prisma/seed.ts --reset"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "9.1.0",
