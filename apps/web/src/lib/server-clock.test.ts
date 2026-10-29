@@ -1,5 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { OFFSET_TTL_MS, chooseOffset, resetServerClock, serverNow, serverOffset, syncServerTime } from "./server-clock";
+import {
+  OFFSET_TTL_MS,
+  chooseOffset,
+  resetServerClock,
+  serverClockSnapshot,
+  serverNow,
+  serverOffset,
+  subscribeServerClock,
+  syncServerTime,
+} from "./server-clock";
 
 describe("chooseOffset (R-4.10)", () => {
   const server = Date.parse("2026-10-24T15:00:00.000Z");
@@ -81,5 +90,55 @@ describe("syncServerTime", () => {
   it("serverTime inválido não mexe em nada", () => {
     syncServerTime("não é data", { sentAt: 0, receivedAt: 1 });
     expect(serverOffset()).toBe(0);
+  });
+});
+
+describe("tique do relógio (todos os cronômetros da tela)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-24T12:00:00.000Z"));
+    resetServerClock();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    resetServerClock();
+  });
+
+  it("vários assinantes dividem um único setInterval de 1 s, e todos veem o mesmo instante do servidor", () => {
+    const interval = vi.spyOn(globalThis, "setInterval");
+    // Aparelho 32 s adiantado em relação ao servidor.
+    syncServerTime("2026-10-24T11:59:28.000Z", { sentAt: Date.now(), receivedAt: Date.now() });
+    const seen: number[][] = [[], [], []];
+    const stops = seen.map((list) => subscribeServerClock(() => list.push(serverClockSnapshot())));
+    expect(interval).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(3_000);
+    for (const list of seen) expect(list).toEqual([1, 2, 3].map((s) => Date.parse("2026-10-24T11:59:28.000Z") + s * 1_000));
+    for (const stop of stops) stop();
+    interval.mockRestore();
+  });
+
+  it("sem assinantes o tique para; assinar de novo (como o StrictMode faz) religa e segue o servidor", () => {
+    const clear = vi.spyOn(globalThis, "clearInterval");
+    const calls = vi.fn();
+    const stop = subscribeServerClock(calls);
+    stop();
+    expect(clear).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(5_000);
+    expect(calls).not.toHaveBeenCalled();
+    const again = subscribeServerClock(calls);
+    vi.advanceTimersByTime(2_000);
+    expect(calls).toHaveBeenCalledTimes(2);
+    expect(serverClockSnapshot()).toBe(serverNow());
+    again();
+    clear.mockRestore();
+  });
+
+  it("uma resposta nova acerta o relógio na hora, sem esperar o próximo tique", () => {
+    const calls = vi.fn();
+    const stop = subscribeServerClock(calls);
+    syncServerTime("2026-10-24T12:00:30.000Z");
+    expect(calls).toHaveBeenCalledTimes(1);
+    expect(serverClockSnapshot()).toBe(Date.parse("2026-10-24T12:00:30.000Z"));
+    stop();
   });
 });
