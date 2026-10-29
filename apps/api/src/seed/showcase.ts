@@ -149,7 +149,7 @@ export interface SeedResult {
 }
 
 /** Roda `work` com o advisory lock: o segundo processo espera aqui e vê o banco já semeado. */
-async function withSeedLock<T>(db: PrismaClient, work: () => Promise<T>): Promise<T> {
+export async function withSeedLock<T>(db: PrismaClient, work: () => Promise<T>): Promise<T> {
   return db.$transaction(
     async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ADVISORY_LOCK_KEY})`;
