@@ -23,7 +23,7 @@ describe("Cronometro: cor dos dígitos", () => {
   });
 });
 
-describe("Cronometro: mostrador fantasma", () => {
+describe("Cronometro: mostrador sem sombra de dígitos", () => {
   const SERVER_NOW = "2026-10-23T12:00:00.000Z";
   const at = (offsetMs: number) => new Date(Date.parse(SERVER_NOW) + offsetMs).toISOString();
   const SEC = 1_000;
@@ -43,28 +43,25 @@ describe("Cronometro: mostrador fantasma", () => {
       />,
     );
   }
-  const ghostOf = (html: string) => /data-ghost="([^"]*)"/.exec(html)?.[1];
   const realOf = (html: string) => />([^<>]*)<\/span><\/span><span class="sr-only"/.exec(html)?.[1];
 
   // Cada caso é um formato que o relógio mostra: dias, horas e minutos.
   it.each([
-    ["26d 10:18:34", 26 * DAY + 10 * HOUR + 18 * MIN + 34 * SEC, "88d 88:88:88"],
-    ["03:07:41", 3 * HOUR + 7 * MIN + 41 * SEC, "88:88:88"],
-    ["09:05", 9 * MIN + 5 * SEC, "88:88"],
-  ])("%s: o fantasma troca só os dígitos por 8 e tem o mesmo tamanho do texto", (text, endsInMs, ghost) => {
+    ["26d 10:18:34", 26 * DAY + 10 * HOUR + 18 * MIN + 34 * SEC],
+    ["03:07:41", 3 * HOUR + 7 * MIN + 41 * SEC],
+    ["09:05", 9 * MIN + 5 * SEC],
+  ])("%s: só o texto real é desenhado, sem cópia de 8 atrás dele", (text, endsInMs) => {
     for (const size of ["sala", "cartao"] as const) {
       const html = render(endsInMs, size);
       expect(realOf(html)).toBe(text);
-      expect(ghostOf(html)).toBe(ghost);
-      expect(ghostOf(html)).toHaveLength(text.length);
-      expect(ghostOf(html)?.replace(/8/g, "0")).toBe(text.replace(/\d/g, "0"));
+      expect(html).not.toContain("data-ghost");
+      expect(html).not.toContain("la-segmentos-apagados");
     }
   });
 
-  it("últimos 2 min: o texto real pulsa e o fantasma continua parado", () => {
+  it("últimos 2 min: o texto real pulsa", () => {
     const html = render(95 * SEC, "sala");
     expect(realOf(html)).toBe("01:35");
-    expect(ghostOf(html)).toBe("88:88");
     expect(html).toContain("animation:la-pulsa 1s infinite");
     expect(html.match(/la-pulsa/g)).toHaveLength(1);
   });
@@ -74,31 +71,27 @@ describe("Cronometro: mostrador fantasma", () => {
     expect(render(9 * MIN, "cartao")).toContain("font-size:24px");
   });
 
-  it("não muda a acessibilidade: role timer no contêiner, texto e fantasma escondidos do leitor", () => {
+  it("não muda a acessibilidade: role timer no contêiner, texto escondido do leitor", () => {
     const html = render(26 * DAY + 10 * HOUR + 18 * MIN + 34 * SEC, "sala");
     expect(html).toContain('role="timer" aria-label="Tempo restante 26d 10:18:40"');
-    expect(html).toMatch(/<span aria-hidden="true" data-ghost="[^"]*" class="la-segmentos-apagados/);
     expect(html).toMatch(/<span aria-hidden="true" class="relative"/);
   });
 
-  it("prorrogado: o selo +2 MIN aparece sem mexer no fantasma", () => {
+  it("prorrogado: o selo +2 MIN aparece", () => {
     const html = render(95 * SEC, "cartao", -5 * MIN);
     expect(html).toContain("+2 MIN");
-    expect(ghostOf(html)).toBe("88:88");
   });
 });
 
-describe("Cronometro: CSS do fantasma", () => {
+describe("Cronometro: CSS do mostrador", () => {
   const css = readFileSync(path.resolve(__dirname, "../../app/globals.css"), "utf8");
 
-  // O "8" é mais largo que o "1" numa fonte proporcional: sem algarismos tabulares o fantasma passa da largura
-  // do texto real e, sem `nowrap`, quebra no espaço ("88d" / "88:88:88"), aparecendo como um segundo mostrador.
   it("o mostrador usa algarismos tabulares", () => {
     expect(css).toMatch(/\.la-mostrador\s*\{[^}]*font-variant-numeric:\s*tabular-nums/);
   });
 
-  it("o fantasma nunca quebra linha", () => {
-    expect(css).toMatch(/\.la-segmentos-apagados\s*\{[^}]*white-space:\s*nowrap/);
+  it("não há mais regra de segmentos apagados no CSS", () => {
+    expect(css).not.toContain("la-segmentos-apagados");
   });
 
   it("o contêiner do relógio usa essas classes", () => {
@@ -142,7 +135,7 @@ describe("Cronometro: pele da Rev. 05", () => {
     const html = render();
     expect(html).toContain("text-[12px] font-bold uppercase");
     expect(html).toContain("la-mostrador");
-    expect(html).toMatch(/role="timer"[^>]*class="la-mostrador relative whitespace-nowrap font-bold leading-none"/);
+    expect(html).toMatch(/role="timer"[^>]*class="la-mostrador whitespace-nowrap font-bold leading-none"/);
   });
 
   it("normal: fio de 1px linha, rótulo RESTAM (cartão) ou TEMPO RESTANTE (Sala), sem ícone", () => {
