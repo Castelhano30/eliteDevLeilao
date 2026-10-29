@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -61,12 +61,37 @@ describe("página Como Funciona", () => {
     const html = page();
     expect(html.match(/<figure[ >]/g)).toHaveLength(3);
     for (const { imagem } of COMO_FUNCIONA.passos) {
-      expect(existsSync(path.resolve(__dirname, "../../public", imagem.src.slice(1))), imagem.src).toBe(true);
+      for (const src of [imagem.srcClaro, imagem.srcEscuro]) {
+        expect(existsSync(path.resolve(__dirname, "../../public", src.slice(1))), src).toBe(true);
+        expect(html).toContain(`src="${src}"`);
+      }
       expect(imagem.alt.length).toBeGreaterThan(40);
-      expect(html).toContain(`src="${imagem.src}"`);
       expect(html).toContain(`width="${imagem.largura}" height="${imagem.altura}"`);
       expect(html).toContain(imagem.legenda);
     }
+  });
+
+  it("cada print existe nos dois temas e o CSS mostra o par do tema ativo", () => {
+    const html = page();
+    expect(html.match(/img-tema-claro/g)).toHaveLength(3);
+    expect(html.match(/img-tema-escuro/g)).toHaveLength(3);
+    for (const { imagem } of COMO_FUNCIONA.passos) {
+      expect(imagem.srcClaro).toMatch(/-claro.png$/);
+      expect(imagem.srcEscuro).toBe(imagem.srcClaro.replace("-claro.png", "-escuro.png"));
+    }
+    const css = readFileSync(path.resolve(__dirname, "../app/globals.css"), "utf8");
+    expect(css).toContain(".img-tema-escuro { display: none; }");
+    expect(css).toContain('[data-theme="noite"] .img-tema-claro { display: none; }');
+    expect(css).toContain('[data-theme="noite"] .img-tema-escuro { display: block; }');
+    const sistema = css.slice(css.indexOf(".img-tema-escuro { display: none; }"));
+    expect(sistema).toContain("@media (prefers-color-scheme: dark) {");
+    expect(sistema).toContain(':root:not([data-theme="claro"]) .img-tema-claro { display: none; }');
+    expect(sistema).toContain(':root:not([data-theme="claro"]) .img-tema-escuro { display: block; }');
+  });
+
+  it("as imagens ficam em tamanho contido: a larga até 880px e as altas até 400px", () => {
+    const max = COMO_FUNCIONA.passos.map((passo) => passo.imagem.larguraMaxima ?? Infinity);
+    expect(max).toEqual([880, 340, 400]);
   });
 
   it("termina com a chamada que leva à vitrine de lotes", () => {

@@ -3,8 +3,9 @@
  * comprovante); nada foi acrescentado. Exatamente três passos, na ordem em que o leilão acontece.
  */
 export interface ImagemPasso {
-  /** Caminho em `public/`: print do próprio site. */
-  src: string;
+  /** Caminhos em `public/`: o mesmo print do próprio site nos dois temas; a página mostra o que combina com o tema ativo. */
+  srcClaro: string;
+  srcEscuro: string;
   alt: string;
   /** Tamanho real do arquivo, para o navegador reservar o espaço antes de carregar. */
   largura: number;
@@ -39,11 +40,13 @@ export const COMO_FUNCIONA = {
         "Ver a vitrine e as salas não pede conta. Para dar lances, entre como licitante.",
       ],
       imagem: {
-        src: "/como-funciona/passo-1-vitrine.png",
+        srcClaro: "/como-funciona/passo-1-vitrine-claro.png",
+        srcEscuro: "/como-funciona/passo-1-vitrine-escuro.png",
         alt: "Vitrine do LanceAuto com três lotes ao vivo. Cada cartão mostra o número do lote, o carro, o lance atual, a quantidade de lances e o cronômetro com o tempo que resta.",
         largura: 2356,
         altura: 1122,
         legenda: "Na vitrine, cada cartão mostra o lance atual, quantos lances já foram dados e o cronômetro do lote.",
+        larguraMaxima: 880,
         disposicao: "abaixo",
       },
     },
@@ -57,12 +60,13 @@ export const COMO_FUNCIONA = {
         "A sala mostra ao vivo se você está ganhando ou foi superado, e a sua posição entre os licitantes.",
       ],
       imagem: {
-        src: "/como-funciona/passo-2-sala.png",
+        srcClaro: "/como-funciona/passo-2-sala-claro.png",
+        srcEscuro: "/como-funciona/passo-2-sala-escuro.png",
         alt: "Painel da sala de um lote ao vivo: cronômetro, lance atual, o aviso Você está ganhando com a posição 1º de 2, o campo de lance com o mínimo aceito e o histórico de lances.",
         largura: 1120,
         altura: 1942,
         legenda: "Na sala do lote: o aviso de quem está ganhando, o mínimo aceito para o próximo lance e o histórico de todos os lances.",
-        larguraMaxima: 420,
+        larguraMaxima: 340,
         disposicao: "ao-lado",
       },
     },
@@ -76,12 +80,13 @@ export const COMO_FUNCIONA = {
         "O histórico de lances de cada lote pode ser conferido por qualquer pessoa, na auditoria.",
       ],
       imagem: {
-        src: "/como-funciona/passo-3-comprovante.png",
+        srcClaro: "/como-funciona/passo-3-comprovante-claro.png",
+        srcEscuro: "/como-funciona/passo-3-comprovante-escuro.png",
         alt: "Comprovante de arremate com o número do lote, o carro, o valor, o arrematante identificado por pseudônimo, o código de verificação e o número do comprovante.",
         largura: 1268,
         altura: 1368,
         legenda: "O comprovante traz o lote, o valor, o arrematante por pseudônimo e o código que pode ser conferido na auditoria.",
-        larguraMaxima: 520,
+        larguraMaxima: 400,
         disposicao: "ao-lado",
       },
     },

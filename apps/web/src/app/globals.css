@@ -251,6 +251,16 @@ label:has(input:focus-visible) {
   outline-offset: 2px;
 }
 
+/* Prints do Como Funciona: cada um existe em claro e escuro e a página mostra o que combina com o tema ativo (mesma regra do resto do
+   site: `noite` à mão, ou o sistema escuro quando o tema não é `claro`). A imagem escondida com display:none não é baixada. */
+.img-tema-escuro { display: none; }
+[data-theme="noite"] .img-tema-claro { display: none; }
+[data-theme="noite"] .img-tema-escuro { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="claro"]) .img-tema-claro { display: none; }
+  :root:not([data-theme="claro"]) .img-tema-escuro { display: block; }
+}
+
 /* ---------- Tipografia (.t-<nome>) ---------- */
 .t-display { font-weight: 800; line-height: 1; text-transform: uppercase; }
 .t-mono { font-size: 14px; font-weight: 500; line-height: 1.3; }

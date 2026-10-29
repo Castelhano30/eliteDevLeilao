@@ -39,17 +39,27 @@ export function ComoFunciona() {
                 ))}
               </ul>
             </div>
-            <figure className="mx-auto w-full min-w-0" style={{ maxWidth: passo.imagem.larguraMaxima }}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- print estático do próprio site, já recortado em public/como-funciona */}
-              <img
-                src={passo.imagem.src}
-                alt={passo.imagem.alt}
-                width={passo.imagem.largura}
-                height={passo.imagem.altura}
-                loading="lazy"
-                decoding="async"
-                className="h-auto w-full rounded-xl border border-borda bg-papel shadow-cartao"
-              />
+            <figure
+              className={`w-full min-w-0 mx-auto ${passo.imagem.disposicao === "ao-lado" ? "lg:ml-auto lg:mr-0" : ""}`}
+              style={{ maxWidth: passo.imagem.larguraMaxima }}
+            >
+              {/* O par claro/escuro troca pelo CSS do tema (globals.css); a imagem escondida não é baixada. */}
+              {[
+                [passo.imagem.srcClaro, "img-tema-claro"],
+                [passo.imagem.srcEscuro, "img-tema-escuro"],
+              ].map(([src, tema]) => (
+                // eslint-disable-next-line @next/next/no-img-element -- print estático do próprio site, já recortado em public/como-funciona
+                <img
+                  key={tema}
+                  src={src}
+                  alt={passo.imagem.alt}
+                  width={passo.imagem.largura}
+                  height={passo.imagem.altura}
+                  loading="lazy"
+                  decoding="async"
+                  className={`${tema} h-auto w-full rounded-xl border border-borda bg-papel shadow-cartao`}
+                />
+              ))}
               <figcaption className="t-body-nota mt-3">{passo.imagem.legenda}</figcaption>
             </figure>
           </li>
