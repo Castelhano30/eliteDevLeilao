@@ -171,6 +171,7 @@ Web em http://localhost:3000 e API em http://localhost:4000. No `npm run dev` o 
 | `npm run lint` / `npm run typecheck` | ESLint; tipos dos três pacotes |
 | `npm test` | testes dos três pacotes |
 | `npm run seed` / `npm run seed:demo` | ver [Contas semeadas](#contas-semeadas-e-dados-de-demonstração) |
+| `npm run seed:reset -- --confirmo` | **apaga o banco inteiro** e semeia de novo; ver [Recomeçar do zero](#recomeçar-do-zero-seedreset) |
 
 ### Os testes
 
@@ -249,6 +250,17 @@ O passado é fabricado com um relógio simulado e `createLot({ allowPast })`, qu
 - **Seguro a cada deploy:** se já existem usuários, o seed não faz nada, imprime `seed ignorado: já existem usuários` e sai com código 0. Nunca apaga dados. Duas execuções ao mesmo tempo não se atropelam (`pg_advisory_xact_lock`).
 - **`npm run seed:demo`** cria um lote ao vivo **novo** (30 dias, 5 lances de Ana e Bruno) sem tocar nos demais e, se o saldo disponível de um deles estiver abaixo de R$ 100.000,00, deposita a diferença (aparece no extrato como depósito). Imprime o número e a URL do lote. Rode quando o lote ao vivo expirar.
 - **Defina `AUDIT_HMAC_KEY` e `JWT_SECRET` uma vez, antes do primeiro seed.** Trocar a chave HMAC depois faz todos os históricos aparecerem como adulterados.
+
+### Recomeçar do zero (`seed:reset`)
+
+Para entregar o ambiente limpo (sem os dados dos testes internos), `npm run seed:reset -- --confirmo` **apaga todas as tabelas** (menos o controle de migrações do Prisma) e roda o seed completo em seguida: as mesmas três contas, com os mesmos e-mails, senha e saldos, e os lotes 001 a 005, numerados de novo a partir de 001.
+
+- **Trava:** sem `--confirmo` o comando só mostra o host do banco (sem usuário nem senha), recusa e sai com erro, sem alterar nada. Confira esse host antes de confirmar.
+- **Nunca roda sozinho:** não faz parte do start da API nem do deploy. É um passo manual.
+- **Por que não apagar só as contas:** `Bid` é append-only e a exclusão de um usuário tentaria zerar o `bidderId` dos lances, o que o trigger recusa. O `TRUNCATE` não é interceptado de propósito.
+- **Se o seed falhar no meio**, o reset esvazia o banco de novo e mostra o erro, para não restar um seed pela metade que o próximo start pularia.
+- **Todos os tokens e dados somem:** quem estava logado precisa entrar de novo, e comprovantes antigos deixam de existir.
+- **O lote 005 dura 30 dias** a partir do reset. Faça o reset perto da avaliação.
 
 **As mesmas contas existem no banco do Railway**, criadas por este mesmo comando, que roda a cada deploy logo depois das migrações.
 
@@ -604,7 +616,7 @@ Estes são **cortes conscientes**, não esquecimentos:
 | **Nem todo carro tem foto** | Nem todo modelo tem artigo na Wikipedia. Sem foto, vale a ilustração padrão. As imagens têm licença Creative Commons, com crédito |
 | **Limites de requisição por IP** | Login e cadastro (30/min), auditoria (60/min). Atrás do proxy do Railway o IP vem de `X-Forwarded-For`; numa rede corporativa com IP compartilhado, quem avalia pode receber "muitas requisições" e basta esperar um minuto |
 | **Hibernação** | Não existe no Railway. Quem hospedar num plano que dorme pode usar um ping externo em `/health`; não está configurado aqui |
-| **Seed só em banco vazio** | Para recomeçar do zero é preciso esvaziar o banco (por exemplo `docker compose down -v`). O `seed:demo` cria um lote novo, mas nunca recria lotes antigos |
+| **Seed só em banco vazio** | Para recomeçar do zero use o [`seed:reset`](#recomeçar-do-zero-seedreset) (apaga tudo, com confirmação) ou, em ambiente local, `docker compose down -v`. O `seed:demo` cria um lote novo, mas nunca recria lotes antigos |
 | **Conferência manual com leitor de tela e aparelhos reais** | Foi feita na Sala, no Comprovante e na Carteira. As demais telas foram verificadas por teclado, axe-core e Chrome real (de 320 a 768 px), sem leitor de tela |
 | **Itens adiados nas revisões** | Achados de code review que escolhi adiar, cada um com onde está e o que fecharia, estão em [`deferred-work.md`](_bmad-output/implementation-artifacts/deferred-work.md) |
 
